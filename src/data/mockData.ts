@@ -1,0 +1,94 @@
+import type { Order, Customer } from '@/types';
+
+export const mockOrders: Order[] = [
+  {
+    id: '1042',
+    customerName: 'García',
+    phone: '(787) 555-0101',
+    estimatedDate: '06 Abr 2026',
+    status: 'EN PROCESO',
+    createdAt: '2026-04-04',
+  },
+  {
+    id: '1041',
+    customerName: 'Martínez',
+    phone: '(787) 555-0182',
+    estimatedDate: '06 Abr 2026',
+    status: 'EN PROCESO',
+    createdAt: '2026-04-04',
+  },
+  {
+    id: '1039',
+    customerName: 'López',
+    phone: '(787) 555-0143',
+    estimatedDate: '05 Abr 2026',
+    status: 'LISTO',
+    rackNumber: '12',
+    createdAt: '2026-04-03',
+  },
+  {
+    id: '1038',
+    customerName: 'Rodríguez',
+    phone: '(787) 555-0167',
+    estimatedDate: '05 Abr 2026',
+    status: 'LISTO',
+    rackNumber: '7',
+    createdAt: '2026-04-03',
+  },
+  {
+    id: '1035',
+    customerName: 'Hernández',
+    phone: '(787) 555-0134',
+    estimatedDate: '04 Abr 2026',
+    status: 'LISTO',
+    rackNumber: '3',
+    daysReady: 2,
+    createdAt: '2026-04-02',
+  },
+  {
+    id: '1031',
+    customerName: 'Torres',
+    phone: '(787) 555-0198',
+    estimatedDate: '02 Abr 2026',
+    status: 'LISTO',
+    rackNumber: '9',
+    daysReady: 5,
+    createdAt: '2026-03-30',
+  },
+  {
+    id: '1028',
+    customerName: 'Pérez',
+    phone: '(787) 555-0112',
+    estimatedDate: '01 Abr 2026',
+    status: 'RECIBIDO',
+    createdAt: '2026-03-30',
+  },
+  {
+    id: '1027',
+    customerName: 'Sánchez',
+    phone: '(787) 555-0155',
+    estimatedDate: '31 Mar 2026',
+    status: 'ENTREGADO',
+    createdAt: '2026-03-29',
+  },
+];
+
+export const mockCustomers: Customer[] = [
+  { phone: '(787) 555-0101', lastName: 'García' },
+  { phone: '(787) 555-0182', lastName: 'Martínez' },
+  { phone: '(787) 555-0143', lastName: 'López' },
+  { phone: '(787) 555-0167', lastName: 'Rodríguez' },
+  { phone: '(787) 555-0134', lastName: 'Hernández' },
+  { phone: '(787) 555-0198', lastName: 'Torres' },
+  { phone: '(787) 555-0112', lastName: 'Pérez' },
+  { phone: '(787) 555-0155', lastName: 'Sánchez' },
+  { phone: '(787) 555-0176', lastName: 'Rivera' },
+  { phone: '(787) 555-0123', lastName: 'Díaz' },
+];
+
+export const businessInfo = {
+  name: 'Tintorería Elegance',
+  address: 'Calle Fortaleza 23, San Juan, PR 00901',
+  hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
+  phone: '(787) 555-0200',
+};
