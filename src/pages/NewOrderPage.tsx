@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, Calendar } from 'lucide-react';
+import { CustomerModal } from '@/components/CustomerModal';
 
 export function NewOrderPage() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export function NewOrderPage() {
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isModalOpen, setIsModalOpen] = useState(true);
+  const [customerData, setCustomerData] = useState<{ fullName: string; phone: string; smsConsent: boolean } | null>(null);
 
   const filteredCustomers = useMemo(() => {
     if (!phone.trim() || phone.length < 3) return [];
@@ -27,6 +30,7 @@ export function NewOrderPage() {
   }, [phone]);
 
   const handlePhoneChange = (value: string) => {
+    if (customerData) return; // Don't allow changes if data from modal
     setPhone(value);
     setShowSuggestions(value.length >= 3);
     // Clear last name if phone is cleared
@@ -79,6 +83,16 @@ export function NewOrderPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleModalSubmit = (data: { fullName: string; phone: string; smsConsent: boolean }) => {
+    setCustomerData(data);
+    setPhone(data.phone);
+    setLastName(data.fullName);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -161,6 +175,7 @@ export function NewOrderPage() {
                   onFocus={() => phone.length >= 3 && setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                  disabled={!!customerData}
                 />
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone}</p>
@@ -198,8 +213,9 @@ export function NewOrderPage() {
                   type="text"
                   placeholder="Apellido del cliente"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => !customerData && setLastName(e.target.value)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                  disabled={!!customerData}
                 />
                 {errors.lastName && (
                   <p className="text-sm text-red-600">{errors.lastName}</p>
@@ -280,6 +296,8 @@ export function NewOrderPage() {
           </CardContent>
         </Card>
       </main>
+
+      <CustomerModal isOpen={isModalOpen} onSubmit={handleModalSubmit} onClose={handleModalClose} />
     </div>
   );
 }
