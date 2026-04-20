@@ -45,8 +45,8 @@
     --color-gray: #727586;
     --color-gray-border: #dadce0;
     --color-light: #fff;
-    --color-primary: #673de6;
-    --color-primary-dark: #5025d1;
+    --color-primary: rgb(27 42 74 / var(--tw-bg-opacity, 1));;
+    --color-primary-dark: #374a6f;
     --color-primary-light: #ebe4ff;
     --color-success: #00b090;
     --font-family: 'DM Sans', sans-serif;
