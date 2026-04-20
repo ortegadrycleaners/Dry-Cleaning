@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import { mockCustomers } from '@/data/mockData';
+import customersData from '@/data/customers.json';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,28 +18,28 @@ export function NewOrderPage() {
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isModalOpen, setIsModalOpen] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Closed by default now
   const [customerData, setCustomerData] = useState<{ fullName: string; phone: string; smsConsent: boolean } | null>(null);
 
   const filteredCustomers = useMemo(() => {
-    if (!phone.trim() || phone.length < 3) return [];
     const query = phone.toLowerCase().replace(/[\s\-\(\)]/g, '');
-    return mockCustomers.filter(customer =>
+    if (!query) return customersData;
+    return customersData.filter(customer =>
       customer.phone.toLowerCase().replace(/[\s\-\(\)]/g, '').includes(query)
-    ).slice(0, 5);
+    );
   }, [phone]);
 
   const handlePhoneChange = (value: string) => {
     if (customerData) return; // Don't allow changes if data from modal
     setPhone(value);
-    setShowSuggestions(value.length >= 3);
+    setShowSuggestions(true);
     // Clear last name if phone is cleared
     if (!value) {
       setLastName('');
     }
   };
 
-  const handleCustomerSelect = (customer: typeof mockCustomers[0]) => {
+  const handleCustomerSelect = (customer: { phone: string, lastName: string }) => {
     setPhone(customer.phone);
     setLastName(customer.lastName);
     setShowSuggestions(false);
@@ -161,7 +161,7 @@ export function NewOrderPage() {
                 )}
               </div>
 
-              {/* Phone with Autocomplete */}
+              {/* Phone with Autocomplete Search */}
               <div className="space-y-2 relative">
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                   Teléfono
@@ -172,7 +172,7 @@ export function NewOrderPage() {
                   placeholder="(787) 555-XXXX"
                   value={phone}
                   onChange={(e) => handlePhoneChange(e.target.value)}
-                  onFocus={() => phone.length >= 3 && setShowSuggestions(true)}
+                  onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                   disabled={!!customerData}
@@ -183,7 +183,7 @@ export function NewOrderPage() {
 
                 {/* Autocomplete Suggestions */}
                 {showSuggestions && filteredCustomers.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {filteredCustomers.map((customer, index) => (
                       <button
                         key={index}
@@ -199,6 +199,11 @@ export function NewOrderPage() {
                         </span>
                       </button>
                     ))}
+                  </div>
+                )}
+                {showSuggestions && filteredCustomers.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg px-4 py-3 text-sm text-gray-500">
+                    No se encontraron clientes con ese número.
                   </div>
                 )}
               </div>
