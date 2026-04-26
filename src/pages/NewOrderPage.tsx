@@ -1,4 +1,8 @@
 import { useState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { customerSchema, escapeHTML } from '@/lib/customerSchema';
+import { generateBase62Hash } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
 import customersData from '@/data/customers.json';
@@ -13,16 +17,32 @@ export function NewOrderPage() {
   const navigate = useNavigate();
   const { addOrder } = useOrders();
   const [orderId, setOrderId] = useState('');
-  const [phone, setPhone] = useState('');
-  const [lastName, setLastName] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isModalOpen, setIsModalOpen] = useState(false); // Closed by default now
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerData, setCustomerData] = useState<{ fullName: string; phone: string; smsConsent: boolean } | null>(null);
 
+  // React Hook Form para datos de cliente
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: '',
+      phone: '',
+      notes: '',
+    },
+  });
+
+  const phone = watch('phone');
+  const lastName = watch('name');
+
   const filteredCustomers = useMemo(() => {
-    const query = phone.toLowerCase().replace(/[\s\-\(\)]/g, '');
+    const query = phone?.toLowerCase().replace(/[\s\-\(\)]/g, '');
     if (!query) return customersData;
     return customersData.filter(customer =>
       customer.phone.toLowerCase().replace(/[\s\-\(\)]/g, '').includes(query)
@@ -30,18 +50,17 @@ export function NewOrderPage() {
   }, [phone]);
 
   const handlePhoneChange = (value: string) => {
-    if (customerData) return; // Don't allow changes if data from modal
-    setPhone(value);
+    if (customerData) return;
+    setValue('phone', value);
     setShowSuggestions(true);
-    // Clear last name if phone is cleared
     if (!value) {
-      setLastName('');
+      setValue('name', '');
     }
   };
 
   const handleCustomerSelect = (customer: { phone: string, lastName: string }) => {
-    setPhone(customer.phone);
-    setLastName(customer.lastName);
+    setValue('phone', customer.phone);
+    setValue('name', customer.lastName);
     setShowSuggestions(false);
   };
 
@@ -62,55 +81,32 @@ export function NewOrderPage() {
     return date.toLocaleDateString('es-ES', options);
   };
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
 
-    if (!orderId.trim()) {
-      newErrors.orderId = 'El ID de orden es requerido';
-    }
-
-    if (!phone.trim()) {
-      newErrors.phone = 'El teléfono es requerido';
-    }
-
-    if (!lastName.trim()) {
-      newErrors.lastName = 'El apellido es requerido';
-    }
-
-    if (!estimatedDate) {
-      newErrors.estimatedDate = 'La fecha estimada es requerida';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleModalSubmit = (data: { fullName: string; phone: string; smsConsent: boolean }) => {
     setCustomerData(data);
-    setPhone(data.phone);
-    setLastName(data.fullName);
+    setValue('phone', data.phone);
+    setValue('name', data.fullName);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const onSubmit = (data: any) => {
+    const createdAt = new Date().toISOString().split('T')[0];
+    // Usar el orderId y la fecha como llave dinámica para el hash
+    const publicId = generateBase62Hash(orderId, createdAt);
     const newOrder = {
-      id: orderId,
-      customerName: lastName,
-      phone: phone,
+      id: publicId, // Usar el hash base62 como ID público
+      customerName: data.name,
+      phone: data.phone,
+      notes: data.notes ? escapeHTML(data.notes) : '',
       estimatedDate: formatDateDisplay(estimatedDate),
       status: 'RECIBIDO' as const,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt,
+      // Si quieres guardar el orderId original, puedes agregarlo como orderNumber: orderId
     };
-
     addOrder(newOrder);
     navigate('/dashboard');
   };
@@ -142,7 +138,7 @@ export function NewOrderPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Order ID */}
               <div className="space-y-2">
                 <Label htmlFor="orderId" className="text-sm font-medium text-gray-700">
@@ -156,8 +152,9 @@ export function NewOrderPage() {
                   onChange={(e) => setOrderId(e.target.value)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                 />
-                {errors.orderId && (
-                  <p className="text-sm text-red-600">{errors.orderId}</p>
+                {/* Validación manual para orderId */}
+                {!orderId.trim() && (
+                  <p className="text-sm text-red-600">El ID de orden es requerido</p>
                 )}
               </div>
 
@@ -170,6 +167,7 @@ export function NewOrderPage() {
                   id="phone"
                   type="tel"
                   placeholder="(787) 555-XXXX"
+                  {...register('phone')}
                   value={phone}
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   onFocus={() => setShowSuggestions(true)}
@@ -178,7 +176,7 @@ export function NewOrderPage() {
                   disabled={!!customerData}
                 />
                 {errors.phone && (
-                  <p className="text-sm text-red-600">{errors.phone}</p>
+                  <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
 
                 {/* Autocomplete Suggestions */}
@@ -217,14 +215,31 @@ export function NewOrderPage() {
                   id="lastName"
                   type="text"
                   placeholder="Apellido del cliente"
+                  {...register('name')}
                   value={lastName}
-                  onChange={(e) => !customerData && setLastName(e.target.value)}
+                  onChange={(e) => !customerData && setValue('name', e.target.value)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                   disabled={!!customerData}
                 />
-                {errors.lastName && (
-                  <p className="text-sm text-red-600">{errors.lastName}</p>
+                {errors.name && (
+                  <p className="text-sm text-red-600">{errors.name.message as string}</p>
                 )}
+                            {/* Notas del pedido */}
+                            <div className="space-y-2">
+                              <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                                Notas del Pedido
+                              </Label>
+                              <Input
+                                id="notes"
+                                type="text"
+                                placeholder="Notas adicionales (opcional)"
+                                {...register('notes')}
+                                className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                              />
+                              {errors.notes && (
+                                <p className="text-sm text-red-600">{errors.notes.message as string}</p>
+                              )}
+                            </div>
               </div>
 
               {/* Estimated Delivery Date */}
@@ -276,8 +291,9 @@ export function NewOrderPage() {
                     Fecha seleccionada: {formatDateDisplay(estimatedDate)}
                   </p>
                 )}
-                {errors.estimatedDate && (
-                  <p className="text-sm text-red-600">{errors.estimatedDate}</p>
+                {/* Validación manual para fecha estimada */}
+                {!estimatedDate && (
+                  <p className="text-sm text-red-600">La fecha estimada es requerida</p>
                 )}
               </div>
 

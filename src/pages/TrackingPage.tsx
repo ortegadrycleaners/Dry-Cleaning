@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import ortegaLogo from '../assets/ortega_logo.png';
 
+
 type TrackingVariant = 'proceso' | 'listo' | 'recordatorio';
 
 interface ProgressStepProps {
@@ -150,32 +151,22 @@ function RecordatorioView({ order }: { order: typeof mockOrders[0] }) {
   );
 }
 
+
 export function TrackingPage() {
-  const { token } = useParams<{ token: string }>();
+  const { orderId } = useParams<{ orderId: string }>();
 
-  // For demo purposes, we'll show different variants based on the token
-  // In a real app, this would fetch the actual order
-  const getVariant = (): TrackingVariant => {
-    if (token === 'listo') return 'listo';
-    if (token === 'recordatorio') return 'recordatorio';
-    return 'proceso';
-  };
+  // Buscar la orden por el hash base62 (id público)
+  const order = mockOrders.find(o => o.id === orderId) || mockOrders[0];
 
-  const variant = getVariant();
-
-  // Get a mock order based on variant
-  const getOrder = () => {
-    switch (variant) {
-      case 'listo':
-        return mockOrders.find(o => o.id === '1039') || mockOrders[0];
-      case 'recordatorio':
-        return mockOrders.find(o => o.id === '1035') || mockOrders[0];
-      default:
-        return mockOrders.find(o => o.id === '1042') || mockOrders[0];
-    }
-  };
-
-  const order = getOrder();
+  // Determina el estado de la orden (esto es solo ejemplo, ajusta según tu lógica real)
+  let variant: TrackingVariant = 'proceso';
+  if (order.status === 'LISTO' && typeof order.daysReady === 'number' && order.daysReady > 2) {
+    variant = 'recordatorio';
+  } else if (order.status === 'LISTO') {
+    variant = 'listo';
+  } else {
+    variant = 'proceso';
+  }
 
   return (
     <div className="min-h-screen bg-white font-sans flex flex-col overflow-x-hidden">
