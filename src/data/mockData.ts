@@ -2,7 +2,8 @@ import type { Order, Customer } from '@/types';
 
 export const mockOrders: Order[] = [
   {
-    id: '1042',
+    id: 'k9A2d',
+    orderNumber: '1042',
     customerName: 'García',
     phone: '(787) 555-0101',
     estimatedDate: '06 Abr 2026',
@@ -10,7 +11,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-04-04',
   },
   {
-    id: '1041',
+    id: 'm3Q7x',
+    orderNumber: '1041',
     customerName: 'Martínez',
     phone: '(787) 555-0182',
     estimatedDate: '06 Abr 2026',
@@ -18,7 +20,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-04-04',
   },
   {
-    id: '1039',
+    id: 'p8L4b',
+    orderNumber: '1039',
     customerName: 'López',
     phone: '(787) 555-0143',
     estimatedDate: '05 Abr 2026',
@@ -27,7 +30,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-04-03',
   },
   {
-    id: '1038',
+    id: 'r5C1n',
+    orderNumber: '1038',
     customerName: 'Rodríguez',
     phone: '(787) 555-0167',
     estimatedDate: '05 Abr 2026',
@@ -36,7 +40,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-04-03',
   },
   {
-    id: '1035',
+    id: 't2V9a',
+    orderNumber: '1035',
     customerName: 'Hernández',
     phone: '(787) 555-0134',
     estimatedDate: '04 Abr 2026',
@@ -46,7 +51,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-04-02',
   },
   {
-    id: '1031',
+    id: 'u7H6e',
+    orderNumber: '1031',
     customerName: 'Torres',
     phone: '(787) 555-0198',
     estimatedDate: '02 Abr 2026',
@@ -56,7 +62,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-03-30',
   },
   {
-    id: '1028',
+    id: 'w4N8k',
+    orderNumber: '1028',
     customerName: 'Pérez',
     phone: '(787) 555-0112',
     estimatedDate: '01 Abr 2026',
@@ -64,7 +71,8 @@ export const mockOrders: Order[] = [
     createdAt: '2026-03-30',
   },
   {
-    id: '1027',
+    id: 'x1R3m',
+    orderNumber: '1027',
     customerName: 'Sánchez',
     phone: '(787) 555-0155',
     estimatedDate: '31 Mar 2026',

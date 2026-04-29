@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { customerSchema, escapeHTML } from '@/lib/customerSchema';
+import type { z } from 'zod';
+import { customerSchema } from '@/lib/customerSchema';
 import { generateBase62Hash } from '@/lib/utils';
+import type { Order } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
 import customersData from '@/data/customers.json';
@@ -13,6 +15,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { CustomerModal } from '@/components/CustomerModal';
 
+type CustomerFormOutput = z.infer<typeof customerSchema>;
+type CreatedOrderInfo = {
+  publicId: string;
+  orderNumber: string;
+  customerName: string;
+  trackingUrl: string;
+};
+
 export function NewOrderPage() {
   const navigate = useNavigate();
   const { addOrder } = useOrders();
@@ -21,6 +31,7 @@ export function NewOrderPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerData, setCustomerData] = useState<{ fullName: string; phone: string; smsConsent: boolean } | null>(null);
+  const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
 
   // React Hook Form para datos de cliente
   const {
@@ -42,10 +53,10 @@ export function NewOrderPage() {
   const lastName = watch('name');
 
   const filteredCustomers = useMemo(() => {
-    const query = phone?.toLowerCase().replace(/[\s\-\(\)]/g, '');
+    const query = phone?.toLowerCase().replace(/[\s\-()]/g, '');
     if (!query) return customersData;
     return customersData.filter(customer =>
-      customer.phone.toLowerCase().replace(/[\s\-\(\)]/g, '').includes(query)
+      customer.phone.toLowerCase().replace(/[\s\-()]/g, '').includes(query)
     );
   }, [phone]);
 
@@ -93,22 +104,43 @@ export function NewOrderPage() {
     setIsModalOpen(false);
   };
 
-  const onSubmit = (data: any) => {
+  useEffect(() => {
+    if (!createdOrderInfo) return;
+    const timeoutId = window.setTimeout(() => {
+      setCreatedOrderInfo(null);
+      navigate('/dashboard');
+    }, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [createdOrderInfo, navigate]);
+
+  const handleCreatedOrderModalClose = () => {
+    setCreatedOrderInfo(null);
+    navigate('/dashboard');
+  };
+
+  const onSubmit = (data: CustomerFormOutput) => {
+    if (!orderId.trim() || !estimatedDate) return;
+
     const createdAt = new Date().toISOString().split('T')[0];
-    // Usar el orderId y la fecha como llave dinámica para el hash
     const publicId = generateBase62Hash(orderId, createdAt);
-    const newOrder = {
-      id: publicId, // Usar el hash base62 como ID público
+    const trackingUrl = `/tracking/${publicId}`;
+    const newOrder: Order = {
+      id: publicId,
+      orderNumber: orderId.trim(),
       customerName: data.name,
       phone: data.phone,
-      notes: data.notes ? escapeHTML(data.notes) : '',
+      ...(data.notes ? { notes: data.notes } : {}),
       estimatedDate: formatDateDisplay(estimatedDate),
-      status: 'RECIBIDO' as const,
+      status: 'RECIBIDO',
       createdAt,
-      // Si quieres guardar el orderId original, puedes agregarlo como orderNumber: orderId
     };
     addOrder(newOrder);
-    navigate('/dashboard');
+    setCreatedOrderInfo({
+      publicId,
+      orderNumber: orderId.trim(),
+      customerName: data.name,
+      trackingUrl,
+    });
   };
 
   return (
@@ -301,7 +333,8 @@ export function NewOrderPage() {
               <div className="pt-4 space-y-3">
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium"
+                  disabled={!orderId.trim() || !estimatedDate}
+                  className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
                   Crear Orden y Enviar SMS
                 </Button>
@@ -319,6 +352,33 @@ export function NewOrderPage() {
       </main>
 
       <CustomerModal isOpen={isModalOpen} onSubmit={handleModalSubmit} onClose={handleModalClose} />
+      {createdOrderInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-semibold text-[#1B2A4A]">Orden creada</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Orden #{createdOrderInfo.orderNumber} para {createdOrderInfo.customerName}.
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              ID de seguimiento: <span className="font-medium text-gray-700">{createdOrderInfo.publicId}</span>
+            </p>
+            <a
+              href={createdOrderInfo.trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline"
+            >
+              Abrir enlace de seguimiento
+            </a>
+            <p className="mt-3 text-xs text-gray-500">Este mensaje se cerrará en 3 segundos.</p>
+            <div className="mt-4 flex justify-end">
+              <Button type="button" variant="outline" onClick={handleCreatedOrderModalClose}>
+                Cerrar ahora
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

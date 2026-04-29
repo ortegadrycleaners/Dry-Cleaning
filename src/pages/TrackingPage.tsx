@@ -1,6 +1,8 @@
-import { useParams } from 'react-router-dom';
-import { mockOrders } from '@/data/mockData';
+import { Navigate, useParams } from 'react-router-dom';
+import type { Order } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
+import { useOrders } from '@/context/OrdersContext';
+import { orderTicketLabel } from '@/lib/utils';
 import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import ortegaLogo from '../assets/ortega_logo.png';
 
@@ -81,7 +83,7 @@ function ProgressBar({ currentStatus }: { currentStatus: string }) {
   );
 }
 
-function EnProcesoView({ order }: { order: typeof mockOrders[0] }) {
+function EnProcesoView({ order }: { order: Order }) {
   return (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
@@ -92,7 +94,7 @@ function EnProcesoView({ order }: { order: typeof mockOrders[0] }) {
           Tu orden está en proceso
         </h2>
         <p className="text-gray-600">
-          Orden #{order.id} | Cliente: {order.customerName}
+          Orden #{orderTicketLabel(order)} | Cliente: {order.customerName}
         </p>
         <p className="text-gray-500 text-sm mt-1">
           Fecha estimada: {order.estimatedDate}
@@ -103,7 +105,7 @@ function EnProcesoView({ order }: { order: typeof mockOrders[0] }) {
   );
 }
 
-function ListoView({ order }: { order: typeof mockOrders[0] }) {
+function ListoView({ order }: { order: Order }) {
   return (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
@@ -114,7 +116,7 @@ function ListoView({ order }: { order: typeof mockOrders[0] }) {
           ¡Tu orden está lista para retirar!
         </h2>
         <p className="text-gray-600">
-          Orden #{order.id} | Rack #{order.rackNumber}
+          Orden #{orderTicketLabel(order)} | Rack #{order.rackNumber}
         </p>
       </div>
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -127,7 +129,7 @@ function ListoView({ order }: { order: typeof mockOrders[0] }) {
   );
 }
 
-function RecordatorioView({ order }: { order: typeof mockOrders[0] }) {
+function RecordatorioView({ order }: { order: Order }) {
   return (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
@@ -138,7 +140,7 @@ function RecordatorioView({ order }: { order: typeof mockOrders[0] }) {
           Tu orden lleva {order.daysReady} días lista esperándote
         </h2>
         <p className="text-gray-600">
-          Orden #{order.id} | Rack #{order.rackNumber}
+          Orden #{orderTicketLabel(order)} | Rack #{order.rackNumber}
         </p>
       </div>
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -154,9 +156,12 @@ function RecordatorioView({ order }: { order: typeof mockOrders[0] }) {
 
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  const { orders } = useOrders();
 
-  // Buscar la orden por el hash base62 (id público)
-  const order = mockOrders.find(o => o.id === orderId) || mockOrders[0];
+  const order = orders.find(o => o.id === orderId);
+  if (!order) {
+    return <Navigate to="/not-found" replace />;
+  }
 
   // Determina el estado de la orden (esto es solo ejemplo, ajusta según tu lógica real)
   let variant: TrackingVariant = 'proceso';

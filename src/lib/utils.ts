@@ -1,3 +1,7 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import type { Order } from '@/types';
+
 // Base62 charset
 const BASE62 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -18,9 +22,13 @@ export function generateBase62Hash(input: string, key: string): string {
   } while (n > 0);
   return result;
 }
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+
+/** Ticket visible (#número) frente al id opaco en URL/contexto. */
+export function orderTicketLabel(order: Pick<Order, 'orderNumber' | 'id'>): string {
+  const n = order.orderNumber?.trim();
+  return n || order.id;
+}
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }

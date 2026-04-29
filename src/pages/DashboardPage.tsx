@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrders } from '@/context/OrdersContext';
 import type { Order } from '@/types';
+import { orderTicketLabel } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -62,7 +63,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
         <div className="space-y-4 pt-2">
           <div className="bg-slate-50 p-3 rounded-lg">
             <p className="text-sm text-gray-600">
-              Orden <span className="font-semibold text-[#1B2A4A]">#{order.id}</span>
+              Orden <span className="font-semibold text-[#1B2A4A]">#{orderTicketLabel(order)}</span>
             </p>
             <p className="text-sm text-gray-600">
               Cliente: <span className="font-medium">{order.customerName}</span>
@@ -162,11 +163,14 @@ export function DashboardPage() {
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return orders;
     const query = searchQuery.toLowerCase();
-    return orders.filter(
-      order =>
+    return orders.filter(order => {
+      const ticket = orderTicketLabel(order);
+      return (
         order.phone.toLowerCase().includes(query) ||
-        order.id.toLowerCase().includes(query)
-    );
+        order.id.toLowerCase().includes(query) ||
+        ticket.toLowerCase().includes(query)
+      );
+    });
   }, [orders, searchQuery]);
 
   const handleMarkReady = (order: Order) => {
@@ -233,7 +237,7 @@ export function DashboardPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Buscar por teléfono o ID de orden"
+              placeholder="Buscar por teléfono o nº de orden"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
@@ -265,7 +269,7 @@ export function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-gray-700">ID Orden</TableHead>
+                    <TableHead className="font-semibold text-gray-700">Nº orden</TableHead>
                     <TableHead className="font-semibold text-gray-700">Cliente</TableHead>
                     <TableHead className="font-semibold text-gray-700">Teléfono</TableHead>
                     <TableHead className="font-semibold text-gray-700">Fecha Estimada</TableHead>
@@ -277,7 +281,7 @@ export function DashboardPage() {
                   {filteredOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-slate-50">
                       <TableCell className="font-medium text-[#1B2A4A]">
-                        #{order.id}
+                        #{orderTicketLabel(order)}
                       </TableCell>
                       <TableCell>{order.customerName}</TableCell>
                       <TableCell className="text-gray-600">{order.phone}</TableCell>
