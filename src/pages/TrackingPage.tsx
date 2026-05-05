@@ -178,7 +178,12 @@ export function TrackingPage() {
       {/* Top Navigation */}
       <nav className="flex items-center justify-between px-6 md:px-12 py-4 bg-white shadow-sm z-10 relative">
         <div className="flex items-center">
-          <img src={ortegaLogo} alt="Ortega Cleaners" className="h-16 md:h-24 object-contain" />
+          <img
+            src={ortegaLogo}
+            alt="Ortega Cleaners"
+            decoding="async"
+            className="h-16 md:h-24 object-contain"
+          />
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
           <a href="https://ortegadrycleaners.com" className="hover:text-gray-900 transition-colors">Home</a>

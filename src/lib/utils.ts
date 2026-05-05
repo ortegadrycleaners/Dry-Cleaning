@@ -5,22 +5,29 @@ import type { Order } from '@/types';
 // Base62 charset
 const BASE62 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-// Genera un hash base62 a partir de un string y una llave dinámica
-export function generateBase62Hash(input: string, key: string): string {
-  // Simple hash combinando input y key
-  let hash = 0;
-  const str = input + key;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) & 0xffffffff;
+/** Genera un id público alfanumérico (Base62) usando `crypto.getRandomValues`. */
+export function generatePublicId(length = 12): string {
+  if (!Number.isInteger(length) || length < 1 || length > 48) {
+    throw new Error('generatePublicId: length debe estar entre 1 y 48');
   }
-  // Convierte el hash a base62
-  let result = '';
-  let n = Math.abs(hash);
-  do {
-    result = BASE62[n % 62] + result;
-    n = Math.floor(n / 62);
-  } while (n > 0);
-  return result;
+
+  // Rejection sampling para evitar sesgo por módulo.
+  const alphabet = BASE62;
+  const max = alphabet.length; // 62
+  const threshold = 256 - (256 % max); // 248
+
+  let id = '';
+  while (id.length < length) {
+    const buf = new Uint8Array(32);
+    crypto.getRandomValues(buf);
+    for (const byte of buf) {
+      if (byte >= threshold) continue;
+      id += alphabet[byte % max];
+      if (id.length === length) break;
+    }
+  }
+
+  return id;
 }
 
 /** Ticket visible (#número) frente al id opaco en URL/contexto. */

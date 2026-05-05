@@ -1,33 +1,62 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from '@/pages/LoginPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { NewOrderPage } from '@/pages/NewOrderPage';
-import { TrackingPage } from '@/pages/TrackingPage';
+import { RequireAuth } from '@/components/RequireAuth';
 import { TrackingGuard } from '@/components/TrackingGuard';
-import NotFoundPage from '@/pages/NotFoundPage';
 import { AuthProvider } from '@/context/AuthContext';
 import { OrdersProvider } from '@/context/OrdersContext';
+
+const LoginPage = lazy(async () => ({
+  default: (await import('@/pages/LoginPage')).LoginPage,
+}));
+const DashboardPage = lazy(async () => ({
+  default: (await import('@/pages/DashboardPage')).DashboardPage,
+}));
+const NewOrderPage = lazy(async () => ({
+  default: (await import('@/pages/NewOrderPage')).NewOrderPage,
+}));
+const TrackingPage = lazy(async () => ({
+  default: (await import('@/pages/TrackingPage')).TrackingPage,
+}));
+const NotFoundPage = lazy(async () => ({
+  default: (await import('@/pages/NotFoundPage')).default,
+}));
 
 function App() {
   return (
     <AuthProvider>
       <OrdersProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/dashboard/nueva" element={<NewOrderPage />} />
-            <Route
-              path="/tracking/:orderId"
-              element={
-                <TrackingGuard>
-                  <TrackingPage />
-                </TrackingGuard>
-              }
-            />
-            <Route path="/not-found" element={<NotFoundPage />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <Suspense fallback={<div className="p-4 text-sm text-gray-600">Cargando…</div>}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <RequireAuth>
+                    <DashboardPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/dashboard/nueva"
+                element={
+                  <RequireAuth>
+                    <NewOrderPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/tracking/:orderId"
+                element={
+                  <TrackingGuard>
+                    <TrackingPage />
+                  </TrackingGuard>
+                }
+              />
+              <Route path="/not-found" element={<NotFoundPage />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </OrdersProvider>
     </AuthProvider>

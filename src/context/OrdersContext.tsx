@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { Order, OrderStatus } from '@/types';
 import { mockOrders } from '@/data/mockData';
 
@@ -13,9 +13,14 @@ const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(mockOrders);
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus, rackNumber?: string) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order => {
+  const updateOrderStatus = useCallback(
+    (orderId: string, status: OrderStatus, rackNumber?: string) => {
+      setOrders(prevOrders =>
+        prevOrders.map(order => {
+          if (order.id !== orderId) {
+            return order;
+          }
+
         if (order.id === orderId) {
           const updatedOrder = { ...order, status };
           if (rackNumber) {
@@ -26,19 +31,24 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
           }
           return updatedOrder;
         }
-        return order;
-      })
-    );
-  };
+        })
+      );
+    },
+    []
+  );
 
-  const addOrder = (order: Order) => {
+  const addOrder = useCallback((order: Order) => {
     setOrders(prevOrders => [order, ...prevOrders]);
-  };
+  }, []);
+
+  const value = useMemo<OrdersContextType>(() => ({ orders, updateOrderStatus, addOrder }), [
+    orders,
+    updateOrderStatus,
+    addOrder,
+  ]);
 
   return (
-    <OrdersContext.Provider value={{ orders, updateOrderStatus, addOrder }}>
-      {children}
-    </OrdersContext.Provider>
+    <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>
   );
 }
 

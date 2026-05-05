@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -13,20 +13,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('tintoreria_auth') === 'true';
   });
 
-  const login = () => {
+  const login = useCallback(() => {
     setIsAuthenticated(true);
     localStorage.setItem('tintoreria_auth', 'true');
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setIsAuthenticated(false);
     localStorage.removeItem('tintoreria_auth');
-  };
+  }, []);
+
+  const value = useMemo<AuthContextType>(() => ({ isAuthenticated, login, logout }), [
+    isAuthenticated,
+    login,
+    logout,
+  ]);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 }
 

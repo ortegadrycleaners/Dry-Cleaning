@@ -3,11 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { customerSchema } from '@/lib/customerSchema';
-import { generateBase62Hash } from '@/lib/utils';
+import { generatePublicId } from '@/lib/utils';
 import type { Order } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import customersData from '@/data/customers.json';
+import { mockCustomers } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,8 +54,8 @@ export function NewOrderPage() {
 
   const filteredCustomers = useMemo(() => {
     const query = phone?.toLowerCase().replace(/[\s\-()]/g, '');
-    if (!query) return customersData;
-    return customersData.filter(customer =>
+    if (!query) return mockCustomers;
+    return mockCustomers.filter(customer =>
       customer.phone.toLowerCase().replace(/[\s\-()]/g, '').includes(query)
     );
   }, [phone]);
@@ -122,7 +122,7 @@ export function NewOrderPage() {
     if (!orderId.trim() || !estimatedDate) return;
 
     const createdAt = new Date().toISOString().split('T')[0];
-    const publicId = generateBase62Hash(orderId, createdAt);
+    const publicId = generatePublicId(12);
     const trackingUrl = `/tracking/${publicId}`;
     const newOrder: Order = {
       id: publicId,
