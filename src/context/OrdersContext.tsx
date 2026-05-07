@@ -17,11 +17,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     (orderId: string, status: OrderStatus, rackNumber?: string) => {
       setOrders(prevOrders =>
         prevOrders.map(order => {
-          if (order.id !== orderId) {
-            return order;
-          }
+          if (order.id !== orderId) return order;
 
-        if (order.id === orderId) {
           const updatedOrder = { ...order, status };
           if (rackNumber) {
             updatedOrder.rackNumber = rackNumber;
@@ -30,7 +27,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
             updatedOrder.daysReady = 0;
           }
           return updatedOrder;
-        }
         })
       );
     },

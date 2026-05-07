@@ -99,4 +99,19 @@ export const businessInfo = {
   address: 'Calle Fortaleza 23, San Juan, PR 00901',
   hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
   phone: '(787) 555-0200',
+  promotions: [
+    {
+      title: '20% en tu primera orden',
+      description: 'Trae este cupón y recibe un descuento especial en tu primer servicio.',
+      code: 'BIENVENIDO20',
+    },
+    {
+      title: 'Programa de Fidelidad',
+      description: 'Acumula 5 órdenes y la 6ta tiene un 15% de descuento automático.',
+    },
+    {
+      title: 'Servicio Express',
+      description: 'Entrega en 24 horas disponible por un cargo adicional. Consulta en mostrador.',
+    },
+  ],
 };
