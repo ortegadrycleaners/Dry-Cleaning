@@ -75,18 +75,26 @@ function generateSecurityToken(): string {
   return generatePublicId(24);
 }
 
-/* ---------- Persistencia ---------- */
+/* ---------- Persistencia con cache en memoria ----------
+ * Evita JSON.parse repetido en cada chequeo (clave para no saturar al backend
+ * cuando esto se migre a Supabase: una sola "lectura" por sesión hasta que
+ * cambien los datos en este mismo cliente). */
+
+let notificationsCache: Notification[] | null = null;
 
 function loadNotifications(): Notification[] {
+  if (notificationsCache !== null) return notificationsCache;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Notification[]) : [];
+    notificationsCache = raw ? (JSON.parse(raw) as Notification[]) : [];
   } catch {
-    return [];
+    notificationsCache = [];
   }
+  return notificationsCache;
 }
 
 function saveNotifications(notifications: Notification[]): void {
+  notificationsCache = notifications;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
   } catch {

@@ -58,7 +58,9 @@ export interface ReminderConfig {
 export const DEFAULT_REMINDER_CONFIG: ReminderConfig = {
   firstReminderDays: 3,
   urgentReminderDays: 5,
-  checkIntervalMs: 60_000,
+  // 5 min: balance entre responsividad y consumo. Con Supabase gratuito esto
+  // implica ~12 chequeos/hora por usuario activo en lugar de 60.
+  checkIntervalMs: 300_000,
 };
 
 /* ---------- Plantillas de mensajes ---------- */

@@ -89,7 +89,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
   }, [syncNotifications]);
 
-  /* ---------- Scheduler de recordatorios ---------- */
+  /* ---------- Scheduler de recordatorios ----------
+   * Pausa el polling cuando la pestaña está oculta para no consumir recursos
+   * (relevante cuando esto consulte Supabase): solo se programa un nuevo tick
+   * mientras `document.visibilityState === 'visible'`. */
   useEffect(() => {
     function checkReminders() {
       for (const order of orders) {
@@ -127,17 +130,39 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    checkReminders();
-
-    reminderIntervalRef.current = window.setInterval(
-      checkReminders,
-      reminderConfig.checkIntervalMs
-    );
-
-    return () => {
+    function clearTimer() {
       if (reminderIntervalRef.current !== null) {
         window.clearInterval(reminderIntervalRef.current);
+        reminderIntervalRef.current = null;
       }
+    }
+
+    function startTimer() {
+      clearTimer();
+      reminderIntervalRef.current = window.setInterval(
+        checkReminders,
+        reminderConfig.checkIntervalMs
+      );
+    }
+
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        checkReminders();
+        startTimer();
+      } else {
+        clearTimer();
+      }
+    }
+
+    if (document.visibilityState === 'visible') {
+      checkReminders();
+      startTimer();
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearTimer();
     };
   }, [orders, reminderConfig]);
 

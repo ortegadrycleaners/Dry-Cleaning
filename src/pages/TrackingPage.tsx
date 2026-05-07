@@ -20,7 +20,10 @@ import {
 
 type TrackingVariant = 'recibido' | 'proceso' | 'listo' | 'recordatorio' | 'entregado';
 
-const POLL_INTERVAL_MS = 15_000;
+// 30s en lugar de 15s y con pausa cuando la pestaña no es visible: cuando esta
+// página dispare lecturas a Supabase reduce a la mitad las requests por usuario
+// y elimina por completo el consumo en pestañas en background.
+const POLL_INTERVAL_MS = 30_000;
 
 /* ---------- Progress Steps ---------- */
 
@@ -358,8 +361,36 @@ export function TrackingPage() {
   }, []);
 
   useEffect(() => {
-    const intervalId = window.setInterval(refreshStatus, POLL_INTERVAL_MS);
-    return () => window.clearInterval(intervalId);
+    let intervalId: number | null = null;
+
+    const stop = () => {
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const start = () => {
+      stop();
+      intervalId = window.setInterval(refreshStatus, POLL_INTERVAL_MS);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshStatus();
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stop();
+    };
   }, [refreshStatus]);
 
   const order = orders.find(o => o.id === orderId);
