@@ -16,12 +16,15 @@ const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>(mockOrders);
 
+  /**
+   * Cambia el estado de una orden. NO envía SMS: el envío a Twilio es una
+   * acción explícita del operador a través del único botón "Notificar al
+   * cliente" (ver TwilioService.notifyOrderReady).
+   */
   const updateOrderStatus = useCallback(
     (orderId: string, status: OrderStatus, rackNumber?: string) => {
       setOrders(prevOrders => {
-        let emitEvent: OrderEvent | null = null;
-
-        const updated = prevOrders.map(order => {
+        return prevOrders.map(order => {
           if (order.id !== orderId) return order;
 
           const updatedOrder = { ...order, status };
@@ -30,25 +33,9 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
           }
           if (status === 'LISTO') {
             updatedOrder.daysReady = 0;
-
-            emitEvent = {
-              type: 'ORDER_READY',
-              orderId: order.id,
-              orderNumber: order.orderNumber,
-              customerName: order.customerName,
-              phone: order.phone,
-              timestamp: new Date().toISOString(),
-              payload: { rackNumber: rackNumber ?? order.rackNumber },
-            };
           }
           return updatedOrder;
         });
-
-        if (emitEvent) {
-          queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_READY, emitEvent));
-        }
-
-        return updated;
       });
     },
     []

@@ -1,4 +1,30 @@
-# React + TypeScript + Vite
+# Tintorería Elegance — Backoffice
+
+App backoffice (React + TypeScript + Vite) para gestionar órdenes y enviar
+SMS al cliente cuando una orden queda lista.
+
+## Notificaciones SMS por Twilio
+
+El envío real de SMS pasa por un endpoint backend que custodia el Auth Token
+de Twilio. Para configurarlo:
+
+1. Lee la guía paso a paso: [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md).
+2. Copia el archivo de variables: `cp .env.example .env`.
+3. Define `VITE_NOTIFY_ENDPOINT_URL` apuntando a tu Edge Function /
+   API (recomendado: Supabase Edge Function).
+4. Ajusta cuotas (`VITE_SMS_DAILY_BUDGET`, `VITE_SMS_GLOBAL_PER_MINUTE`,
+   etc.). Mientras `VITE_TWILIO_MOCK=true` la app **no envía nada** a Twilio.
+
+En el dashboard, marca una orden como `LISTO` con su rack, y aparecerá el
+único botón **“Notificar al cliente”** que dispara el SMS tras pasar **17
+capas de protección** (idempotency key, dedup, rate-limit por orden, global
+por minuto, presupuesto diario, kill switch, validación E.164, allowlist QA,
+cooldown anti doble-click, etc.). Detalle completo en
+[`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md).
+
+---
+
+## Plantilla original
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
