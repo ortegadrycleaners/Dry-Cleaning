@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Sparkles, Plus, LogOut, Search, Package, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { NotificationsPanel } from '@/components/NotificationsPanel';
 
 interface MarkReadyModalProps {
   order: Order | null;
@@ -217,6 +218,7 @@ export function DashboardPage() {
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Orden
               </Button>
+              <NotificationsPanel />
               <button
                 onClick={handleLogout}
                 className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 px-3 py-2"
