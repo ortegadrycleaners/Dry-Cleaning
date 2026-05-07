@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, Calendar } from 'lucide-react';
-import { CustomerModal } from '@/components/CustomerModal';
 
 type CustomerFormOutput = z.infer<typeof customerSchema>;
 type CreatedOrderInfo = {
@@ -29,8 +28,6 @@ export function NewOrderPage() {
   const [orderId, setOrderId] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [customerData, setCustomerData] = useState<{ fullName: string; phone: string; smsConsent: boolean } | null>(null);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
 
   // React Hook Form para datos de cliente
@@ -61,7 +58,6 @@ export function NewOrderPage() {
   }, [phone]);
 
   const handlePhoneChange = (value: string) => {
-    if (customerData) return;
     setValue('phone', value);
     setShowSuggestions(true);
     if (!value) {
@@ -93,16 +89,6 @@ export function NewOrderPage() {
   };
 
 
-
-  const handleModalSubmit = (data: { fullName: string; phone: string; smsConsent: boolean }) => {
-    setCustomerData(data);
-    setValue('phone', data.phone);
-    setValue('name', data.fullName);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-  };
 
   useEffect(() => {
     if (!createdOrderInfo) return;
@@ -205,7 +191,6 @@ export function NewOrderPage() {
                   onFocus={() => setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                  disabled={!!customerData}
                 />
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
@@ -249,9 +234,8 @@ export function NewOrderPage() {
                   placeholder="Apellido del cliente"
                   {...register('name')}
                   value={lastName}
-                  onChange={(e) => !customerData && setValue('name', e.target.value)}
+                  onChange={(e) => setValue('name', e.target.value)}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                  disabled={!!customerData}
                 />
                 {errors.name && (
                   <p className="text-sm text-red-600">{errors.name.message as string}</p>
@@ -351,7 +335,6 @@ export function NewOrderPage() {
         </Card>
       </main>
 
-      <CustomerModal isOpen={isModalOpen} onSubmit={handleModalSubmit} onClose={handleModalClose} />
       {createdOrderInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
