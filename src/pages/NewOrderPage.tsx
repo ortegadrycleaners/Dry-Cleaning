@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ArrowLeft, Calendar } from 'lucide-react';
+import { CustomerModal } from '@/components/CustomerModal';
 
 type CustomerFormOutput = z.infer<typeof customerSchema>;
 type CreatedOrderInfo = {
@@ -31,6 +32,8 @@ export function NewOrderPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
   const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingOrderData, setPendingOrderData] = useState<CustomerFormOutput | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // React Hook Form para datos de cliente
@@ -108,6 +111,12 @@ export function NewOrderPage() {
 
   const onSubmit = (data: CustomerFormOutput) => {
     if (!orderId.trim() || !estimatedDate) return;
+    setPendingOrderData(data);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSubmit = (modalData: any) => {
+    if (!pendingOrderData) return;
 
     const createdAt = new Date().toISOString().split('T')[0];
     const publicId = generatePublicId(12);
@@ -115,20 +124,26 @@ export function NewOrderPage() {
     const newOrder: Order = {
       id: publicId,
       orderNumber: orderId.trim(),
-      customerName: data.name,
-      phone: data.phone,
-      ...(data.notes ? { notes: data.notes } : {}),
+      customerName: modalData.name,
+      phone: modalData.phone,
+      ...(modalData.notes ? { notes: modalData.notes } : {}),
       estimatedDate: formatDateDisplay(estimatedDate),
       status: 'RECIBIDO',
       createdAt,
     };
     addOrder(newOrder);
+    setIsModalOpen(false);
     setCreatedOrderInfo({
       publicId,
       orderNumber: orderId.trim(),
-      customerName: data.name,
+      customerName: modalData.name,
       trackingUrl,
     });
+    setPendingOrderData(null);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -364,6 +379,13 @@ export function NewOrderPage() {
           </div>
         </div>
       )}
+
+      <CustomerModal
+        isOpen={isModalOpen}
+        initialData={pendingOrderData || undefined}
+        onSubmit={handleModalSubmit}
+        onClose={handleModalClose}
+      />
     </div>
   );
 }
