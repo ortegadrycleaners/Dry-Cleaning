@@ -1,12 +1,25 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { Order, OrderStatus } from '@/types';
 import type { OrderEvent } from '@/types/notifications';
-import { mockOrders } from '@/data/mockData';
 import { eventBus } from '@/services/EventBus';
 import { EVENT_NAMES } from '@/services/NotificationService';
+import {
+  fetchOrders,
+  insertOrder,
+  updateOrderStatusInDb,
+} from '@/services/supabase/ordersService';
 
 interface OrdersContextType {
   orders: Order[];
+  isLoading: boolean;
   updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => void;
   addOrder: (order: Order) => void;
 }
@@ -14,35 +27,70 @@ interface OrdersContextType {
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Carga inicial desde Supabase
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    fetchOrders().then((data) => {
+      if (!cancelled) {
+        setOrders(data);
+        setIsLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /**
-   * Cambia el estado de una orden. NO envía SMS: el envío a Twilio es una
-   * acción explícita del operador a través del único botón "Notificar al
-   * cliente" (ver TwilioService.notifyOrderReady).
+   * Cambia el estado de una orden en Supabase y actualiza el estado local.
+   * NO envía SMS: el envío es una acción explícita del operador.
    */
   const updateOrderStatus = useCallback(
     (orderId: string, status: OrderStatus, rackNumber?: string) => {
-      setOrders(prevOrders => {
-        return prevOrders.map(order => {
+      // Optimistic update
+      setOrders((prev) =>
+        prev.map((order) => {
           if (order.id !== orderId) return order;
+          const updated = { ...order, status };
+          if (rackNumber) updated.rackNumber = rackNumber;
+          if (status === 'LISTO') updated.daysReady = 0;
+          return updated;
+        })
+      );
 
-          const updatedOrder = { ...order, status };
-          if (rackNumber) {
-            updatedOrder.rackNumber = rackNumber;
-          }
-          if (status === 'LISTO') {
-            updatedOrder.daysReady = 0;
-          }
-          return updatedOrder;
-        });
+      // Persistir en Supabase (en background, sin bloquear UI)
+      updateOrderStatusInDb(orderId, status, rackNumber).then((ok) => {
+        if (!ok) {
+          console.error('[OrdersContext] No se pudo actualizar el estado en Supabase');
+        }
       });
     },
     []
   );
 
   const addOrder = useCallback((order: Order) => {
-    setOrders(prevOrders => [order, ...prevOrders]);
+    // Optimistic update: agregar al inicio de la lista
+    setOrders((prev) => [order, ...prev]);
+
+    // Persistir en Supabase
+    insertOrder(order).then((newId) => {
+      if (!newId) {
+        console.error('[OrdersContext] No se pudo insertar la orden en Supabase');
+        // Revertir el optimistic update si falló
+        setOrders((prev) => prev.filter((o) => o.id !== order.id));
+        return;
+      }
+      // Actualizar el id con el UUID real asignado por Supabase si difiere
+      if (newId !== order.id) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === order.id ? { ...o, id: newId } : o))
+        );
+      }
+    });
 
     const event: OrderEvent = {
       type: 'ORDER_CREATED',
@@ -56,15 +104,12 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_CREATED, event));
   }, []);
 
-  const value = useMemo<OrdersContextType>(() => ({ orders, updateOrderStatus, addOrder }), [
-    orders,
-    updateOrderStatus,
-    addOrder,
-  ]);
-
-  return (
-    <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>
+  const value = useMemo<OrdersContextType>(
+    () => ({ orders, isLoading, updateOrderStatus, addOrder }),
+    [orders, isLoading, updateOrderStatus, addOrder]
   );
+
+  return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>;
 }
 
 export function useOrders() {

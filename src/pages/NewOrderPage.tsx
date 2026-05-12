@@ -1,13 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { customerSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
 import type { Order } from '@/types';
+import type { Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import { mockCustomers } from '@/data/mockData';
+import { searchCustomersByPhone } from '@/services/supabase/customersService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,8 @@ export function NewOrderPage() {
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
+  const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // React Hook Form para datos de cliente
   const {
@@ -49,23 +52,22 @@ export function NewOrderPage() {
   const phone = watch('phone');
   const lastName = watch('name');
 
-  const filteredCustomers = useMemo(() => {
-    const query = phone?.toLowerCase().replace(/[\s\-()]/g, '');
-    if (!query) return mockCustomers;
-    return mockCustomers.filter(customer =>
-      customer.phone.toLowerCase().replace(/[\s\-()]/g, '').includes(query)
-    );
-  }, [phone]);
-
   const handlePhoneChange = (value: string) => {
     setValue('phone', value);
     setShowSuggestions(true);
     if (!value) {
       setValue('name', '');
+      setCustomerSuggestions([]);
+      return;
     }
+    // Debounce la búsqueda 300ms para no saturar Supabase
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      searchCustomersByPhone(value).then(setCustomerSuggestions);
+    }, 300);
   };
 
-  const handleCustomerSelect = (customer: { phone: string, lastName: string }) => {
+  const handleCustomerSelect = (customer: Customer) => {
     setValue('phone', customer.phone);
     setValue('name', customer.lastName);
     setShowSuggestions(false);
@@ -196,10 +198,10 @@ export function NewOrderPage() {
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
 
-                {/* Autocomplete Suggestions */}
-                {showSuggestions && filteredCustomers.length > 0 && (
+                {/* Autocomplete Suggestions desde Supabase */}
+                {showSuggestions && customerSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredCustomers.map((customer, index) => (
+                    {customerSuggestions.map((customer, index) => (
                       <button
                         key={index}
                         type="button"
@@ -216,7 +218,7 @@ export function NewOrderPage() {
                     ))}
                   </div>
                 )}
-                {showSuggestions && filteredCustomers.length === 0 && (
+                {showSuggestions && phone.length > 3 && customerSuggestions.length === 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg px-4 py-3 text-sm text-gray-500">
                     No se encontraron clientes con ese número.
                   </div>

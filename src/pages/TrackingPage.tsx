@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useOrders } from '@/context/OrdersContext';
 import { orderTicketLabel } from '@/lib/utils';
-import { businessInfo, mockOrders } from '@/data/mockData';
+import { businessInfo } from '@/data/mockData';
 import { BrandLogo } from '@/components/BrandLogo';
 import {
   Loader2,
@@ -353,7 +353,7 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
-  const { orders } = useOrders();
+  const { orders, isLoading } = useOrders();
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
 
   const refreshStatus = useCallback(() => {
@@ -395,7 +395,18 @@ export function TrackingPage() {
 
   const order = orders.find(o => o.id === orderId);
   if (!order) {
-    return <Navigate to="/not-found" replace />;
+    // Mientras carga, mostrar un spinner en lugar de redirigir inmediatamente
+    if (isLoading) {
+      return (
+        <div className="min-h-screen bg-[#0B1521] flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-300 text-sm">Cargando estado de la orden…</p>
+          </div>
+        </div>
+      );
+    }
+    return <div className="min-h-screen bg-[#0B1521] flex items-center justify-center"><p className="text-gray-300">Orden no encontrada.</p></div>;
   }
 
   let variant: TrackingVariant;
@@ -418,11 +429,7 @@ export function TrackingPage() {
       variant = 'proceso';
   }
 
-  const demoLinks = mockOrders
-    .filter(o => o.id !== orderId)
-    .slice(0, 4);
-
-  return (
+return (
     <div className="min-h-screen bg-white font-sans flex flex-col overflow-x-hidden">
       {/* Navegación superior - marca unificada */}
       <nav className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 sm:py-4 bg-white shadow-sm z-10 relative">
@@ -467,23 +474,6 @@ export function TrackingPage() {
         {/* Sección de identidad de marca */}
         <BrandInfoSection />
 
-        {/* Demo: enlaces de ejemplo */}
-        <div className="w-full max-w-3xl mx-auto mt-10 sm:mt-12 p-4 sm:p-5 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
-          <p className="text-sm text-gray-400 text-center mb-4">
-            <strong>Demo:</strong> Prueba con otras órdenes:
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-            {demoLinks.map(demo => (
-              <Link
-                key={demo.id}
-                to={`/tracking/${demo.id}`}
-                className="text-xs sm:text-sm px-3 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#1877F2]/20 text-blue-300 hover:bg-[#1877F2]/40 transition-colors"
-              >
-                #{orderTicketLabel(demo)} — {demo.status}
-              </Link>
-            ))}
-          </div>
-        </div>
       </main>
     </div>
   );

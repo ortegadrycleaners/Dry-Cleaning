@@ -1,15 +1,11 @@
 /**
  * customerSource — Adaptador de la fuente canónica del cliente.
  *
- * En producción esto debe leer de Supabase (tabla `customers` / `orders`).
- * Hoy es un stub que retorna null para que el TwilioService caiga al dato
- * de la orden in-memory; cuando se conecte Supabase se reemplaza la
- * implementación SIN cambiar la firma.
- *
- * Importante: el frontend NO debe ser la única fuente de verdad. El backend
- * que dispara Twilio DEBE volver a leer de Supabase para el envío real —
- * este módulo solo provee información para el preview que ve el operador.
+ * Lee de Supabase la tabla "client" uniendo con "receipt" para obtener
+ * el teléfono y nombre del cliente asociado a una orden.
  */
+
+import { supabase } from '@/lib/supabase';
 
 export interface CustomerRecord {
   /** Nombre tal como debe aparecer en el SMS. */
@@ -20,28 +16,43 @@ export interface CustomerRecord {
   smsOptOut?: boolean;
 }
 
+/** Convierte un numeric de teléfono a formato E.164 para Twilio (+17875550101) */
+function toE164(raw: number | string): string {
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
+
 /**
- * Obtiene el cliente asociado a una orden.
+ * Obtiene el cliente asociado a una orden consultando Supabase.
  *
- * @param orderId ID interno de la orden.
- * @returns El cliente o null si Supabase no está conectado / no hay match.
+ * @param orderId - id_order (UUID) de la orden.
+ * @returns El cliente o null si no se encontró.
  */
 export async function getCustomerForOrder(orderId: string): Promise<CustomerRecord | null> {
-  // Stub: el ID se ignora hasta que se conecte Supabase. Se conserva en la
-  // firma porque es la API pública del adaptador.
-  void orderId;
-  // TODO(supabase): reemplazar por:
-  //
-  //   const { data, error } = await supabase
-  //     .from('orders')
-  //     .select('customer:customers(name, phone, sms_opt_out)')
-  //     .eq('id', orderId)
-  //     .single();
-  //   if (error || !data?.customer) return null;
-  //   return {
-  //     name: data.customer.name,
-  //     phone: data.customer.phone,
-  //     smsOptOut: data.customer.sms_opt_out ?? false,
-  //   };
-  return null;
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(`
+      client:fk_cliente (
+        name,
+        phone_number
+      )
+    `)
+    .eq('id_order', orderId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('[customerSource] getCustomerForOrder error:', error?.message);
+    return null;
+  }
+
+  const client = data.client as { name: string; phone_number: number } | null;
+  if (!client) return null;
+
+  return {
+    name: client.name ?? '',
+    phone: toE164(client.phone_number),
+    smsOptOut: false,
+  };
 }
