@@ -20,15 +20,15 @@ export const escapeHTML = (str: string) =>
 const nameSchema = z
   .string()
   .trim()
-  .min(2, "El nombre es requerido")
-  .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s'-]+$/, "Solo letras y espacios")
+  .min(2, "Name is required")
+  .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ\s'-]+$/, "Only letters and spaces allowed")
   .transform(val => escapeHTML(val.replace(/\s+/g, " ")));
 
 // Permitir letras, números, espacios, acentos y puntuación básica en notas
 const notesSchema = z
   .string()
-  .max(500, "Máx 500 caracteres")
-  .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ0-9.,:;()\-\s'"!?¿¡\n]*$/, "Caracteres no permitidos en notas")
+  .max(500, "Max 500 characters")
+  .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ0-9.,:;()\-\s'"!?¿¡\n]*$/, "Invalid characters in notes")
   .transform(val => escapeHTML(val.trim()));
 
 // Teléfono PR: 10 dígitos, puede incluir paréntesis, guiones, espacios
@@ -37,12 +37,12 @@ const phoneSchema = z
   .trim()
   .regex(
     /^(\(787\)|787|939|\(939\))[-.\s]?\d{3}[-.\s]?\d{4}$/,
-    "Teléfono inválido (Ej: 787-555-1234)"
+    "Invalid phone number (Ex: 787-555-1234)"
   );
 
 export const customerSchema = z.object({
   name: nameSchema,
   phone: phoneSchema,
   notes: notesSchema.optional(),
-  smsConsent: z.boolean().refine(val => val === true, "Debes aceptar el consentimiento"),
+  smsConsent: z.boolean().refine(val => val === true, "You must accept the consent"),
 });

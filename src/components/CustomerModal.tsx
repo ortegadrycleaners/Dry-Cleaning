@@ -32,6 +32,8 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
         notes: initialData?.notes || '',
         smsConsent: initialData?.smsConsent || false,
       });
+      // Update URL hash when modal opens
+      window.history.replaceState(null, '', '#consent');
     }
   }, [isOpen, initialData, reset]);
 
@@ -50,6 +52,8 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
     setShowSuccess(false);
     setIsSubmitting(false);
     reset();
+    // Remove hash from URL when modal closes
+    window.history.replaceState(null, '', window.location.pathname);
     onClose();
   };
 

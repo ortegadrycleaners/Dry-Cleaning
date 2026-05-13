@@ -109,6 +109,19 @@ export function NewOrderPage() {
     return () => window.clearTimeout(timeoutId);
   }, [createdOrderInfo, navigate]);
 
+  // Detectar hash #consent para abrir el modal directamente
+  useEffect(() => {
+    if (window.location.hash === '#consent') {
+      setIsModalOpen(true);
+      setPendingOrderData({
+        name: '',
+        phone: '',
+        notes: '',
+        smsConsent: false,
+      });
+    }
+  }, []);
+
   const handleCreatedOrderModalClose = () => {
     setCreatedOrderInfo(null);
     navigate('/dashboard');
