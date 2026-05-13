@@ -18,8 +18,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CustomerData>({
+  const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<CustomerData>({
     resolver: zodResolver(customerSchema),
+    mode: 'onChange',
     defaultValues: { name: '', phone: '', smsConsent: false, notes: '' },
   });
 
@@ -71,8 +72,8 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
 
           <div id="formContent" style={{ display: showSuccess ? 'none' : 'block' }}>
             <div className="form-header">
-              <h3>Customer Information</h3>
-              <p>Please provide your details to proceed with the service agreement.</p>
+              <h3>Customer Data Registration</h3>
+              <p>Please provide your information. Explicit consent is required to proceed.</p>
             </div>
 
             <form id="customerForm" onSubmit={handleSubmit(onSubmitForm)} autoComplete="off">
@@ -83,7 +84,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                   type="text"
                   id="name"
                   className={`form-input ${errors.name ? 'error' : ''}`}
-                  placeholder="John Doe"
+                  placeholder="John Garcia"
                   {...register('name')}
                 />
                 {errors.name && <span className="error-message">{errors.name.message}</span>}
@@ -96,13 +97,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                   type="tel"
                   id="phoneNumber"
                   className={`form-input ${errors.phone ? 'error' : ''}`}
-                  placeholder="(555) 123-4567"
+                  placeholder="(787) 555-1234"
                   {...register('phone')}
                 />
                 {errors.phone && <span className="error-message">{errors.phone.message}</span>}
               </div>
 
-              {/* Notas del Pedido */}
+              {/* Order Notes */}
               <div className="form-group">
                 <label htmlFor="notes" className="form-label">Order Notes</label>
                 <textarea
@@ -114,32 +115,42 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                 />
               </div>
 
-              {/* SMS Consent */}
-              <div className="checkbox-group">
+              {/* SMS Consent - MANDATORY */}
+              <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1B2A4A', marginBottom: '0.5rem' }}>
+                    ✓ Explicit Consent (Required)
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                    By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.
+                  </p>
+                </div>
                 <label className="custom-checkbox">
                   <input
                     type="checkbox"
                     id="smsConsent"
                     {...register('smsConsent')}
+                    required
                   />
                   <span className="checkmark"></span>
                 </label>
-                <span className="checkbox-text">
-                  I agree to receive an SMS notification when my order is ready.
+                <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
+                  I accept and authorize the registration of my data and SMS notifications
                 </span>
+                {errors.smsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.smsConsent.message}</span>}
               </div>
 
-              <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                {isSubmitting ? 'Processing...' : 'Accept & Continue'}
+              <button type="submit" className="submit-btn" disabled={isSubmitting || !isValid} style={{ marginTop: '1.5rem', opacity: !isValid ? 0.5 : 1, cursor: !isValid ? 'not-allowed' : 'pointer' }}>
+                {isSubmitting ? 'Processing...' : 'Confirm and Register'}
               </button>
             </form>
           </div>
 
           {/* Success State */}
           <div className="success-message" style={{ display: showSuccess ? 'block' : 'none' }}>
-            <div className="success-icon">&#10003;</div>
-            <h4 className="success-title">Information Received</h4>
-            <p className="success-text">Thank you! We have recorded your preferences and will notify you via SMS.</p>
+            <div className="success-icon">✓</div>
+            <h4 className="success-title">Data Registered!</h4>
+            <p className="success-text">Thank you for your consent. Your data has been registered and you will receive SMS notifications about your order status.</p>
             <button className="submit-btn" style={{ marginTop: '1.5rem' }} onClick={handleClose}>Close</button>
           </div>
         </div>

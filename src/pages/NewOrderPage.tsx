@@ -32,8 +32,11 @@ export function NewOrderPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
   const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [selectedExistingCustomer, setSelectedExistingCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingOrderData, setPendingOrderData] = useState<CustomerFormOutput | null>(null);
+  const [phone, setPhone] = useState('');
+  const [lastName, setLastName] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // React Hook Form para datos de cliente
@@ -41,7 +44,6 @@ export function NewOrderPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(customerSchema),
@@ -52,14 +54,14 @@ export function NewOrderPage() {
     },
   });
 
-  const phone = watch('phone');
-  const lastName = watch('name');
-
   const handlePhoneChange = (value: string) => {
+    setPhone(value);
     setValue('phone', value);
     setShowSuggestions(true);
+    setSelectedExistingCustomer(null);
     if (!value) {
       setValue('name', '');
+      setLastName('');
       setCustomerSuggestions([]);
       return;
     }
@@ -71,8 +73,11 @@ export function NewOrderPage() {
   };
 
   const handleCustomerSelect = (customer: Customer) => {
+    setPhone(customer.phone);
+    setLastName(customer.lastName);
     setValue('phone', customer.phone);
     setValue('name', customer.lastName);
+    setSelectedExistingCustomer(customer);
     setShowSuggestions(false);
   };
 
@@ -111,34 +116,44 @@ export function NewOrderPage() {
 
   const onSubmit = (data: CustomerFormOutput) => {
     if (!orderId.trim() || !estimatedDate) return;
+    
+    // Si el cliente ya existe, crear la orden SIN pedir consentimiento de nuevo
+    if (selectedExistingCustomer) {
+      createOrder(data);
+      return;
+    }
+    
+    // Si es cliente nuevo, requerir consentimiento explícito en el modal
     setPendingOrderData(data);
     setIsModalOpen(true);
   };
 
-  const handleModalSubmit = (modalData: any) => {
-    if (!pendingOrderData) return;
-
+  const createOrder = (data: CustomerFormOutput) => {
     const createdAt = new Date().toISOString().split('T')[0];
     const publicId = generatePublicId(12);
     const trackingUrl = `/tracking/${publicId}`;
     const newOrder: Order = {
       id: publicId,
       orderNumber: orderId.trim(),
-      customerName: modalData.name,
-      phone: modalData.phone,
-      ...(modalData.notes ? { notes: modalData.notes } : {}),
+      customerName: data.name,
+      phone: data.phone,
+      ...(data.notes ? { notes: data.notes } : {}),
       estimatedDate: formatDateDisplay(estimatedDate),
       status: 'RECIBIDO',
       createdAt,
     };
     addOrder(newOrder);
-    setIsModalOpen(false);
     setCreatedOrderInfo({
       publicId,
       orderNumber: orderId.trim(),
-      customerName: modalData.name,
+      customerName: data.name,
       trackingUrl,
     });
+  };
+
+  const handleModalSubmit = (modalData: CustomerFormOutput) => {
+    createOrder(modalData);
+    setIsModalOpen(false);
     setPendingOrderData(null);
   };
 
@@ -173,6 +188,11 @@ export function NewOrderPage() {
             </p>
           </CardHeader>
           <CardContent>
+            <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+              <p className="text-xs text-amber-800 font-medium">
+                ⚠️ CONSENTIMIENTO REQUERIDO: Si el cliente es nuevo o cambias sus datos, deberá dar consentimiento explícito en el modal para registrar sus datos y recibir SMS. Si ya existe, se creará la orden sin pedir consentimiento nuevamente.
+              </p>
+            </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Order ID */}
               <div className="space-y-2">
@@ -212,6 +232,9 @@ export function NewOrderPage() {
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
+                {!errors.phone && !showSuggestions && phone && (
+                  <p className="text-xs text-gray-500">✓ Teléfono válido</p>
+                )}
 
                 {/* Autocomplete Suggestions desde Supabase */}
                 {showSuggestions && customerSuggestions.length > 0 && (
@@ -234,8 +257,26 @@ export function NewOrderPage() {
                   </div>
                 )}
                 {showSuggestions && phone.length > 3 && customerSuggestions.length === 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg px-4 py-3 text-sm text-gray-500">
-                    No se encontraron clientes con ese número.
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-3 space-y-3">
+                    <p className="text-sm text-gray-500">No se encontraron clientes con ese número.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        setSelectedExistingCustomer(null);
+                        // Abrir el modal con los datos actuales
+                        setPendingOrderData({
+                          name: lastName,
+                          phone,
+                          notes: '',
+                          smsConsent: false,
+                        });
+                        setIsModalOpen(true);
+                      }}
+                      className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
+                    >
+                      ✓ Registrar como nuevo cliente
+                    </button>
                   </div>
                 )}
               </div>
@@ -244,6 +285,7 @@ export function NewOrderPage() {
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
                   Apellido
+                  <span className="text-red-500 ml-1">*</span>
                 </Label>
                 <Input
                   id="lastName"
@@ -251,28 +293,32 @@ export function NewOrderPage() {
                   placeholder="Apellido del cliente"
                   {...register('name')}
                   value={lastName}
-                  onChange={(e) => setValue('name', e.target.value)}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setValue('name', e.target.value);
+                  }}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                 />
                 {errors.name && (
                   <p className="text-sm text-red-600">{errors.name.message as string}</p>
                 )}
-                            {/* Notas del pedido */}
-                            <div className="space-y-2">
-                              <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
-                                Notas del Pedido
-                              </Label>
-                              <Input
-                                id="notes"
-                                type="text"
-                                placeholder="Notas adicionales (opcional)"
-                                {...register('notes')}
-                                className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                              />
-                              {errors.notes && (
-                                <p className="text-sm text-red-600">{errors.notes.message as string}</p>
-                              )}
-                            </div>
+              </div>
+
+              {/* Notas del pedido */}
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                  Notas del Pedido
+                </Label>
+                <Input
+                  id="notes"
+                  type="text"
+                  placeholder="Notas adicionales (opcional)"
+                  {...register('notes')}
+                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                />
+                {errors.notes && (
+                  <p className="text-sm text-red-600">{errors.notes.message as string}</p>
+                )}
               </div>
 
               {/* Estimated Delivery Date */}

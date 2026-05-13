@@ -44,5 +44,5 @@ export const customerSchema = z.object({
   name: nameSchema,
   phone: phoneSchema,
   notes: notesSchema.optional(),
-  smsConsent: z.boolean().optional(),
+  smsConsent: z.boolean().refine(val => val === true, "Debes aceptar el consentimiento"),
 });
