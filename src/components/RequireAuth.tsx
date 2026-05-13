@@ -6,14 +6,22 @@ interface RequireAuthProps {
   children: ReactNode;
 }
 
-/** Evita acceder a rutas internas si no hay sesión “mock” activa. */
+/** Protege rutas internas verificando la sesión real de Supabase Auth. */
 export function RequireAuth({ children }: RequireAuthProps) {
-  const { isAuthenticated } = useAuth();
+  const { session, loading } = useAuth();
 
-  if (!isAuthenticated) {
+  // Mientras Supabase verifica la sesión existente, no redirigir aún
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">
+        Cargando…
+      </div>
+    );
+  }
+
+  if (!session) {
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 }
-

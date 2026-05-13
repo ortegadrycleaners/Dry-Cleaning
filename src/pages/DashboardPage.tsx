@@ -467,8 +467,8 @@ export function DashboardPage() {
     updateOrderStatus(orderId, 'ENTREGADO');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

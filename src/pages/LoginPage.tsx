@@ -5,26 +5,43 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim() || !password.trim()) {
-      setError('Por favor ingresa usuario y contraseña');
+    if (!email.trim() || !password.trim()) {
+      setError('Por favor ingresa email y contraseña');
       return;
     }
 
-    // Mock login - any credentials work
-    login();
+    setIsLoading(true);
+    const errorMessage = await login(email.trim(), password);
+    setIsLoading(false);
+
+    if (errorMessage) {
+      // Traducir los mensajes más comunes de Supabase al español
+      if (errorMessage.includes('Invalid login credentials')) {
+        setError('Email o contraseña incorrectos');
+      } else if (errorMessage.includes('Email not confirmed')) {
+        setError('Debes confirmar tu email antes de ingresar');
+      } else if (errorMessage.includes('Too many requests')) {
+        setError('Demasiados intentos. Espera unos minutos');
+      } else {
+        setError(errorMessage);
+      }
+      return;
+    }
+
     navigate('/dashboard');
   };
 
@@ -41,15 +58,16 @@ export function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-                Usuario
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email
               </Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Ingresa tu usuario"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="usuario@ejemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
               />
             </div>
@@ -63,6 +81,7 @@ export function LoginPage() {
                 placeholder="Ingresa tu contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
               />
             </div>
@@ -71,9 +90,17 @@ export function LoginPage() {
             )}
             <Button
               type="submit"
+              disabled={isLoading}
               className="w-full h-11 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium"
             >
-              Entrar
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Verificando…
+                </span>
+              ) : (
+                'Entrar'
+              )}
             </Button>
           </form>
         </CardContent>
