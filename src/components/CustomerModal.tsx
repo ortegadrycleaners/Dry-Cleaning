@@ -1,15 +1,11 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import type { z } from 'zod';
 import { customerSchema } from '../lib/customerSchema';
 import './CustomerModal.css';
 
-type CustomerData = {
-  name: string;
-  phone: string;
-  smsConsent: boolean;
-  notes?: string;
-};
+type CustomerData = z.infer<typeof customerSchema>;
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -35,12 +31,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
         notes: initialData?.notes || '',
         smsConsent: initialData?.smsConsent || false,
       });
-      setShowSuccess(false);
-      setIsSubmitting(false);
     }
   }, [isOpen, initialData, reset]);
 
-  const onSubmitForm = (data: CustomerData) => {
+  const onSubmitForm: SubmitHandler<CustomerData> = (data) => {
     setIsSubmitting(true);
     // Simulación de carga para feedback visual
     setTimeout(() => {
@@ -53,6 +47,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
 
   const handleClose = () => {
     setShowSuccess(false);
+    setIsSubmitting(false);
     reset();
     onClose();
   };

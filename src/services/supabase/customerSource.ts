@@ -47,7 +47,10 @@ export async function getCustomerForOrder(orderId: string): Promise<CustomerReco
     return null;
   }
 
-  const client = data.client as { name: string; phone_number: number } | null;
+  const client = Array.isArray(data.client)
+    ? (data.client[0] as { name: string; phone_number: number } | null)
+    : (data.client as { name: string; phone_number: number } | null);
+
   if (!client) return null;
 
   return {

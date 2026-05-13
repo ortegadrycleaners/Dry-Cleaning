@@ -80,7 +80,9 @@ export async function fetchOrders(): Promise<Order[]> {
   }
 
   return (data ?? []).map((row) => {
-    const clientData = row.client as { name: string; phone_number: number } | null;
+    const clientData = Array.isArray(row.client)
+      ? (row.client[0] as { name: string; phone_number: number } | null)
+      : (row.client as { name: string; phone_number: number } | null);
     return rowToOrder({
       ...row,
       name: clientData?.name ?? '',
@@ -197,7 +199,9 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
     return null;
   }
 
-  const clientData = data.client as { name: string; phone_number: number } | null;
+  const clientData = Array.isArray(data.client)
+    ? (data.client[0] as { name: string; phone_number: number } | null)
+    : (data.client as { name: string; phone_number: number } | null);
   return rowToOrder({
     ...data,
     name: clientData?.name ?? '',

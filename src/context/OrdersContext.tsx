@@ -34,12 +34,20 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    fetchOrders().then((data) => {
-      if (!cancelled) {
-        setOrders(data);
-        setIsLoading(false);
-      }
-    });
+    fetchOrders()
+      .then((data) => {
+        if (!cancelled) {
+          setOrders(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('[OrdersContext] Error loading orders:', error);
+          setOrders([]);
+          setIsLoading(false);
+        }
+      });
     return () => {
       cancelled = true;
     };

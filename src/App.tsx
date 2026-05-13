@@ -23,13 +23,24 @@ const NotFoundPage = lazy(async () => ({
   default: (await import('@/pages/NotFoundPage')).default,
 }));
 
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-[#1B2A4A] rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando…</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <OrdersProvider>
         <NotificationsProvider>
           <BrowserRouter>
-            <Suspense fallback={<div className="p-4 text-sm text-gray-600">Cargando…</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route
