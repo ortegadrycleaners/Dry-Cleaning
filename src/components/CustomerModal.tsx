@@ -125,7 +125,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
               <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 <div className="checkbox-description">
                   <p className="checkbox-title">
-                    ✓ Explicit Consent (Required)
+                    Explicit Consent (Required)
                   </p>
                   <p className="checkbox-subtitle">
                     By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.
