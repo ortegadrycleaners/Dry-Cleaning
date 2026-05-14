@@ -229,6 +229,7 @@ export function NewOrderPage() {
       return;
     }
 
+    setSelectedExistingCustomer(null);
     const validationError = await validateOrderInputs(data);
     if (validationError) {
       setSubmitError(validationError);
@@ -304,6 +305,30 @@ export function NewOrderPage() {
                 {/* Validación manual para orderId */}
                 {!orderId.trim() && (
                   <p className="text-sm text-red-600">El ID de orden es requerido</p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                  Apellido
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Apellido del cliente"
+                  {...register('name')}
+                  value={lastName}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setValue('name', e.target.value);
+                    setSubmitError(null);
+                  }}
+                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-600">{errors.name.message as string}</p>
                 )}
               </div>
 
@@ -384,30 +409,6 @@ export function NewOrderPage() {
                       </Button>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Last Name */}
-              <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                  Apellido
-                  <span className="text-red-500 ml-1">*</span>
-                </Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Apellido del cliente"
-                  {...register('name')}
-                  value={lastName}
-                  onChange={(e) => {
-                    setLastName(e.target.value);
-                    setValue('name', e.target.value);
-                    setSubmitError(null);
-                  }}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-600">{errors.name.message as string}</p>
                 )}
               </div>
 
