@@ -123,26 +123,28 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
 
               {/* SMS Consent - MANDATORY */}
               <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1B2A4A', marginBottom: '0.5rem' }}>
+                <div className="checkbox-description">
+                  <p className="checkbox-title">
                     ✓ Explicit Consent (Required)
                   </p>
-                  <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                  <p className="checkbox-subtitle">
                     By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.
                   </p>
                 </div>
-                <label className="custom-checkbox">
-                  <input
-                    type="checkbox"
-                    id="smsConsent"
-                    {...register('smsConsent')}
-                    required
-                  />
-                  <span className="checkmark"></span>
-                </label>
-                <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
-                  I accept and authorize the registration of my data and SMS notifications
-                </span>
+                <div className="checkbox-row">
+                  <label className="custom-checkbox">
+                    <input
+                      type="checkbox"
+                      id="smsConsent"
+                      {...register('smsConsent')}
+                      required
+                    />
+                    <span className="checkmark"></span>
+                  </label>
+                  <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
+                    I accept and authorize the registration of my data and SMS notifications
+                  </span>
+                </div>
                 {errors.smsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.smsConsent.message}</span>}
               </div>
 
