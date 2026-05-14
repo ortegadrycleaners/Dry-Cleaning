@@ -96,15 +96,23 @@ export function NewOrderPage() {
     setShowSuggestions(false);
   };
 
+  const formatDateInputValue = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleQuickDate = (days: number) => {
     const date = new Date();
     date.setDate(date.getDate() + days);
-    setEstimatedDate(date.toISOString().split('T')[0]);
+    setEstimatedDate(formatDateInputValue(date));
   };
 
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const options: Intl.DateTimeFormatOptions = {
       day: 'numeric',
       month: 'short',
