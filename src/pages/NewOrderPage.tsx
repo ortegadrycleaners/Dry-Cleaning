@@ -270,11 +270,6 @@ export function NewOrderPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded-lg">
-              <p className="text-xs text-amber-800 font-medium">
-                ⚠️ CONSENTIMIENTO REQUERIDO: Si el cliente es nuevo o cambias sus datos, deberá dar consentimiento explícito en el modal para registrar sus datos y recibir SMS. Si ya existe, se creará la orden sin pedir consentimiento nuevamente.
-              </p>
-            </div>
             {submitError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {submitError}
@@ -362,16 +357,23 @@ export function NewOrderPage() {
                   </div>
                 )}
                 {showSuggestions && phone.length > 3 && customerSuggestions.length === 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-3 space-y-3">
-                    <p className="text-sm text-gray-500">No se encontraron clientes con ese número.</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={openNewCustomerModal}
-                      className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
-                    >
-                      ✓ Registrar como nuevo cliente
-                    </Button>
+                  <div className="absolute z-10 w-full mt-1 space-y-3">
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                      <p className="text-xs font-medium text-amber-800">
+                        ⚠️ CONSENTIMIENTO REQUERIDO: Si el cliente es nuevo o cambias sus datos, deberá dar consentimiento explícito en el modal para registrar sus datos y recibir SMS. Si ya existe, se creará la orden sin pedir consentimiento nuevamente.
+                      </p>
+                    </div>
+                    <div className="rounded-md border border-gray-200 bg-white p-3 shadow-lg space-y-3">
+                      <p className="text-sm text-gray-500">No se encontraron clientes con ese número.</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={openNewCustomerModal}
+                        className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
+                      >
+                        ✓ Registrar como nuevo cliente
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
