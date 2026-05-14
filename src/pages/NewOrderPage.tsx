@@ -310,7 +310,7 @@ export function NewOrderPage() {
               {/* Phone with Autocomplete Search */}
               <div className="space-y-2 relative">
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                  Teléfono
+                  Teléfono<span className="text-red-500 ml-1">*</span>
                 </Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
