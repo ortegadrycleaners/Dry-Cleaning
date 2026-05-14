@@ -158,8 +158,18 @@ export async function updateOrderStatusInDb(
   rackNumber?: string
 ): Promise<boolean> {
   const updates: Record<string, unknown> = { status };
-  if (rackNumber !== undefined) updates.rack_number = rackNumber;
-  if (status === 'LISTO') updates.days_ready = 0;
+  if (rackNumber !== undefined) {
+    updates.rack_number = rackNumber;
+  } else if (status === 'RECIBIDO') {
+    // Limpiar rack_number al revertir a recibido
+    updates.rack_number = null;
+  }
+  if (status === 'LISTO') {
+    updates.days_ready = 0;
+  } else if (status === 'RECIBIDO') {
+    // Limpiar days_ready al revertir
+    updates.days_ready = null;
+  }
 
   const { error } = await supabase
     .from('receipt')

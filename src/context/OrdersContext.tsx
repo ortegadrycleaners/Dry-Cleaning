@@ -64,8 +64,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         prev.map((order) => {
           if (order.id !== orderId) return order;
           const updated = { ...order, status };
-          if (rackNumber) updated.rackNumber = rackNumber;
-          if (status === 'LISTO') updated.daysReady = 0;
+          if (rackNumber !== undefined) {
+            updated.rackNumber = rackNumber;
+          } else if (status === 'RECIBIDO') {
+            // Limpiar rackNumber al revertir a recibido
+            updated.rackNumber = undefined;
+          }
+          if (status === 'LISTO') {
+            updated.daysReady = 0;
+          } else if (status === 'RECIBIDO') {
+            // Limpiar daysReady al revertir
+            updated.daysReady = undefined;
+          }
           return updated;
         })
       );

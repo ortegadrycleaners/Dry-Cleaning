@@ -35,6 +35,7 @@ import {
   Loader2,
   ShieldAlert,
   ShieldCheck,
+  Undo,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import {
@@ -422,6 +423,7 @@ export function DashboardPage() {
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
+  const [pendingDelivery, setPendingDelivery] = useState<{ orderId: string; timeoutId: number } | null>(null);
   const notifiedOrderIds = useNotifiedOrderIds(historyTick);
 
   const filteredOrders = useMemo(() => {
@@ -464,7 +466,41 @@ export function DashboardPage() {
   };
 
   const handleMarkDelivered = (orderId: string) => {
-    updateOrderStatus(orderId, 'ENTREGADO');
+    // Mostrar warning con opción de revertir
+    const timeoutId = window.setTimeout(() => {
+      updateOrderStatus(orderId, 'ENTREGADO');
+      setPendingDelivery(null);
+      toast.success('Pedido marcado como ENTREGADO');
+    }, 5000);
+
+    setPendingDelivery({ orderId, timeoutId });
+
+    toast.warning('Pedido marcado como entregado', {
+      description: 'Se notificará al cliente en 5 segundos. Haz clic para revertir.',
+      action: {
+        label: 'Revertir',
+        onClick: () => handleCancelDelivery(),
+      },
+      duration: 5000,
+    });
+  };
+
+  const handleCancelDelivery = () => {
+    if (pendingDelivery) {
+      clearTimeout(pendingDelivery.timeoutId);
+      setPendingDelivery(null);
+      toast.success('Entrega cancelada');
+    }
+  };
+
+  const handleRevertToReceived = (orderId: string) => {
+    updateOrderStatus(orderId, 'RECIBIDO');
+    toast.success('Orden revertida a RECIBIDO');
+  };
+
+  const handleRevertToReady = (orderId: string) => {
+    updateOrderStatus(orderId, 'LISTO');
+    toast.success('Orden revertida a LISTO');
   };
 
   const handleLogout = async () => {
@@ -604,14 +640,42 @@ export function DashboardPage() {
                               <Button
                                 size="sm"
                                 onClick={() => handleMarkDelivered(order.id)}
-                                className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                disabled={pendingDelivery?.orderId === order.id}
+                                className="bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
                               >
-                                Entregado
+                                {pendingDelivery?.orderId === order.id ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                    Procesando...
+                                  </>
+                                ) : (
+                                  'Entregado'
+                                )}
+                              </Button>
+                            )}
+
+                            {order.status === 'LISTO' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRevertToReceived(order.id)}
+                                className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
+                              >
+                                <Undo className="w-3.5 h-3.5 mr-1" />
+                                Revertir
                               </Button>
                             )}
 
                             {order.status === 'ENTREGADO' && (
-                              <span className="text-gray-400 text-sm">—</span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRevertToReady(order.id)}
+                                className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
+                              >
+                                <Undo className="w-3.5 h-3.5 mr-1" />
+                                Revertir
+                              </Button>
                             )}
                           </div>
                         </TableCell>
