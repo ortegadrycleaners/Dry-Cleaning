@@ -5,15 +5,29 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const cleanInputValue = (value: string) =>
+    value
+      .normalize('NFC')
+      .replace(/[\u200B-\u200D\uFEFF\u2028\u2029]/g, '')
+      .replace(/[\r\n]+/g, '')
+      .trim();
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>, setValue: (value: string) => void) => {
+    event.preventDefault();
+    const pastedText = event.clipboardData.getData('text');
+    setValue(cleanInputValue(pastedText));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +39,10 @@ export function LoginPage() {
     }
 
     setIsLoading(true);
-    const errorMessage = await login(email.trim(), password);
+    // Limpiar caracteres invisibles (zero-width spaces, saltos de linea, etc) que vienen al copiar y pegar
+    const cleanPassword = cleanInputValue(password);
+    const cleanEmail = cleanInputValue(email);
+    const errorMessage = await login(cleanEmail, cleanPassword);
     setIsLoading(false);
 
     if (errorMessage) {
@@ -67,6 +84,7 @@ export function LoginPage() {
                 placeholder="usuario@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onPaste={(e) => handlePaste(e, setEmail)}
                 disabled={isLoading}
                 className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
               />
@@ -75,15 +93,29 @@ export function LoginPage() {
               <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                 Contraseña
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Ingresa tu contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Ingresa tu contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onPaste={(e) => handlePaste(e, setPassword)}
+                  disabled={isLoading}
+                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C] pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
             {error && (
               <p className="text-sm text-red-600">{error}</p>
