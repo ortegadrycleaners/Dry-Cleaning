@@ -16,6 +16,38 @@ function formatPhone(raw: number | string): string {
   return digits;
 }
 
+function normalizePhoneDigits(value: string): string {
+  return String(value).replace(/\D/g, '');
+}
+
+export async function findCustomerByPhone(phone: string): Promise<{ phone: string; name: string } | null> {
+  const digits = normalizePhoneDigits(phone);
+  if (!digits) {
+    return null;
+  }
+
+  const rawPhone = parseInt(digits, 10);
+  const { data, error } = await supabase
+    .from('client')
+    .select('phone_number, name')
+    .eq('phone_number', rawPhone)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[customersService] findCustomerByPhone error:', error.message);
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    phone: formatPhone(data.phone_number),
+    name: data.name ?? '',
+  };
+}
+
 /**
  * Busca clientes cuyo phone_number contiene el texto de búsqueda.
  * El query limpia caracteres no numéricos para comparar dígitos.
@@ -42,17 +74,33 @@ export async function searchCustomersByPhone(query: string): Promise<Customer[]>
     }));
   }
 
-  // Buscar clientes cuyo phone_number empieza con los dígitos dados
-  // Usamos cast a text y LIKE
+  // Buscar clientes cuyo phone_number contiene los dígitos dados.
+  // Aunque la columna es numeric, intentamos usar LIKE de forma directa.
   const { data, error } = await supabase
     .from('client')
     .select('phone_number, name')
-    .like('phone_number::text', `%${digits}%`)
+    .like('phone_number', `%${digits}%`)
     .limit(10);
 
   if (error) {
     console.error('[customersService] searchCustomersByPhone error:', error.message);
-    return [];
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('client')
+      .select('phone_number, name')
+      .order('name', { ascending: true })
+      .limit(200);
+
+    if (fallbackError || !fallbackData) {
+      return [];
+    }
+
+    return fallbackData
+      .filter((row) => String(row.phone_number).includes(digits))
+      .slice(0, 10)
+      .map((row) => ({
+        phone: formatPhone(row.phone_number),
+        lastName: row.name ?? '',
+      }));
   }
 
   return (data ?? []).map((row) => ({

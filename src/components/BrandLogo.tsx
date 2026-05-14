@@ -6,7 +6,7 @@ interface BrandLogoProps {
   className?: string;
 }
 
-/** Logo de marca "Tintorería Elegance" como componente SVG/icon inline. */
+/** Logo de marca "Ortega Dry Cleaners" como componente SVG/icon inline. */
 export function BrandLogo({ size = 'md', className }: BrandLogoProps) {
   const iconSizes = {
     sm: { container: 'w-8 h-8', icon: 'w-4 h-4', text: 'text-sm' },
@@ -27,7 +27,7 @@ export function BrandLogo({ size = 'md', className }: BrandLogoProps) {
         <Sparkles className={cn(s.icon, 'text-[#C9A84C]')} />
       </div>
       <span className={cn(s.text, 'font-bold text-[#1B2A4A]')}>
-        Tintorería Elegance
+        Ortega Dry Cleaners
       </span>
     </div>
   );

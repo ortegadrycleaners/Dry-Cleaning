@@ -518,7 +518,7 @@ export function DashboardPage() {
                 <Sparkles className="w-5 h-5 text-[#C9A84C]" />
               </div>
               <span className="text-lg font-bold text-[#1B2A4A] hidden sm:block">
-                Tintorería Elegance
+                Ortega Dry Cleaners
               </span>
             </div>
             <div className="flex items-center gap-3">

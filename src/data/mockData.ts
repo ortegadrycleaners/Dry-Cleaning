@@ -95,7 +95,7 @@ export const mockCustomers: Customer[] = [
 ];
 
 export const businessInfo = {
-  name: 'Tintorería Elegance',
+  name: 'Ortega Dry Cleaners',
   address: 'Calle Fortaleza 23, San Juan, PR 00901',
   hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
   phone: '(787) 555-0200',

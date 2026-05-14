@@ -7,16 +7,22 @@ import './CustomerModal.css';
 
 type CustomerData = z.infer<typeof customerSchema>;
 
+interface SubmitResult {
+  success: boolean;
+  error?: string;
+}
+
 interface CustomerModalProps {
   isOpen: boolean;
   initialData?: Partial<CustomerData>;
-  onSubmit: (data: CustomerData) => void;
+  onSubmit: (data: CustomerData) => Promise<SubmitResult>;
   onClose: () => void;
 }
 
 export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialData, onSubmit, onClose }) => {
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<CustomerData>({
     resolver: zodResolver(customerSchema),
@@ -36,15 +42,19 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
     }
   }, [isOpen, initialData, reset]);
 
-  const onSubmitForm: SubmitHandler<CustomerData> = (data) => {
+  const onSubmitForm: SubmitHandler<CustomerData> = async (data) => {
     setIsSubmitting(true);
-    // Simulación de carga para feedback visual
-    setTimeout(() => {
-      onSubmit(data);
+    setSubmitError(null);
+    const result = await onSubmit(data);
+    setIsSubmitting(false);
+
+    if (result.success) {
       setShowSuccess(true);
-      setIsSubmitting(false);
       reset();
-    }, 800);
+    } else {
+      setShowSuccess(false);
+      setSubmitError(result.error ?? 'No se pudo registrar el cliente. Por favor revisa los datos e intenta de nuevo.');
+    }
   };
 
   const handleClose = () => {
@@ -80,6 +90,11 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
             </div>
 
             <form id="customerForm" onSubmit={handleSubmit(onSubmitForm)} autoComplete="off">
+            {submitError && (
+              <div className="error-message" style={{ marginBottom: '1rem' }}>
+                {submitError}
+              </div>
+            )}
               {/* Full Name */}
               <div className="form-group">
                 <label htmlFor="name" className="form-label">Full Name</label>

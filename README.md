@@ -1,4 +1,4 @@
-# Tintorería Elegance — Backoffice
+# Ortega Dry Cleaners — Backoffice
 
 App backoffice (React + TypeScript + Vite) para gestionar órdenes y enviar
 SMS al cliente cuando una orden queda lista.

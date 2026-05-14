@@ -15,13 +15,14 @@ import {
   fetchOrders,
   insertOrder,
   updateOrderStatusInDb,
+  type InsertOrderResult,
 } from '@/services/supabase/ordersService';
 
 interface OrdersContextType {
   orders: Order[];
   isLoading: boolean;
   updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => void;
-  addOrder: (order: Order) => void;
+  addOrder: (order: Order) => Promise<InsertOrderResult>;
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
@@ -90,29 +91,25 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const addOrder = useCallback((order: Order) => {
-    // Optimistic update: agregar al inicio de la lista
+  const addOrder = useCallback(async (order: Order): Promise<InsertOrderResult> => {
     setOrders((prev) => [order, ...prev]);
 
-    // Persistir en Supabase
-    insertOrder(order).then((newId) => {
-      if (!newId) {
-        console.error('[OrdersContext] No se pudo insertar la orden en Supabase');
-        // Revertir el optimistic update si falló
-        setOrders((prev) => prev.filter((o) => o.id !== order.id));
-        return;
-      }
-      // Actualizar el id con el UUID real asignado por Supabase si difiere
-      if (newId !== order.id) {
-        setOrders((prev) =>
-          prev.map((o) => (o.id === order.id ? { ...o, id: newId } : o))
-        );
-      }
-    });
+    const result = await insertOrder(order);
+    if (!result.orderId) {
+      console.error('[OrdersContext] No se pudo insertar la orden en Supabase:', result.error);
+      setOrders((prev) => prev.filter((o) => o.id !== order.id));
+      return result;
+    }
+
+    if (result.orderId !== order.id) {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === order.id ? { ...o, id: result.orderId as string } : o))
+      );
+    }
 
     const event: OrderEvent = {
       type: 'ORDER_CREATED',
-      orderId: order.id,
+      orderId: result.orderId,
       orderNumber: order.orderNumber,
       customerName: order.customerName,
       phone: order.phone,
@@ -120,6 +117,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       payload: { estimatedDate: order.estimatedDate },
     };
     queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_CREATED, event));
+
+    return result;
   }, []);
 
   const value = useMemo<OrdersContextType>(

@@ -8,7 +8,7 @@ import type { Order } from '@/types';
 import type { Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import { searchCustomersByPhone } from '@/services/supabase/customersService';
+import { searchCustomersByPhone, findCustomerByPhone } from '@/services/supabase/customersService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,12 +26,13 @@ type CreatedOrderInfo = {
 
 export function NewOrderPage() {
   const navigate = useNavigate();
-  const { addOrder } = useOrders();
+  const { orders, addOrder } = useOrders();
   const [orderId, setOrderId] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
   const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedExistingCustomer, setSelectedExistingCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingOrderData, setPendingOrderData] = useState<CustomerFormOutput | null>(null);
@@ -57,6 +58,7 @@ export function NewOrderPage() {
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
+    setSubmitError(null);
     setValue('phone', value, { shouldValidate: true });
     setShowSuggestions(true);
     setSelectedExistingCustomer(null);
@@ -99,6 +101,69 @@ export function NewOrderPage() {
     return date.toLocaleDateString('es-ES', options);
   };
 
+  const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
+  const normalizeName = (value: string) => value.trim().toLowerCase();
+
+  const validateOrderInputs = async (data: CustomerFormOutput): Promise<string | null> => {
+    const trimmedOrderId = orderId.trim();
+    if (!trimmedOrderId) return 'El número de orden es requerido.';
+    if (!/^[0-9]+$/.test(trimmedOrderId)) {
+      return 'El número de orden debe contener solo dígitos.';
+    }
+
+    if (orders.some((order) => order.orderNumber.trim() === trimmedOrderId)) {
+      return `El número de orden ${trimmedOrderId} ya existe.`;
+    }
+
+    const phoneDigits = normalizePhoneDigits(data.phone);
+    if (!phoneDigits) {
+      return 'El teléfono no es válido.';
+    }
+
+    const existingCustomer = await findCustomerByPhone(phoneDigits);
+    if (existingCustomer && normalizeName(existingCustomer.name) !== normalizeName(data.name)) {
+      return `No se pudo insertar la orden porque el número ${existingCustomer.phone} ya está registrado en Customer Data Registration con ${existingCustomer.name}.`;
+    }
+
+    return null;
+  };
+
+  const createOrder = async (data: CustomerFormOutput): Promise<{ success: boolean; error?: string }> => {
+    const validationError = await validateOrderInputs(data);
+    if (validationError) {
+      setSubmitError(validationError);
+      return { success: false, error: validationError };
+    }
+
+    const createdAt = new Date().toISOString().split('T')[0];
+    const localPublicId = generatePublicId(12);
+    const newOrder: Order = {
+      id: localPublicId,
+      orderNumber: orderId.trim(),
+      customerName: data.name,
+      phone: data.phone,
+      ...(data.notes ? { notes: data.notes } : {}),
+      estimatedDate: formatDateDisplay(estimatedDate),
+      status: 'RECIBIDO',
+      createdAt,
+    };
+
+    const result = await addOrder(newOrder);
+    if (!result.orderId) {
+      const errorMessage = result.error ?? 'No se pudo crear la orden.';
+      setSubmitError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+
+    const actualPublicId = result.orderId;
+    setCreatedOrderInfo({
+      publicId: actualPublicId,
+      orderNumber: orderId.trim(),
+      customerName: data.name,
+      trackingUrl: `/tracking/${actualPublicId}`,
+    });
+    return { success: true };
+  };
 
 
   useEffect(() => {
@@ -128,47 +193,38 @@ export function NewOrderPage() {
     navigate('/dashboard');
   };
 
-  const onSubmit = (data: CustomerFormOutput) => {
-    if (!orderId.trim() || !estimatedDate) return;
-    
-    // Si el cliente ya existe, crear la orden SIN pedir consentimiento de nuevo
-    if (selectedExistingCustomer) {
-      createOrder(data);
+  const onSubmit = async (data: CustomerFormOutput) => {
+    setSubmitError(null);
+    if (!orderId.trim() || !estimatedDate) {
+      setSubmitError('El número de orden y la fecha estimada son requeridos.');
       return;
     }
-    
-    // Si es cliente nuevo, requerir consentimiento explícito en el modal
+
+    if (selectedExistingCustomer) {
+      const result = await createOrder(data);
+      if (result.success) {
+        setSelectedExistingCustomer(null);
+      }
+      return;
+    }
+
+    const validationError = await validateOrderInputs(data);
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
     setPendingOrderData(data);
     setIsModalOpen(true);
   };
 
-  const createOrder = (data: CustomerFormOutput) => {
-    const createdAt = new Date().toISOString().split('T')[0];
-    const publicId = generatePublicId(12);
-    const trackingUrl = `/tracking/${publicId}`;
-    const newOrder: Order = {
-      id: publicId,
-      orderNumber: orderId.trim(),
-      customerName: data.name,
-      phone: data.phone,
-      ...(data.notes ? { notes: data.notes } : {}),
-      estimatedDate: formatDateDisplay(estimatedDate),
-      status: 'RECIBIDO',
-      createdAt,
-    };
-    addOrder(newOrder);
-    setCreatedOrderInfo({
-      publicId,
-      orderNumber: orderId.trim(),
-      customerName: data.name,
-      trackingUrl,
-    });
-  };
-
-  const handleModalSubmit = (modalData: CustomerFormOutput) => {
-    createOrder(modalData);
-    setIsModalOpen(false);
-    setPendingOrderData(null);
+  const handleModalSubmit = async (modalData: CustomerFormOutput) => {
+    const result = await createOrder(modalData);
+    if (result.success) {
+      setIsModalOpen(false);
+      setPendingOrderData(null);
+    }
+    return result;
   };
 
   const handleModalClose = () => {
@@ -207,6 +263,11 @@ export function NewOrderPage() {
                 ⚠️ CONSENTIMIENTO REQUERIDO: Si el cliente es nuevo o cambias sus datos, deberá dar consentimiento explícito en el modal para registrar sus datos y recibir SMS. Si ya existe, se creará la orden sin pedir consentimiento nuevamente.
               </p>
             </div>
+            {submitError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Order ID */}
               <div className="space-y-2">
@@ -218,7 +279,10 @@ export function NewOrderPage() {
                   type="text"
                   placeholder="Ej. 1043"
                   value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
+                  onChange={(e) => {
+                    setOrderId(e.target.value);
+                    setSubmitError(null);
+                  }}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                 />
                 {/* Validación manual para orderId */}
@@ -310,6 +374,7 @@ export function NewOrderPage() {
                   onChange={(e) => {
                     setLastName(e.target.value);
                     setValue('name', e.target.value);
+                    setSubmitError(null);
                   }}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                 />
@@ -375,7 +440,10 @@ export function NewOrderPage() {
                   <Input
                     type="date"
                     value={estimatedDate}
-                    onChange={(e) => setEstimatedDate(e.target.value)}
+                    onChange={(e) => {
+                      setEstimatedDate(e.target.value);
+                      setSubmitError(null);
+                    }}
                     className="pl-10 h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                   />
                 </div>
@@ -397,7 +465,7 @@ export function NewOrderPage() {
                   disabled={!orderId.trim() || !estimatedDate}
                   className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  Crear Orden y Enviar SMS
+                  Crear Orden
                 </Button>
                 <button
                   type="button"

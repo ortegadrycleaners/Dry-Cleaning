@@ -52,7 +52,7 @@ export function LoginPage() {
           <div className="mx-auto w-16 h-16 bg-[#1B2A4A] rounded-full flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-[#C9A84C]" />
           </div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Tintorería Elegance</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">Ortega Dry Cleaners</h1>
           <p className="text-sm text-gray-500">Sistema de Gestión de Órdenes</p>
         </CardHeader>
         <CardContent>

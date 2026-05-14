@@ -12,6 +12,25 @@
 import { supabase } from '@/lib/supabase';
 import type { Order, OrderStatus } from '@/types';
 
+export interface InsertOrderResult {
+  orderId: string | null;
+  error?: string;
+  code?:
+    | 'ORDER_NUMBER_EXISTS'
+    | 'PHONE_NAME_MISMATCH'
+    | 'CLIENT_INSERT_FAILED'
+    | 'RECEIPT_INSERT_FAILED'
+    | 'DATABASE_ERROR';
+}
+
+function normalizePhoneDigits(raw: string): string {
+  return String(raw).replace(/\D/g, '');
+}
+
+function normalizeName(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
 /** Convierte un numeric de teléfono (ej. 7875550101) al formato (787) 555-0101 */
 function formatPhone(raw: number | string): string {
   const digits = String(raw).replace(/\D/g, '');
@@ -95,47 +114,108 @@ export async function fetchOrders(): Promise<Order[]> {
  * Inserta un nuevo cliente (si no existe por phone) y una nueva orden en Supabase.
  * Retorna el id_order (UUID) asignado, o null si ocurrió un error.
  */
-export async function insertOrder(order: Order): Promise<string | null> {
-  const rawPhone = parseInt(order.phone.replace(/\D/g, ''), 10);
+export async function insertOrder(order: Order): Promise<InsertOrderResult> {
+  const rawPhoneDigits = normalizePhoneDigits(order.phone);
+  if (!rawPhoneDigits) {
+    return {
+      orderId: null,
+      error: 'El teléfono no es válido.',
+      code: 'DATABASE_ERROR',
+    };
+  }
+
+  const rawPhone = parseInt(rawPhoneDigits, 10);
+  const numericOrderNumber = parseInt(order.orderNumber.trim(), 10);
+  if (Number.isNaN(numericOrderNumber) || numericOrderNumber <= 0) {
+    return {
+      orderId: null,
+      error: 'El número de orden debe ser un número válido.',
+      code: 'DATABASE_ERROR',
+    };
+  }
+
   const orderId = crypto.randomUUID();
   const clientId = crypto.randomUUID();
 
+  const { data: existingReceipt, error: receiptQueryError } = await supabase
+    .from('receipt')
+    .select('id_order')
+    .eq('order_number', numericOrderNumber)
+    .maybeSingle();
+
+  if (receiptQueryError) {
+    console.error('[ordersService] insertOrder (receipt check) error:', receiptQueryError.message);
+    return {
+      orderId: null,
+      error: 'Error al verificar el número de orden.',
+      code: 'DATABASE_ERROR',
+    };
+  }
+
+  if (existingReceipt) {
+    return {
+      orderId: null,
+      error: `El número de orden ${numericOrderNumber} ya existe.`,
+      code: 'ORDER_NUMBER_EXISTS',
+    };
+  }
+
   // 1. Buscar cliente existente por número de teléfono
-  const { data: existing } = await supabase
+  const { data: existingClient, error: clientQueryError } = await supabase
     .from('client')
-    .select('id_client')
+    .select('id_client, phone_number, name')
     .eq('phone_number', rawPhone)
     .maybeSingle();
 
+  if (clientQueryError) {
+    console.error('[ordersService] insertOrder (client check) error:', clientQueryError.message);
+    return {
+      orderId: null,
+      error: 'Error al verificar el teléfono del cliente.',
+      code: 'DATABASE_ERROR',
+    };
+  }
+
   let resolvedClientId: string;
 
-  if (existing?.id_client) {
-    resolvedClientId = existing.id_client as string;
+  if (existingClient?.id_client) {
+    if (normalizeName(existingClient.name ?? '') !== normalizeName(order.customerName)) {
+      return {
+        orderId: null,
+        error: `No se pudo insertar la orden porque el número ${formatPhone(rawPhone)} ya está registrado en Customer Data Registration con ${existingClient.name}.`,
+        code: 'PHONE_NAME_MISMATCH',
+      };
+    }
+    resolvedClientId = existingClient.id_client as string;
   } else {
-    // 2. Crear cliente nuevo
     const { error: clientError } = await supabase.from('client').insert({
       id_client: clientId,
       phone_number: rawPhone,
       name: order.customerName,
     });
+
     if (clientError) {
       console.error('[ordersService] insertOrder (client) error:', clientError.message);
-      return null;
+      return {
+        orderId: null,
+        error: 'No se pudo crear el cliente.',
+        code: 'CLIENT_INSERT_FAILED',
+      };
     }
+
     resolvedClientId = clientId;
   }
 
   // 3. Insertar la orden (receipt)
   // Convertir estimatedDate de "DD Mes YYYY" a timestamp
   const deliverDate = (() => {
-    // El campo viene como "06 Abr 2026" — parseamos con new Date()
     const parsed = new Date(order.estimatedDate);
     return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
   })();
 
   const { error: receiptError } = await supabase.from('receipt').insert({
     id_order: orderId,
-    order_number: parseInt(order.orderNumber, 10) || 0,
+    order_number: numericOrderNumber,
     order_date: new Date().toISOString(),
     deliver_date: deliverDate,
     fk_cliente: resolvedClientId,
@@ -145,10 +225,14 @@ export async function insertOrder(order: Order): Promise<string | null> {
 
   if (receiptError) {
     console.error('[ordersService] insertOrder (receipt) error:', receiptError.message);
-    return null;
+    return {
+      orderId: null,
+      error: 'No se pudo crear la orden. Verifica que el número de orden no exista.',
+      code: 'RECEIPT_INSERT_FAILED',
+    };
   }
 
-  return orderId;
+  return { orderId };
 }
 
 /** Actualiza el estado de una orden y opcionalmente el número de rack */
