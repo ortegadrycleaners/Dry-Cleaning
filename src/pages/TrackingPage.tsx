@@ -393,7 +393,7 @@ export function TrackingPage() {
     };
   }, [refreshStatus]);
 
-  const order = orders.find(o => o.id === orderId);
+  const order = orders.find((o) => o.publicId === orderId || o.id === orderId);
   if (!order) {
     // Mientras carga, mostrar un spinner en lugar de redirigir inmediatamente
     if (isLoading) {

@@ -101,11 +101,16 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       return result;
     }
 
-    if (result.orderId !== order.id) {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === order.id ? { ...o, id: result.orderId as string } : o))
-      );
-    }
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id !== order.id) return o;
+        return {
+          ...o,
+          id: result.orderId as string,
+          publicId: result.publicId ?? o.publicId,
+        };
+      })
+    );
 
     const event: OrderEvent = {
       type: 'ORDER_CREATED',

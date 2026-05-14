@@ -35,6 +35,7 @@ import {
   Loader2,
   ShieldAlert,
   ShieldCheck,
+  Link,
   Undo,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
@@ -434,10 +435,29 @@ export function DashboardPage() {
       return (
         order.phone.toLowerCase().includes(query) ||
         order.id.toLowerCase().includes(query) ||
+        (order.publicId ?? '').toLowerCase().includes(query) ||
         ticket.toLowerCase().includes(query)
       );
     });
   }, [orders, searchQuery]);
+
+  const buildTrackingUrl = (order: Order) =>
+    `${window.location.origin}/tracking/${order.publicId ?? order.id}`;
+
+  const handleCopyTrackingLink = async (order: Order) => {
+    const url = buildTrackingUrl(order);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Enlace de tracking copiado', {
+        description: `#${order.orderNumber} — ${order.customerName}`,
+      });
+    } catch (error) {
+      console.error('[DashboardPage] Copy tracking link failed:', error);
+      toast.error('No se pudo copiar el enlace', {
+        description: 'Verifica permisos del navegador.',
+      });
+    }
+  };
 
   const handleMarkReady = (order: Order) => {
     setSelectedOrder(order);
@@ -608,6 +628,15 @@ export function DashboardPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCopyTrackingLink(order)}
+                              className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
+                            >
+                              <Link className="w-3.5 h-3.5 mr-1" />
+                              Copiar tracking
+                            </Button>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
                               <Button
                                 size="sm"

@@ -11,7 +11,8 @@ ALTER TABLE "Receipt"
   ADD COLUMN IF NOT EXISTS status       TEXT NOT NULL DEFAULT 'RECIBIDO',
   ADD COLUMN IF NOT EXISTS rack_number  TEXT,
   ADD COLUMN IF NOT EXISTS days_ready   INTEGER,
-  ADD COLUMN IF NOT EXISTS notes        TEXT;
+  ADD COLUMN IF NOT EXISTS notes        TEXT,
+  ADD COLUMN IF NOT EXISTS public_id    TEXT;
 
 -- Constraint: status solo puede ser uno de los 4 valores válidos
 ALTER TABLE "Receipt"
@@ -55,6 +56,11 @@ CREATE INDEX IF NOT EXISTS idx_receipt_fk_cliente ON "Receipt" (fk_cliente);
 
 -- Búsqueda de cliente por teléfono (autocompletado)
 CREATE INDEX IF NOT EXISTS idx_client_phone ON "Client" (phone_number);
+
+-- Tracking por id público (Base62)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_receipt_public_id
+  ON "Receipt" (public_id)
+  WHERE public_id IS NOT NULL;
 
 -- Orden cronológico de las órdenes en el dashboard
 CREATE INDEX IF NOT EXISTS idx_receipt_order_date ON "Receipt" (order_date DESC);

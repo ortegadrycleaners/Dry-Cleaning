@@ -1,8 +1,9 @@
 export type OrderStatus = 'RECIBIDO' | 'EN PROCESO' | 'LISTO' | 'ENTREGADO';
 
-/** id: identificador opaco (p. ej. hash Base62 en URL); orderNumber: ticket visible en backoffice. */
+/** id: UUID interno; publicId: identificador opaco Base62 para tracking público. */
 export interface Order {
   id: string;
+  publicId?: string;
   orderNumber: string;
   customerName: string;
   phone: string;

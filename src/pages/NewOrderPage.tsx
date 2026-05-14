@@ -150,7 +150,8 @@ export function NewOrderPage() {
     const createdAt = new Date().toISOString().split('T')[0];
     const localPublicId = generatePublicId(12);
     const newOrder: Order = {
-      id: localPublicId,
+      id: crypto.randomUUID(),
+      publicId: localPublicId,
       orderNumber: orderId.trim(),
       customerName: data.name,
       phone: data.phone,
@@ -167,7 +168,7 @@ export function NewOrderPage() {
       return { success: false, error: errorMessage };
     }
 
-    const actualPublicId = result.orderId;
+    const actualPublicId = result.publicId ?? localPublicId;
     setCreatedOrderInfo({
       publicId: actualPublicId,
       orderNumber: orderId.trim(),

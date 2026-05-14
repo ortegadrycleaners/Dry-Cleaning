@@ -45,10 +45,14 @@ function buildIdempotencyKey(orderId: string, type: NotificationEventType): stri
 
 /* ---------- Tracking URL ---------- */
 
-function buildTrackingUrl(orderId: string): string {
+function resolveTrackingId(order: Pick<Order, 'id' | 'publicId'>): string {
+  return order.publicId?.trim() || order.id;
+}
+
+function buildTrackingUrl(order: Pick<Order, 'id' | 'publicId'>): string {
   // El token real lo genera el backend al persistir la notificación; el
   // frontend solo arma una URL de preview a la página de tracking.
-  return `${window.location.origin}/tracking/${orderId}`;
+  return `${window.location.origin}/tracking/${resolveTrackingId(order)}`;
 }
 
 /* ---------- Preview de mensaje ---------- */
@@ -57,7 +61,7 @@ export function previewMessage(order: Order, type: NotificationEventType): strin
   const ctx: TemplateContext = {
     customerName: order.customerName,
     orderNumber: order.orderNumber,
-    trackingUrl: buildTrackingUrl(order.id),
+    trackingUrl: buildTrackingUrl(order),
     rackNumber: order.rackNumber,
     daysReady: order.daysReady,
     estimatedDate: order.estimatedDate,
@@ -176,7 +180,7 @@ export async function notifyOrderReady({
   const ctx: TemplateContext = {
     customerName,
     orderNumber: order.orderNumber,
-    trackingUrl: buildTrackingUrl(order.id),
+    trackingUrl: buildTrackingUrl(order),
     rackNumber: order.rackNumber,
     estimatedDate: order.estimatedDate,
   };

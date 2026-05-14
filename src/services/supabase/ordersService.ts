@@ -10,10 +10,12 @@
  */
 
 import { supabase } from '@/lib/supabase';
+import { generatePublicId } from '@/lib/utils';
 import type { Order, OrderStatus } from '@/types';
 
 export interface InsertOrderResult {
   orderId: string | null;
+  publicId: string | null;
   error?: string;
   code?:
     | 'ORDER_NUMBER_EXISTS'
@@ -29,6 +31,12 @@ function normalizePhoneDigits(raw: string): string {
 
 function normalizeName(raw: string): string {
   return raw.trim().toLowerCase();
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
 }
 
 /** Convierte un numeric de teléfono (ej. 7875550101) al formato (787) 555-0101 */
@@ -61,6 +69,7 @@ function toDateString(iso: string): string {
 function rowToOrder(row: Record<string, unknown>): Order {
   return {
     id: row.id_order as string,
+    publicId: (row.public_id as string | undefined) ?? undefined,
     orderNumber: String(row.order_number),
     customerName: (row.name as string) ?? '',
     phone: formatPhone(row.phone_number as number),
@@ -86,6 +95,7 @@ export async function fetchOrders(): Promise<Order[]> {
       rack_number,
       days_ready,
       notes,
+      public_id,
       client:fk_cliente (
         name,
         phone_number
@@ -119,6 +129,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   if (!rawPhoneDigits) {
     return {
       orderId: null,
+      publicId: null,
       error: 'El teléfono no es válido.',
       code: 'DATABASE_ERROR',
     };
@@ -129,12 +140,14 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   if (Number.isNaN(numericOrderNumber) || numericOrderNumber <= 0) {
     return {
       orderId: null,
+      publicId: null,
       error: 'El número de orden debe ser un número válido.',
       code: 'DATABASE_ERROR',
     };
   }
 
-  const orderId = crypto.randomUUID();
+  const orderId = order.id && isUuid(order.id) ? order.id : crypto.randomUUID();
+  const publicId = order.publicId?.trim() || generatePublicId(12);
   const clientId = crypto.randomUUID();
 
   const { data: existingReceipt, error: receiptQueryError } = await supabase
@@ -147,6 +160,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     console.error('[ordersService] insertOrder (receipt check) error:', receiptQueryError.message);
     return {
       orderId: null,
+      publicId: null,
       error: 'Error al verificar el número de orden.',
       code: 'DATABASE_ERROR',
     };
@@ -155,6 +169,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   if (existingReceipt) {
     return {
       orderId: null,
+      publicId: null,
       error: `El número de orden ${numericOrderNumber} ya existe.`,
       code: 'ORDER_NUMBER_EXISTS',
     };
@@ -171,6 +186,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     console.error('[ordersService] insertOrder (client check) error:', clientQueryError.message);
     return {
       orderId: null,
+      publicId: null,
       error: 'Error al verificar el teléfono del cliente.',
       code: 'DATABASE_ERROR',
     };
@@ -182,6 +198,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     if (normalizeName(existingClient.name ?? '') !== normalizeName(order.customerName)) {
       return {
         orderId: null,
+        publicId: null,
         error: `No se pudo insertar la orden porque el número ${formatPhone(rawPhone)} ya está registrado en Customer Data Registration con ${existingClient.name}.`,
         code: 'PHONE_NAME_MISMATCH',
       };
@@ -198,6 +215,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       console.error('[ordersService] insertOrder (client) error:', clientError.message);
       return {
         orderId: null,
+        publicId: null,
         error: 'No se pudo crear el cliente.',
         code: 'CLIENT_INSERT_FAILED',
       };
@@ -215,6 +233,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
 
   const { error: receiptError } = await supabase.from('receipt').insert({
     id_order: orderId,
+    public_id: publicId,
     order_number: numericOrderNumber,
     order_date: new Date().toISOString(),
     deliver_date: deliverDate,
@@ -227,12 +246,13 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     console.error('[ordersService] insertOrder (receipt) error:', receiptError.message);
     return {
       orderId: null,
+      publicId: null,
       error: 'No se pudo crear la orden. Verifica que el número de orden no exista.',
       code: 'RECEIPT_INSERT_FAILED',
     };
   }
 
-  return { orderId };
+  return { orderId, publicId };
 }
 
 /** Actualiza el estado de una orden y opcionalmente el número de rack */
@@ -273,6 +293,7 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
     .from('receipt')
     .select(`
       id_order,
+      public_id,
       order_number,
       order_date,
       deliver_date,
