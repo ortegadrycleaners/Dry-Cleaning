@@ -47,6 +47,7 @@ export function NewOrderPage() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(customerSchema),
+    mode: 'onChange',
     defaultValues: {
       name: '',
       phone: '',
@@ -56,7 +57,7 @@ export function NewOrderPage() {
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
-    setValue('phone', value);
+    setValue('phone', value, { shouldValidate: true });
     setShowSuggestions(true);
     setSelectedExistingCustomer(null);
     if (!value) {

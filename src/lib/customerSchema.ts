@@ -31,12 +31,12 @@ const notesSchema = z
   .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñüÜ0-9.,:;()\-\s'"!?¿¡\n]*$/, "Invalid characters in notes")
   .transform(val => escapeHTML(val.trim()));
 
-// Teléfono PR: 10 dígitos, puede incluir paréntesis, guiones, espacios
+// Teléfono EE. UU.: 10 dígitos, puede incluir código de área con paréntesis, guiones o espacios
 const phoneSchema = z
   .string()
   .trim()
   .regex(
-    /^(\(787\)|787|939|\(939\))[-.\s]?\d{3}[-.\s]?\d{4}$/,
+    /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/, 
     "Invalid phone number (Ex: 787-555-1234)"
   );
 

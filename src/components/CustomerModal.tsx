@@ -21,7 +21,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
   const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<CustomerData>({
     resolver: zodResolver(customerSchema),
     mode: 'onChange',
-    defaultValues: { name: '', phone: '', smsConsent: false, notes: '' },
+    defaultValues: { name: '', phone: '', smsConsent: false },
   });
 
   React.useEffect(() => {
@@ -29,7 +29,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
       reset({
         name: initialData?.name || '',
         phone: initialData?.phone || '',
-        notes: initialData?.notes || '',
         smsConsent: initialData?.smsConsent || false,
       });
       // Update URL hash when modal opens
@@ -105,18 +104,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                   {...register('phone')}
                 />
                 {errors.phone && <span className="error-message">{errors.phone.message}</span>}
-              </div>
-
-              {/* Order Notes */}
-              <div className="form-group">
-                <label htmlFor="notes" className="form-label">Order Notes</label>
-                <textarea
-                  id="notes"
-                  className="form-input"
-                  placeholder="Additional notes (optional)"
-                  {...register('notes')}
-                  maxLength={200}
-                />
               </div>
 
               {/* SMS Consent - MANDATORY */}
