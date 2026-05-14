@@ -75,6 +75,18 @@ export function NewOrderPage() {
     }, 300);
   };
 
+  const openNewCustomerModal = () => {
+    setShowSuggestions(false);
+    setSelectedExistingCustomer(null);
+    setPendingOrderData({
+      name: lastName,
+      phone,
+      notes: '',
+      smsConsent: false,
+    });
+    setIsModalOpen(true);
+  };
+
   const handleCustomerSelect = (customer: Customer) => {
     setPhone(customer.phone);
     setLastName(customer.lastName);
@@ -296,17 +308,32 @@ export function NewOrderPage() {
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                   Teléfono
                 </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="(787) 555-XXXX"
-                  {...register('phone')}
-                  value={phone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="(787) 555-XXXX"
+                      {...register('phone')}
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                    />
+                  </div>
+                  <div className="w-full sm:w-[30%]">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!phone.trim()}
+                      onClick={openNewCustomerModal}
+                      className="h-11 w-full border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
+                    >
+                      Nuevo cliente
+                    </Button>
+                  </div>
+                </div>
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
@@ -337,24 +364,14 @@ export function NewOrderPage() {
                 {showSuggestions && phone.length > 3 && customerSuggestions.length === 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-3 space-y-3">
                     <p className="text-sm text-gray-500">No se encontraron clientes con ese número.</p>
-                    <button
+                    <Button
                       type="button"
-                      onClick={() => {
-                        setShowSuggestions(false);
-                        setSelectedExistingCustomer(null);
-                        // Abrir el modal con los datos actuales
-                        setPendingOrderData({
-                          name: lastName,
-                          phone,
-                          notes: '',
-                          smsConsent: false,
-                        });
-                        setIsModalOpen(true);
-                      }}
+                      variant="outline"
+                      onClick={openNewCustomerModal}
                       className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
                     >
                       ✓ Registrar como nuevo cliente
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -405,7 +422,7 @@ export function NewOrderPage() {
                 <Label className="text-sm font-medium text-gray-700">
                   Fecha Estimada de Entrega
                 </Label>
-                
+
                 {/* Quick Select Buttons */}
                 <div className="flex gap-2">
                   <Button
