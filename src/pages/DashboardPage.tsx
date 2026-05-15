@@ -638,24 +638,38 @@ export function DashboardPage() {
                               Copiar tracking
                             </Button>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMarkReady(order)}
-                                className="bg-[#1B2A4A] hover:bg-[#2a3d66] text-white text-xs"
-                              >
-                                Marcar Listo
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkReady(order)}
+                                  className="bg-[#1B2A4A] hover:bg-[#2a3d66] text-white text-xs"
+                                  title="Marcar la orden como lista"
+                                >
+                                  Marcar Listo
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Marcar la orden como lista
+                                </span>
+                              </span>
                             )}
 
                             {order.status === 'LISTO' && !alreadyNotified && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleOpenNotify(order)}
-                                className="bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] text-xs font-semibold"
-                              >
-                                <Send className="w-3.5 h-3.5 mr-1" />
-                                Notificar al cliente
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenNotify(order)}
+                                  className="bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] text-xs font-semibold"
+                                  title="Notificar al cliente que su pedido está listo"
+                                >
+                                  <Send className="w-3.5 h-3.5 mr-1" />
+                                  Notificar al cliente
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Notificar al cliente que su pedido está listo
+                                </span>
+                              </span>
                             )}
 
                             {order.status === 'LISTO' && alreadyNotified && (
@@ -666,45 +680,66 @@ export function DashboardPage() {
                             )}
 
                             {order.status === 'LISTO' && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMarkDelivered(order.id)}
-                                disabled={pendingDelivery?.orderId === order.id}
-                                className="bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
-                              >
-                                {pendingDelivery?.orderId === order.id ? (
-                                  <>
-                                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                                    Procesando...
-                                  </>
-                                ) : (
-                                  'Entregado'
-                                )}
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkDelivered(order.id)}
+                                  disabled={pendingDelivery?.orderId === order.id}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
+                                  title="Marcar la orden como retirada por el cliente"
+                                >
+                                  {pendingDelivery?.orderId === order.id ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                                      Procesando...
+                                    </>
+                                  ) : (
+                                    'Entregado'
+                                  )}
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Marcar la orden como retirada por el cliente
+                                </span>
+                              </span>
                             )}
 
                             {order.status === 'LISTO' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRevertToReceived(order.id)}
-                                className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
-                              >
-                                <Undo className="w-3.5 h-3.5 mr-1" />
-                                Revertir
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  onClick={() => handleRevertToReceived(order.id)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                  title="Revertir"
+                                  aria-label="Revertir"
+                                >
+                                  <Undo className="w-3.5 h-3.5" />
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Revertir
+                                </span>
+                              </span>
                             )}
 
                             {order.status === 'ENTREGADO' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRevertToReady(order.id)}
-                                className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
-                              >
-                                <Undo className="w-3.5 h-3.5 mr-1" />
-                                Revertir
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  onClick={() => handleRevertToReady(order.id)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                  title="Revertir"
+                                  aria-label="Revertir"
+                                >
+                                  <Undo className="w-3.5 h-3.5" />
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Revertir
+                                </span>
+                              </span>
                             )}
                           </div>
                         </TableCell>

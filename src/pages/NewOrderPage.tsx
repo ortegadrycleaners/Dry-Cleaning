@@ -13,7 +13,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Droplet,
+  Scissors,
+  AlertCircle,
+  ZapOff,
+  Leaf,
+  Package,
+  Sparkles,
+  Cloud,
+  Shield,
+  Edit3,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { CustomerModal } from '@/components/CustomerModal';
 
 type CustomerFormOutput = z.infer<typeof customerSchema>;
@@ -38,6 +53,7 @@ export function NewOrderPage() {
   const [pendingOrderData, setPendingOrderData] = useState<CustomerFormOutput | null>(null);
   const [phone, setPhone] = useState('');
   const [lastName, setLastName] = useState('');
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // React Hook Form para datos de cliente
@@ -121,6 +137,86 @@ export function NewOrderPage() {
     return date.toLocaleDateString('es-ES', options);
   };
 
+  const presetNotes: Array<{
+    label: string
+    icon: LucideIcon
+    selectedClasses: string
+    unselectedClasses: string
+  }> = [
+    {
+      label: 'Mancha',
+      icon: Droplet,
+      selectedClasses: 'border-red-500 bg-red-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Rotura/Rasgadura',
+      icon: Scissors,
+      selectedClasses: 'border-orange-500 bg-orange-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Botón faltante',
+      icon: AlertCircle,
+      selectedClasses: 'border-yellow-500 bg-yellow-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Cremallera dañada',
+      icon: ZapOff,
+      selectedClasses: 'border-fuchsia-500 bg-fuchsia-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Express (24h)',
+      icon: Clock,
+      selectedClasses: 'border-sky-500 bg-sky-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Sin almidón',
+      icon: Leaf,
+      selectedClasses: 'border-emerald-500 bg-emerald-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Con almidón',
+      icon: Package,
+      selectedClasses: 'border-violet-500 bg-violet-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Solo planchar',
+      icon: Sparkles,
+      selectedClasses: 'border-emerald-500 bg-emerald-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Limpieza en seco',
+      icon: Cloud,
+      selectedClasses: 'border-slate-500 bg-slate-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Frágil/Cuidado especial',
+      icon: Shield,
+      selectedClasses: 'border-pink-500 bg-pink-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+    {
+      label: 'Alteración',
+      icon: Edit3,
+      selectedClasses: 'border-amber-500 bg-amber-500 text-white',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
+    },
+  ];
+
+  const togglePresetNote = (note: string) => {
+    setSelectedNotes((prev) =>
+      prev.includes(note) ? prev.filter((item) => item !== note) : [...prev, note]
+    );
+  };
+
   const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
   const normalizeName = (value: string) => value.trim().toLowerCase();
 
@@ -157,13 +253,18 @@ export function NewOrderPage() {
 
     const createdAt = new Date().toISOString().split('T')[0];
     const localPublicId = generatePublicId(12);
+    const selectedNotesString = selectedNotes.join(', ');
+    const combinedNotes = [selectedNotesString, data.notes?.trim()]
+      .filter(Boolean)
+      .join(selectedNotesString && data.notes ? ', ' : '');
+
     const newOrder: Order = {
       id: crypto.randomUUID(),
       publicId: localPublicId,
       orderNumber: orderId.trim(),
       customerName: data.name,
       phone: data.phone,
-      ...(data.notes ? { notes: data.notes } : {}),
+      ...(combinedNotes ? { notes: combinedNotes } : {}),
       estimatedDate: formatDateDisplay(estimatedDate),
       status: 'RECIBIDO',
       createdAt,
@@ -183,6 +284,7 @@ export function NewOrderPage() {
       customerName: data.name,
       trackingUrl: `/tracking/${actualPublicId}`,
     });
+    setSelectedNotes([]);
     return { success: true };
   };
 
@@ -413,20 +515,44 @@ export function NewOrderPage() {
               </div>
 
               {/* Notas del pedido */}
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">
                   Notas del Pedido
                 </Label>
-                <Input
-                  id="notes"
-                  type="text"
-                  placeholder="Notas adicionales (opcional)"
-                  {...register('notes')}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
-                />
-                {errors.notes && (
-                  <p className="text-sm text-red-600">{errors.notes.message as string}</p>
-                )}
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
+                  {presetNotes.map((note) => {
+                    const Icon = note.icon;
+                    const selected = selectedNotes.includes(note.label);
+                    return (
+                      <button
+                        key={note.label}
+                        type="button"
+                        onClick={() => togglePresetNote(note.label)}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all ${
+                          selected ? note.selectedClasses : note.unselectedClasses
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {note.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                    Otra nota (opcional)
+                  </Label>
+                  <Input
+                    id="notes"
+                    type="text"
+                    placeholder="Descripción libre"
+                    {...register('notes')}
+                    className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                  />
+                  {errors.notes && (
+                    <p className="text-sm text-red-600">{errors.notes.message as string}</p>
+                  )}
+                </div>
               </div>
 
               {/* Estimated Delivery Date */}
