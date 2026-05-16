@@ -191,9 +191,12 @@ function ListoView({ order }: { order: Order }) {
         </p>
       </div>
       {order.rackNumber && <RackLocation rackNumber={order.rackNumber} />}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
         <p className="text-green-800 font-medium">
           Puedes pasar a recogerla cuando gustes
+        </p>
+        <p className="text-green-700 text-sm">
+          ⭐️ Después de recogerla, te invitaremos a contarnos cómo lo hicimos.
         </p>
       </div>
       <ProgressBar currentStatus="LISTO" />
@@ -240,10 +243,21 @@ function EntregadoView({ order }: { order: Order }) {
           Orden #{orderTicketLabel(order)} | {order.customerName}
         </p>
       </div>
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto space-y-3 text-center">
         <p className="text-gray-600 text-sm">
-          Esta orden ya fue recogida. ¡Gracias por tu preferencia!
+          Esta orden ya fue recogida.
         </p>
+        <p className="text-gray-600 text-sm font-medium">
+          ¡Gracias por tu preferencia!
+        </p>
+        <a
+          href={businessInfo.googleReviewUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="inline-flex items-center justify-center rounded-full bg-[#1B2A4A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Escribir review en Google
+        </a>
       </div>
       <ProgressBar currentStatus="ENTREGADO" />
     </div>

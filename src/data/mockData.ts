@@ -99,6 +99,7 @@ export const businessInfo = {
   address: 'Calle Fortaleza 23, San Juan, PR 00901',
   hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
   phone: '(787) 555-0200',
+  googleReviewUrl: 'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR',
   promotions: [
     {
       title: '20% en tu primera orden',

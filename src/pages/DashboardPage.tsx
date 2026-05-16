@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   Link,
   Undo,
+  Zap,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import {
@@ -529,7 +530,7 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -562,7 +563,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -752,6 +753,18 @@ export function DashboardPage() {
           )}
         </div>
       </main>
+
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="border-t border-gray-200 pt-4 flex items-center justify-between gap-4 text-sm text-gray-600">
+          <p className="truncate">
+            Ortega Dry Cleaners — Seguimiento de órdenes y atención con claridad.
+          </p>
+          <p className="inline-flex items-center gap-1 text-gray-500 whitespace-nowrap">
+            <Zap className="w-4 h-4 text-[#C9A84C]" />
+            Powered by Zivo
+          </p>
+        </div>
+      </footer>
 
       <MarkReadyModal
         order={selectedOrder}
