@@ -12,6 +12,7 @@ export interface Order {
   rackNumber?: string;
   daysReady?: number;
   createdAt: string;
+  statusUpdatedAt?: string;
   notes?: string;
 }
 

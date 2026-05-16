@@ -64,7 +64,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       setOrders((prev) =>
         prev.map((order) => {
           if (order.id !== orderId) return order;
-          const updated = { ...order, status };
+          const updated = { ...order, status, statusUpdatedAt: new Date().toISOString() };
           if (rackNumber !== undefined) {
             updated.rackNumber = rackNumber;
           } else if (status === 'RECIBIDO') {

@@ -8,11 +8,12 @@
 -- =============================================================================
 
 ALTER TABLE "Receipt"
-  ADD COLUMN IF NOT EXISTS status       TEXT NOT NULL DEFAULT 'RECIBIDO',
-  ADD COLUMN IF NOT EXISTS rack_number  TEXT,
-  ADD COLUMN IF NOT EXISTS days_ready   INTEGER,
-  ADD COLUMN IF NOT EXISTS notes        TEXT,
-  ADD COLUMN IF NOT EXISTS public_id    TEXT;
+  ADD COLUMN IF NOT EXISTS status             TEXT NOT NULL DEFAULT 'RECIBIDO',
+  ADD COLUMN IF NOT EXISTS status_updated_at   TIMESTAMP WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS rack_number        TEXT,
+  ADD COLUMN IF NOT EXISTS days_ready         INTEGER,
+  ADD COLUMN IF NOT EXISTS notes              TEXT,
+  ADD COLUMN IF NOT EXISTS public_id          TEXT;
 
 -- Constraint: status solo puede ser uno de los 4 valores válidos
 ALTER TABLE "Receipt"

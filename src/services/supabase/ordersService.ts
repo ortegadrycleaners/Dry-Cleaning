@@ -78,6 +78,7 @@ function rowToOrder(row: Record<string, unknown>): Order {
     rackNumber: (row.rack_number as string | undefined) ?? undefined,
     daysReady: (row.days_ready as number | undefined) ?? undefined,
     createdAt: toDateString(row.order_date as string),
+    statusUpdatedAt: row.status_updated_at as string | undefined,
     notes: (row.notes as string | undefined) ?? undefined,
   };
 }
@@ -92,6 +93,7 @@ export async function fetchOrders(): Promise<Order[]> {
       order_date,
       deliver_date,
       status,
+      status_updated_at,
       rack_number,
       days_ready,
       notes,
@@ -239,6 +241,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     deliver_date: deliverDate,
     fk_cliente: resolvedClientId,
     status: order.status,
+    status_updated_at: new Date().toISOString(),
     notes: order.notes ?? null,
   });
 
@@ -261,7 +264,10 @@ export async function updateOrderStatusInDb(
   status: OrderStatus,
   rackNumber?: string
 ): Promise<boolean> {
-  const updates: Record<string, unknown> = { status };
+  const updates: Record<string, unknown> = {
+    status,
+    status_updated_at: new Date().toISOString(),
+  };
   if (rackNumber !== undefined) {
     updates.rack_number = rackNumber;
   } else if (status === 'RECIBIDO') {
@@ -298,6 +304,7 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
       order_date,
       deliver_date,
       status,
+      status_updated_at,
       rack_number,
       days_ready,
       notes,

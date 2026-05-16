@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useOrders } from '@/context/OrdersContext';
-import { orderTicketLabel } from '@/lib/utils';
+import { formatElapsedTime, orderTicketLabel } from '@/lib/utils';
 import { businessInfo } from '@/data/mockData';
 import { BrandLogo } from '@/components/BrandLogo';
 import {
@@ -349,16 +349,12 @@ function BrandInfoSection() {
 /* ---------- Refresh Indicator ---------- */
 
 function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
-  const timeStr = lastRefresh.toLocaleTimeString('es-ES', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  const elapsedText = formatElapsedTime(lastRefresh);
 
   return (
     <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mt-4">
       <RefreshCw className="w-3 h-3" />
-      <span>Última actualización: {timeStr}</span>
+      <span>Actualizado {elapsedText}</span>
     </div>
   );
 }
@@ -472,7 +468,11 @@ return (
             </CardContent>
           </Card>
 
-          <RefreshIndicator lastRefresh={lastRefresh} />
+          <RefreshIndicator lastRefresh={
+            order.statusUpdatedAt && !isNaN(new Date(order.statusUpdatedAt).getTime())
+              ? new Date(order.statusUpdatedAt)
+              : lastRefresh
+          } />
         </div>
 
         {/* Mensaje de marca */}
