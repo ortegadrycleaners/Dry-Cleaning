@@ -1,62 +1,38 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { customerSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
 import type { Order } from '@/types';
-import type { Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import { searchCustomersByPhone, findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
+import { findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Droplet,
-  Scissors,
-  AlertCircle,
-  ZapOff,
-  Leaf,
-  Package,
-  Sparkles,
-  Cloud,
-  Shield,
-  Edit3,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { ArrowLeft, Calendar } from 'lucide-react';
 import { CustomerModal } from '@/components/CustomerModal';
+import { useCustomerSearch } from '@/hooks/useCustomerSearch';
+import { useOrderForm } from '@/hooks/useOrderForm';
+import { useCustomerWizard } from '@/hooks/useCustomerWizard';
 
 type CustomerFormOutput = z.infer<typeof customerSchema>;
-type CreatedOrderInfo = {
-  publicId: string;
-  orderNumber: string;
-  customerName: string;
-  trackingUrl: string;
-};
 
 export function NewOrderPage() {
   const navigate = useNavigate();
   const { orders, addOrder } = useOrders();
-  const [orderId, setOrderId] = useState('');
-  const [estimatedDate, setEstimatedDate] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [createdOrderInfo, setCreatedOrderInfo] = useState<CreatedOrderInfo | null>(null);
-  const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [selectedExistingCustomer, setSelectedExistingCustomer] = useState<Customer | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [pendingOrderData, setPendingOrderData] = useState<CustomerFormOutput | null>(null);
-  const [phone, setPhone] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [createdOrderInfo, setCreatedOrderInfo] = useState<{ publicId: string; orderNumber: string; customerName: string; trackingUrl: string } | null>(null);
 
-  // React Hook Form para datos de cliente
+  // Custom hooks for separated concerns
+  const customerSearch = useCustomerSearch();
+  const orderForm = useOrderForm();
+  const wizard = useCustomerWizard();
+  const [customerName, setCustomerName] = useState('');
+
+  // React Hook Form para validación de cliente
   const {
     register,
     handleSubmit,
@@ -72,156 +48,11 @@ export function NewOrderPage() {
     },
   });
 
-  const handlePhoneChange = (value: string) => {
-    setPhone(value);
-    setSubmitError(null);
-    setValue('phone', value, { shouldValidate: true });
-    setShowSuggestions(true);
-    setSelectedExistingCustomer(null);
-    if (!value) {
-      setValue('name', '');
-      setLastName('');
-      setCustomerSuggestions([]);
-      return;
-    }
-    // Debounce la búsqueda 300ms para no saturar Supabase
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      searchCustomersByPhone(value).then(setCustomerSuggestions);
-    }, 300);
-  };
-
-  const openNewCustomerModal = () => {
-    setShowSuggestions(false);
-    setSelectedExistingCustomer(null);
-    setPendingOrderData({
-      name: lastName,
-      phone,
-      notes: '',
-      smsConsent: false,
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleCustomerSelect = (customer: Customer) => {
-    setPhone(customer.phone);
-    setLastName(customer.lastName);
-    setValue('phone', customer.phone);
-    setValue('name', customer.lastName);
-    setSelectedExistingCustomer(customer);
-    setShowSuggestions(false);
-  };
-
-  const formatDateInputValue = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const handleQuickDate = (days: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    setEstimatedDate(formatDateInputValue(date));
-  };
-
-  const formatDateDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    const options: Intl.DateTimeFormatOptions = {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    };
-    return date.toLocaleDateString('es-ES', options);
-  };
-
-  const presetNotes: Array<{
-    label: string
-    icon: LucideIcon
-    selectedClasses: string
-    unselectedClasses: string
-  }> = [
-    {
-      label: 'Mancha',
-      icon: Droplet,
-      selectedClasses: 'border-red-500 bg-red-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Rotura/Rasgadura',
-      icon: Scissors,
-      selectedClasses: 'border-orange-500 bg-orange-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Botón faltante',
-      icon: AlertCircle,
-      selectedClasses: 'border-yellow-500 bg-yellow-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Cremallera dañada',
-      icon: ZapOff,
-      selectedClasses: 'border-fuchsia-500 bg-fuchsia-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Express (24h)',
-      icon: Clock,
-      selectedClasses: 'border-sky-500 bg-sky-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Sin almidón',
-      icon: Leaf,
-      selectedClasses: 'border-emerald-500 bg-emerald-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Con almidón',
-      icon: Package,
-      selectedClasses: 'border-violet-500 bg-violet-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Solo planchar',
-      icon: Sparkles,
-      selectedClasses: 'border-emerald-500 bg-emerald-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Limpieza en seco',
-      icon: Cloud,
-      selectedClasses: 'border-slate-500 bg-slate-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Frágil/Cuidado especial',
-      icon: Shield,
-      selectedClasses: 'border-pink-500 bg-pink-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-    {
-      label: 'Alteración',
-      icon: Edit3,
-      selectedClasses: 'border-amber-500 bg-amber-500 text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:border-slate-400',
-    },
-  ];
-
-  const togglePresetNote = (note: string) => {
-    setSelectedNotes((prev) =>
-      prev.includes(note) ? prev.filter((item) => item !== note) : [...prev, note]
-    );
-  };
-
   const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
   const normalizeName = (value: string) => value.trim().toLowerCase();
 
   const validateOrderInputs = async (data: CustomerFormOutput): Promise<string | null> => {
-    const trimmedOrderId = orderId.trim();
+    const trimmedOrderId = orderForm.orderId.trim();
     if (!trimmedOrderId) return 'El número de orden es requerido.';
     if (!/^[0-9]+$/.test(trimmedOrderId)) {
       return 'El número de orden debe contener solo dígitos.';
@@ -253,7 +84,7 @@ export function NewOrderPage() {
 
     const createdAt = new Date().toISOString().split('T')[0];
     const localPublicId = generatePublicId(12);
-    const selectedNotesString = selectedNotes.join(', ');
+    const selectedNotesString = orderForm.selectedNotes.join(', ');
     const combinedNotes = [selectedNotesString, data.notes?.trim()]
       .filter(Boolean)
       .join(selectedNotesString && data.notes ? ', ' : '');
@@ -261,11 +92,11 @@ export function NewOrderPage() {
     const newOrder: Order = {
       id: crypto.randomUUID(),
       publicId: localPublicId,
-      orderNumber: orderId.trim(),
+      orderNumber: orderForm.orderId.trim(),
       customerName: data.name,
       phone: data.phone,
       ...(combinedNotes ? { notes: combinedNotes } : {}),
-      estimatedDate: formatDateDisplay(estimatedDate),
+      estimatedDate: orderForm.formatDateDisplay(orderForm.estimatedDate),
       status: 'RECIBIDO',
       createdAt,
     };
@@ -280,15 +111,16 @@ export function NewOrderPage() {
     const actualPublicId = result.publicId ?? localPublicId;
     setCreatedOrderInfo({
       publicId: actualPublicId,
-      orderNumber: orderId.trim(),
+      orderNumber: orderForm.orderId.trim(),
       customerName: data.name,
       trackingUrl: `/tracking/${actualPublicId}`,
     });
-    setSelectedNotes([]);
+    orderForm.clearForm();
     return { success: true };
   };
 
 
+  // Success screen timeout
   useEffect(() => {
     if (!createdOrderInfo) return;
     const timeoutId = window.setTimeout(() => {
@@ -298,18 +130,33 @@ export function NewOrderPage() {
     return () => window.clearTimeout(timeoutId);
   }, [createdOrderInfo, navigate]);
 
-  // Detectar hash #consent para abrir el modal directamente
+  // Detect hash #consent to open modal directly
   useEffect(() => {
     if (window.location.hash === '#consent') {
-      setIsModalOpen(true);
-      setPendingOrderData({
-        name: '',
-        phone: '',
-        notes: '',
-        smsConsent: false,
-      });
+      wizard.openModal({ name: '', phone: '', notes: '', smsConsent: false });
     }
   }, []);
+
+  const handlePhoneChange = (value: string) => {
+    customerSearch.setPhone(value);
+    setSubmitError(null);
+    setValue('phone', value, { shouldValidate: true });
+  };
+
+  const handleCustomerSelect = (customer: any) => {
+    customerSearch.selectCustomer(customer);
+    setValue('phone', customer.phone);
+    setValue('name', customer.lastName);
+  };
+
+  const openNewCustomerModal = () => {
+    wizard.openModal({
+      name: customerName,
+      phone: customerSearch.phone,
+      notes: '',
+      smsConsent: false,
+    });
+  };
 
   const handleCreatedOrderModalClose = () => {
     setCreatedOrderInfo(null);
@@ -318,28 +165,26 @@ export function NewOrderPage() {
 
   const onSubmit = async (data: CustomerFormOutput) => {
     setSubmitError(null);
-    if (!orderId.trim() || !estimatedDate) {
+    if (!orderForm.orderId.trim() || !orderForm.estimatedDate) {
       setSubmitError('El número de orden y la fecha estimada son requeridos.');
       return;
     }
 
-    if (selectedExistingCustomer) {
+    if (customerSearch.selectedCustomer) {
       const result = await createOrder(data);
       if (result.success) {
-        setSelectedExistingCustomer(null);
+        customerSearch.clearSearch();
       }
       return;
     }
 
-    setSelectedExistingCustomer(null);
     const validationError = await validateOrderInputs(data);
     if (validationError) {
       setSubmitError(validationError);
       return;
     }
 
-    setPendingOrderData(data);
-    setIsModalOpen(true);
+    wizard.openModal(data);
   };
 
   const handleModalSubmit = async (modalData: CustomerFormOutput) => {
@@ -348,19 +193,18 @@ export function NewOrderPage() {
       return { success: false, error: result.error };
     }
 
-    setLastName(modalData.name);
-    setPhone(modalData.phone);
+    setCustomerName(modalData.name);
+    customerSearch.selectCustomer({ phone: modalData.phone, lastName: modalData.name, name: modalData.name });
     setValue('name', modalData.name);
     setValue('phone', modalData.phone);
-    setIsModalOpen(false);
-    setPendingOrderData(null);
+    wizard.closeModal();
     setSubmitError(null);
 
     return { success: true };
   };
 
   const handleModalClose = () => {
-    setIsModalOpen(false);
+    wizard.closeModal();
   };
 
   return (
@@ -405,15 +249,15 @@ export function NewOrderPage() {
                   id="orderId"
                   type="text"
                   placeholder="Ej. 1043"
-                  value={orderId}
+                  value={orderForm.orderId}
                   onChange={(e) => {
-                    setOrderId(e.target.value);
+                    orderForm.setOrderId(e.target.value);
                     setSubmitError(null);
                   }}
                   className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                 />
                 {/* Validación manual para orderId */}
-                {!orderId.trim() && (
+                {!orderForm.orderId.trim() && (
                   <p className="text-sm text-red-600">El ID de orden es requerido</p>
                 )}
               </div>
@@ -429,9 +273,9 @@ export function NewOrderPage() {
                   type="text"
                   placeholder="Apellido del cliente"
                   {...register('name')}
-                  value={lastName}
+                  value={customerName}
                   onChange={(e) => {
-                    setLastName(e.target.value);
+                    setCustomerName(e.target.value);
                     setValue('name', e.target.value);
                     setSubmitError(null);
                   }}
@@ -454,10 +298,10 @@ export function NewOrderPage() {
                       type="tel"
                       placeholder="(787) 555-XXXX"
                       {...register('phone')}
-                      value={phone}
+                      value={customerSearch.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      onFocus={() => setShowSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      onFocus={() => customerSearch.setPhone(customerSearch.phone)}
+                      onBlur={() => setTimeout(() => {}, 200)}
                       className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                     />
                   </div>
@@ -465,7 +309,7 @@ export function NewOrderPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={!phone.trim()}
+                      disabled={!customerSearch.phone.trim()}
                       onClick={openNewCustomerModal}
                       className="h-11 w-full border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                     >
@@ -476,14 +320,14 @@ export function NewOrderPage() {
                 {errors.phone && (
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
-                {!errors.phone && !showSuggestions && phone && (
+                {!errors.phone && !customerSearch.showSuggestions && customerSearch.phone && (
                   <p className="text-xs text-gray-500">✓ Teléfono válido</p>
                 )}
 
                 {/* Autocomplete Suggestions desde Supabase */}
-                {showSuggestions && customerSuggestions.length > 0 && (
+                {customerSearch.showSuggestions && customerSearch.suggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {customerSuggestions.map((customer, index) => (
+                    {customerSearch.suggestions.map((customer, index) => (
                       <button
                         key={index}
                         type="button"
@@ -500,7 +344,7 @@ export function NewOrderPage() {
                     ))}
                   </div>
                 )}
-                {showSuggestions && phone.length > 3 && customerSuggestions.length === 0 && (
+                {customerSearch.showSuggestions && customerSearch.phone.length > 3 && customerSearch.suggestions.length === 0 && (
                   <div className="absolute z-10 w-full mt-1 space-y-3">
                     <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
                       <p className="text-xs font-medium text-amber-800">
@@ -528,14 +372,14 @@ export function NewOrderPage() {
                   Notas del Pedido
                 </Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
-                  {presetNotes.map((note) => {
+                  {orderForm.presetNotes.map((note) => {
                     const Icon = note.icon;
-                    const selected = selectedNotes.includes(note.label);
+                    const selected = orderForm.selectedNotes.includes(note.label);
                     return (
                       <button
                         key={note.label}
                         type="button"
-                        onClick={() => togglePresetNote(note.label)}
+                        onClick={() => orderForm.togglePresetNote(note.label)}
                         className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all ${
                           selected ? note.selectedClasses : note.unselectedClasses
                         }`}
@@ -574,7 +418,7 @@ export function NewOrderPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleQuickDate(1)}
+                    onClick={() => orderForm.handleQuickDate(1)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
                     + 1 día
@@ -582,7 +426,7 @@ export function NewOrderPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleQuickDate(3)}
+                    onClick={() => orderForm.handleQuickDate(3)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
                     + 3 días
@@ -590,7 +434,7 @@ export function NewOrderPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleQuickDate(5)}
+                    onClick={() => orderForm.handleQuickDate(5)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
                     + 5 días
@@ -602,21 +446,21 @@ export function NewOrderPage() {
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     type="date"
-                    value={estimatedDate}
+                    value={orderForm.estimatedDate}
                     onChange={(e) => {
-                      setEstimatedDate(e.target.value);
+                      orderForm.setEstimatedDate(e.target.value);
                       setSubmitError(null);
                     }}
                     className="pl-10 h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                   />
                 </div>
-                {estimatedDate && (
+                {orderForm.estimatedDate && (
                   <p className="text-sm text-gray-500">
-                    Fecha seleccionada: {formatDateDisplay(estimatedDate)}
+                    Fecha seleccionada: {orderForm.formatDateDisplay(orderForm.estimatedDate)}
                   </p>
                 )}
                 {/* Validación manual para fecha estimada */}
-                {!estimatedDate && (
+                {!orderForm.estimatedDate && (
                   <p className="text-sm text-red-600">La fecha estimada es requerida</p>
                 )}
               </div>
@@ -625,7 +469,7 @@ export function NewOrderPage() {
               <div className="pt-4 space-y-3">
                 <Button
                   type="submit"
-                  disabled={!orderId.trim() || !estimatedDate}
+                  disabled={!orderForm.orderId.trim() || !orderForm.estimatedDate}
                   className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
                   Crear Orden
@@ -672,8 +516,8 @@ export function NewOrderPage() {
       )}
 
       <CustomerModal
-        isOpen={isModalOpen}
-        initialData={pendingOrderData || undefined}
+        isOpen={wizard.isModalOpen}
+        initialData={wizard.pendingCustomerData || undefined}
         onSubmit={handleModalSubmit}
         onClose={handleModalClose}
       />
