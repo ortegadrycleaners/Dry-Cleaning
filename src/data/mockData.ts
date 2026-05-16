@@ -96,9 +96,9 @@ export const mockCustomers: Customer[] = [
 
 export const businessInfo = {
   name: 'Ortega Dry Cleaners',
-  address: 'Calle Fortaleza 23, San Juan, PR 00901',
-  hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
-  phone: '(787) 555-0200',
+  address: '5330 Ortega Blvd, Jacksonville, FL 32210, United States',
+  hours: 'Lunes - Viernes 8am - 6pm | Sábados 10am - 5pm',
+  phone: '(904) 666-0809',
   googleReviewUrl: 'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR',
   promotions: [
     {
