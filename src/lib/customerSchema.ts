@@ -46,3 +46,7 @@ export const customerSchema = z.object({
   notes: notesSchema.optional(),
   smsConsent: z.boolean().refine(val => val === true, "You must accept the consent"),
 });
+
+export const customerDraftSchema = customerSchema.omit({
+  smsConsent: true,
+});

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
-import { customerSchema } from '@/lib/customerSchema';
+import { customerDraftSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
 import type { Order } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { useCustomerSearch } from '@/hooks/useCustomerSearch';
 import { useOrderForm } from '@/hooks/useOrderForm';
 import { useCustomerWizard } from '@/hooks/useCustomerWizard';
 
-type CustomerFormOutput = z.infer<typeof customerSchema>;
+type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
 
 export function NewOrderPage() {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export function NewOrderPage() {
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(customerSchema),
+    resolver: zodResolver(customerDraftSchema),
     mode: 'onChange',
     defaultValues: {
       name: '',
