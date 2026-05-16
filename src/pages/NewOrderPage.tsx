@@ -8,7 +8,7 @@ import type { Order } from '@/types';
 import type { Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/context/OrdersContext';
-import { searchCustomersByPhone, findCustomerByPhone } from '@/services/supabase/customersService';
+import { searchCustomersByPhone, findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -343,12 +343,20 @@ export function NewOrderPage() {
   };
 
   const handleModalSubmit = async (modalData: CustomerFormOutput) => {
-    const result = await createOrder(modalData);
-    if (result.success) {
-      setIsModalOpen(false);
-      setPendingOrderData(null);
+    const result = await createCustomer({ name: modalData.name, phone: modalData.phone });
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
-    return result;
+
+    setLastName(modalData.name);
+    setPhone(modalData.phone);
+    setValue('name', modalData.name);
+    setValue('phone', modalData.phone);
+    setIsModalOpen(false);
+    setPendingOrderData(null);
+    setSubmitError(null);
+
+    return { success: true };
   };
 
   const handleModalClose = () => {

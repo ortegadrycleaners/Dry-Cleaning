@@ -20,6 +20,10 @@ function normalizePhoneDigits(value: string): string {
   return String(value).replace(/\D/g, '');
 }
 
+function normalizeName(value: string): string {
+  return String(value).trim().toLowerCase();
+}
+
 export async function findCustomerByPhone(phone: string): Promise<{ phone: string; name: string } | null> {
   const digits = normalizePhoneDigits(phone);
   if (!digits) {
@@ -55,6 +59,49 @@ export async function findCustomerByPhone(phone: string): Promise<{ phone: strin
  * @param query - Texto que escribe el usuario (puede incluir paréntesis, guiones, etc.)
  * @returns Lista de Customer para el autocompletado.
  */
+export async function createCustomer(customer: { name: string; phone: string }): Promise<{ success: boolean; error?: string }> {
+  const digits = normalizePhoneDigits(customer.phone);
+  if (!digits) {
+    return { success: false, error: 'El teléfono no es válido.' };
+  }
+
+  const rawPhone = parseInt(digits, 10);
+
+  const { data: existingCustomer, error: existingError } = await supabase
+    .from('client')
+    .select('id_client, name')
+    .eq('phone_number', rawPhone)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error('[customersService] createCustomer (check existing) error:', existingError.message);
+    return { success: false, error: 'Error al verificar el cliente existente.' };
+  }
+
+  if (existingCustomer) {
+    if (normalizeName(existingCustomer.name ?? '') !== normalizeName(customer.name)) {
+      return {
+        success: false,
+        error: `El número ${formatPhone(rawPhone)} ya está registrado con otro nombre.`,
+      };
+    }
+    return { success: true };
+  }
+
+  const { error } = await supabase.from('client').insert({
+    id_client: crypto.randomUUID(),
+    phone_number: rawPhone,
+    name: customer.name,
+  });
+
+  if (error) {
+    console.error('[customersService] createCustomer error:', error.message);
+    return { success: false, error: 'No se pudo registrar el cliente.' };
+  }
+
+  return { success: true };
+}
+
 export async function searchCustomersByPhone(query: string): Promise<Customer[]> {
   // Limpiar query a solo dígitos para buscar en el campo numeric
   const digits = query.replace(/\D/g, '');
