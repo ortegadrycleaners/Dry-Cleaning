@@ -138,15 +138,15 @@ function RecibidoView({ order }: { order: Order }) {
           Tu orden ha sido recibida
         </h2>
         <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)} | Cliente: {order.customerName}
+          Orden #{orderTicketLabel(order)} 
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          Fecha estimada: {order.estimatedDate}
+          Lista para entrega el: {order.estimatedDate}
         </p>
       </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800 text-sm">
-          Estamos preparando tu orden. Te notificaremos cuando esté lista.
+          Estamos preparando tu orden. Te enviaremos un SMS cuando esté lista para recoger
         </p>
       </div>
       <ProgressBar currentStatus="RECIBIDO" />
