@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { OrdersProvider } from '@/context/OrdersContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
 import { Toaster } from '@/components/ui/sonner';
+import { I18nProvider } from '@/i18n';
 
 const LoginPage = lazy(async () => ({
   default: (await import('@/pages/LoginPage')).LoginPage,
@@ -39,9 +40,10 @@ function App() {
     <AuthProvider>
       <OrdersProvider>
         <NotificationsProvider>
-          <BrowserRouter>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
+          <I18nProvider>
+            <BrowserRouter>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route
                   path="/dashboard"
@@ -70,8 +72,9 @@ function App() {
                 <Route path="/not-found" element={<NotFoundPage />} />
                 <Route path="/" element={<Navigate to="/login" replace />} />
               </Routes>
-            </Suspense>
-          </BrowserRouter>
+              </Suspense>
+            </BrowserRouter>
+          </I18nProvider>
           <Toaster />
         </NotificationsProvider>
       </OrdersProvider>

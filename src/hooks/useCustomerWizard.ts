@@ -11,11 +11,6 @@ interface CreatedOrderInfo {
   trackingUrl: string;
 }
 
-interface SubmitResult {
-  success: boolean;
-  error?: string;
-}
-
 interface UseCustomerWizardReturn {
   isModalOpen: boolean;
   pendingCustomerData: CustomerFormOutput | null;

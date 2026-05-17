@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/i18n';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Sparkles, Loader2, Eye, EyeOff } from 'lucide-react';
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,7 @@ export function LoginPage() {
     setError('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Por favor ingresa email y contraseña');
+      setError(t('login.missingCredentials'));
       return;
     }
 
@@ -48,11 +50,11 @@ export function LoginPage() {
     if (errorMessage) {
       // Traducir los mensajes más comunes de Supabase al español
       if (errorMessage.includes('Invalid login credentials')) {
-        setError('Email o contraseña incorrectos');
+        setError(t('login.invalidCredentials'));
       } else if (errorMessage.includes('Email not confirmed')) {
-        setError('Debes confirmar tu email antes de ingresar');
+        setError(t('login.emailNotConfirmed'));
       } else if (errorMessage.includes('Too many requests')) {
-        setError('Demasiados intentos. Espera unos minutos');
+        setError(t('login.tooManyRequests'));
       } else {
         setError(errorMessage);
       }
@@ -69,19 +71,19 @@ export function LoginPage() {
           <div className="mx-auto w-16 h-16 bg-[#1B2A4A] rounded-full flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-[#C9A84C]" />
           </div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Ortega Dry Cleaners</h1>
-          <p className="text-sm text-gray-500">Sistema de Gestión de Órdenes</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('login.title')}</h1>
+          <p className="text-sm text-gray-500">{t('login.subtitle')}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email
+                {t('common.email')}
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="usuario@ejemplo.com"
+                placeholder={t('login.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onPaste={(e) => handlePaste(e, setEmail)}
@@ -91,13 +93,13 @@ export function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Contraseña
+                {t('common.password')}
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Ingresa tu contraseña"
+                  placeholder={t('login.passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onPaste={(e) => handlePaste(e, setPassword)}
@@ -128,10 +130,10 @@ export function LoginPage() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Verificando…
+                  {t('app.loading')}
                 </span>
               ) : (
-                'Entrar'
+                t('login.submit')
               )}
             </Button>
           </form>

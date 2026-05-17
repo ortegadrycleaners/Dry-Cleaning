@@ -6,6 +6,7 @@ import { customerDraftSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
 import type { Order } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '@/i18n';
 import { useOrders } from '@/context/OrdersContext';
 import { findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
 
 export function NewOrderPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { orders, addOrder } = useOrders();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<{ publicId: string; orderNumber: string; customerName: string; trackingUrl: string } | null>(null);
@@ -53,23 +55,26 @@ export function NewOrderPage() {
 
   const validateOrderInputs = async (data: CustomerFormOutput): Promise<string | null> => {
     const trimmedOrderId = orderForm.orderId.trim();
-    if (!trimmedOrderId) return 'El número de orden es requerido.';
+    if (!trimmedOrderId) return t('newOrder.orderNumberRequired');
     if (!/^[0-9]+$/.test(trimmedOrderId)) {
-      return 'El número de orden debe contener solo dígitos.';
+      return t('newOrder.orderNumberDigits');
     }
 
     if (orders.some((order) => order.orderNumber.trim() === trimmedOrderId)) {
-      return `El número de orden ${trimmedOrderId} ya existe.`;
+      return t('newOrder.orderAlreadyExists', { orderNumber: trimmedOrderId });
     }
 
     const phoneDigits = normalizePhoneDigits(data.phone);
     if (!phoneDigits) {
-      return 'El teléfono no es válido.';
+      return t('newOrder.phoneInvalid');
     }
 
     const existingCustomer = await findCustomerByPhone(phoneDigits);
     if (existingCustomer && normalizeName(existingCustomer.name) !== normalizeName(data.name)) {
-      return `No se pudo insertar la orden porque el número ${existingCustomer.phone} ya está registrado en Customer Data Registration con ${existingCustomer.name}.`;
+      return t('newOrder.orderPhoneMismatch', {
+        phone: existingCustomer.phone,
+        customerName: existingCustomer.name,
+      });
     }
 
     return null;
@@ -103,7 +108,7 @@ export function NewOrderPage() {
 
     const result = await addOrder(newOrder);
     if (!result.orderId) {
-      const errorMessage = result.error ?? 'No se pudo crear la orden.';
+      const errorMessage = result.error ?? t('newOrder.orderCreateError');
       setSubmitError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -166,7 +171,7 @@ export function NewOrderPage() {
   const onSubmit = async (data: CustomerFormOutput) => {
     setSubmitError(null);
     if (!orderForm.orderId.trim() || !orderForm.estimatedDate) {
-      setSubmitError('El número de orden y la fecha estimada son requeridos.');
+      setSubmitError(t('newOrder.orderAndDateRequired'));
       return;
     }
 
@@ -194,7 +199,7 @@ export function NewOrderPage() {
     }
 
     setCustomerName(modalData.name);
-    customerSearch.selectCustomer({ phone: modalData.phone, lastName: modalData.name, name: modalData.name });
+    customerSearch.selectCustomer({ phone: modalData.phone, lastName: modalData.name });
     setValue('name', modalData.name);
     setValue('phone', modalData.phone);
     wizard.closeModal();
@@ -218,7 +223,7 @@ export function NewOrderPage() {
               className="flex items-center text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              <span className="text-sm font-medium">Volver</span>
+              <span className="text-sm font-medium">{t('common.back')}</span>
             </button>
           </div>
         </div>
@@ -228,9 +233,9 @@ export function NewOrderPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="shadow-sm border-0">
           <CardHeader className="pb-4">
-            <h1 className="text-2xl font-bold text-[#1B2A4A]">Nueva Orden</h1>
+            <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('newOrder.title')}</h1>
             <p className="text-sm text-gray-500">
-              Ingresa los datos del cliente y la orden
+              {t('newOrder.subtitle')}
             </p>
           </CardHeader>
           <CardContent>
@@ -243,12 +248,12 @@ export function NewOrderPage() {
               {/* Order ID */}
               <div className="space-y-2">
                 <Label htmlFor="orderId" className="text-sm font-medium text-gray-700">
-                  ID de Orden
+                  {t('common.orderId')}
                 </Label>
                 <Input
                   id="orderId"
                   type="text"
-                  placeholder="Ej. 1043"
+                  placeholder={t('common.orderId') + ' • ' + t('newOrder.orderNumberDigits')}
                   value={orderForm.orderId}
                   onChange={(e) => {
                     orderForm.setOrderId(e.target.value);
@@ -258,20 +263,20 @@ export function NewOrderPage() {
                 />
                 {/* Validación manual para orderId */}
                 {!orderForm.orderId.trim() && (
-                  <p className="text-sm text-red-600">El ID de orden es requerido</p>
+                  <p className="text-sm text-red-600">{t('newOrder.orderIdRequired')}</p>
                 )}
               </div>
 
               {/* Last Name */}
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                  Apellido
+                  {t('newOrder.lastName')}
                   <span className="text-red-500 ml-1">*</span>
                 </Label>
                 <Input
                   id="lastName"
                   type="text"
-                  placeholder="Apellido del cliente"
+                  placeholder={t('newOrder.lastNamePlaceholder')}
                   {...register('name')}
                   value={customerName}
                   onChange={(e) => {
@@ -289,14 +294,14 @@ export function NewOrderPage() {
               {/* Phone with Autocomplete Search */}
               <div className="space-y-2 relative">
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                  Teléfono<span className="text-red-500 ml-1">*</span>
+                  {t('common.phone')}<span className="text-red-500 ml-1">*</span>
                 </Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="(787) 555-XXXX"
+                      placeholder={t('newOrder.phonePlaceholder')}
                       {...register('phone')}
                       value={customerSearch.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
@@ -313,7 +318,7 @@ export function NewOrderPage() {
                       onClick={openNewCustomerModal}
                       className="h-11 w-full border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                     >
-                      Nuevo cliente
+                      {t('newOrder.addNewCustomer')}
                     </Button>
                   </div>
                 </div>
@@ -321,7 +326,7 @@ export function NewOrderPage() {
                   <p className="text-sm text-red-600">{errors.phone.message as string}</p>
                 )}
                 {!errors.phone && !customerSearch.showSuggestions && customerSearch.phone && (
-                  <p className="text-xs text-gray-500">✓ Teléfono válido</p>
+                  <p className="text-xs text-gray-500">{t('newOrder.validPhoneHint')}</p>
                 )}
 
                 {/* Autocomplete Suggestions desde Supabase */}
@@ -348,18 +353,18 @@ export function NewOrderPage() {
                   <div className="absolute z-10 w-full mt-1 space-y-3">
                     <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
                       <p className="text-xs font-medium text-amber-800">
-                        ⚠️ CONSENTIMIENTO REQUERIDO: Si el cliente es nuevo o cambias sus datos, deberá dar consentimiento explícito en el modal para registrar sus datos y recibir SMS. Si ya existe, se creará la orden sin pedir consentimiento nuevamente.
+                        {t('newOrder.consentRequiredWarning')}
                       </p>
                     </div>
                     <div className="rounded-md border border-gray-200 bg-white p-3 shadow-lg space-y-3">
-                      <p className="text-sm text-gray-500">No se encontraron clientes con ese número.</p>
+                      <p className="text-sm text-gray-500">{t('newOrder.noCustomersFound')}</p>
                       <Button
                         type="button"
                         variant="outline"
                         onClick={openNewCustomerModal}
                         className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
                       >
-                        ✓ Registrar como nuevo cliente
+                        {t('newOrder.addNewCustomer')}
                       </Button>
                     </div>
                   </div>
@@ -369,7 +374,7 @@ export function NewOrderPage() {
               {/* Notas del pedido */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium text-gray-700">
-                  Notas del Pedido
+                  {t('newOrder.notesTitle')}
                 </Label>
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
                   {orderForm.presetNotes.map((note) => {
@@ -392,12 +397,12 @@ export function NewOrderPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
-                    Otra nota (opcional)
+                    {t('newOrder.notesOptional')}
                   </Label>
                   <Input
                     id="notes"
                     type="text"
-                    placeholder="Descripción libre"
+                    placeholder={t('newOrder.notesPlaceholder')}
                     {...register('notes')}
                     className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
                   />
@@ -410,7 +415,7 @@ export function NewOrderPage() {
               {/* Estimated Delivery Date */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium text-gray-700">
-                  Fecha Estimada de Entrega
+                  {t('common.estimatedDate')}
                 </Label>
 
                 {/* Quick Select Buttons */}
@@ -421,7 +426,7 @@ export function NewOrderPage() {
                     onClick={() => orderForm.handleQuickDate(1)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
-                    + 1 día
+                    {t('newOrder.quickDate1')}
                   </Button>
                   <Button
                     type="button"
@@ -429,7 +434,7 @@ export function NewOrderPage() {
                     onClick={() => orderForm.handleQuickDate(3)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
-                    + 3 días
+                    {t('newOrder.quickDate3')}
                   </Button>
                   <Button
                     type="button"
@@ -437,7 +442,7 @@ export function NewOrderPage() {
                     onClick={() => orderForm.handleQuickDate(5)}
                     className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
                   >
-                    + 5 días
+                    {t('newOrder.quickDate5')}
                   </Button>
                 </div>
 
@@ -456,12 +461,12 @@ export function NewOrderPage() {
                 </div>
                 {orderForm.estimatedDate && (
                   <p className="text-sm text-gray-500">
-                    Fecha seleccionada: {orderForm.formatDateDisplay(orderForm.estimatedDate)}
+                    {t('newOrder.selectedDate', { selectedDate: orderForm.formatDateDisplay(orderForm.estimatedDate) })}
                   </p>
                 )}
                 {/* Validación manual para fecha estimada */}
                 {!orderForm.estimatedDate && (
-                  <p className="text-sm text-red-600">La fecha estimada es requerida</p>
+                  <p className="text-sm text-red-600">{t('newOrder.orderAndDateRequired')}</p>
                 )}
               </div>
 
@@ -472,14 +477,14 @@ export function NewOrderPage() {
                   disabled={!orderForm.orderId.trim() || !orderForm.estimatedDate}
                   className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  Crear Orden
+                  {t('newOrder.createOrder')}
                 </Button>
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard')}
                   className="w-full h-10 text-gray-500 hover:text-gray-700 text-sm"
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </button>
               </div>
             </form>
@@ -490,12 +495,17 @@ export function NewOrderPage() {
       {createdOrderInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-semibold text-[#1B2A4A]">Orden creada</h2>
+            <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('newOrder.orderCreatedTitle')}</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Orden #{createdOrderInfo.orderNumber} para {createdOrderInfo.customerName}.
+              {t('newOrder.orderCreatedMessage', {
+                orderNumber: createdOrderInfo.orderNumber,
+                customerName: createdOrderInfo.customerName,
+              })}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              ID de seguimiento: <span className="font-medium text-gray-700">{createdOrderInfo.publicId}</span>
+              {t('newOrder.orderCreatedTracking', {
+                trackingUrl: createdOrderInfo.trackingUrl,
+              })}
             </p>
             <a
               href={createdOrderInfo.trackingUrl}
@@ -503,12 +513,12 @@ export function NewOrderPage() {
               rel="noopener noreferrer"
               className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline"
             >
-              Abrir enlace de seguimiento
+              {t('tracking.writeReview')}
             </a>
-            <p className="mt-3 text-xs text-gray-500">Este mensaje se cerrará en 3 segundos.</p>
+            <p className="mt-3 text-xs text-gray-500">{t('newOrder.orderCreatedAutoClose')}</p>
             <div className="mt-4 flex justify-end">
               <Button type="button" variant="outline" onClick={handleCreatedOrderModalClose}>
-                Cerrar ahora
+                {t('newOrder.closeNow')}
               </Button>
             </div>
           </div>

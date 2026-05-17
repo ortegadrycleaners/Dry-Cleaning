@@ -13,6 +13,7 @@ import {
   Shield,
   Edit3,
 } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface PresetNote {
   label: string;
@@ -35,6 +36,7 @@ interface UseOrderFormReturn {
 }
 
 export function useOrderForm(): UseOrderFormReturn {
+  const { locale } = useI18n();
   const [orderId, setOrderId] = useState('');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
@@ -125,13 +127,14 @@ export function useOrderForm(): UseOrderFormReturn {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day);
+    const dateLocale = locale === 'en' ? 'en-US' : 'es-ES';
     const options: Intl.DateTimeFormatOptions = {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     };
-    return date.toLocaleDateString('es-ES', options);
-  }, []);
+    return date.toLocaleDateString(dateLocale, options);
+  }, [locale]);
 
   const togglePresetNote = useCallback((label: string) => {
     setSelectedNotes((prev) =>

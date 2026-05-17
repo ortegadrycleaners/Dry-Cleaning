@@ -11,6 +11,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { generatePublicId } from '@/lib/utils';
+import { formatDate } from '@/i18n';
 import type { Order, OrderStatus } from '@/types';
 
 export interface InsertOrderResult {
@@ -48,15 +49,10 @@ function formatPhone(raw: number | string): string {
   return digits;
 }
 
-/** Convierte un timestamp ISO al formato "DD Mes YYYY" en español */
+/** Convierte un timestamp ISO al formato localizado según el navegador */
 function formatDisplayDate(iso: string): string {
   if (!iso) return '';
-  const date = new Date(iso);
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  return formatDate(iso);
 }
 
 /** Convierte un timestamp ISO a "YYYY-MM-DD" para el campo createdAt */

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
+import { useI18n } from '@/i18n';
 import { Card, CardContent } from '@/components/ui/card';
 import { useOrders } from '@/context/OrdersContext';
 import { formatElapsedTime, orderTicketLabel } from '@/lib/utils';
@@ -72,11 +74,12 @@ function ProgressStep({ label, status, isLast }: ProgressStepProps) {
 }
 
 function ProgressBar({ currentStatus }: { currentStatus: string }) {
+  const { t } = useI18n();
   const steps = [
-    { label: 'Recibido', key: 'RECIBIDO' },
-    { label: 'En Proceso', key: 'EN PROCESO' },
-    { label: 'Listo', key: 'LISTO' },
-    { label: 'Entregado', key: 'ENTREGADO' },
+    { label: t('tracking.status.received'), key: 'RECIBIDO' },
+    { label: t('tracking.status.processing'), key: 'EN PROCESO' },
+    { label: t('tracking.status.ready'), key: 'LISTO' },
+    { label: t('tracking.status.delivered'), key: 'ENTREGADO' },
   ];
 
   const getStatus = (stepKey: string): 'completed' | 'current' | 'pending' => {
@@ -128,6 +131,8 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
 /* ---------- Status Views ---------- */
 
 function RecibidoView({ order }: { order: Order }) {
+  const { t } = useI18n();
+
   return (
     <div className="text-center space-y-5">
       <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
@@ -135,18 +140,18 @@ function RecibidoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
-          Tu orden ha sido recibida
+          {t('tracking.receivedTitle')}
         </h2>
         <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)} 
+          Orden #{orderTicketLabel(order)}
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          Lista para entrega el: {order.estimatedDate}
+          {t('tracking.receivedMessage')}
         </p>
       </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800 text-sm">
-          Estamos preparando tu orden. Te enviaremos un SMS cuando esté lista para recoger
+          {t('tracking.receivedMessage')}
         </p>
       </div>
       <ProgressBar currentStatus="RECIBIDO" />
@@ -155,6 +160,8 @@ function RecibidoView({ order }: { order: Order }) {
 }
 
 function EnProcesoView({ order }: { order: Order }) {
+  const { t, formatDate } = useI18n();
+
   return (
     <div className="text-center space-y-5">
       <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
@@ -162,13 +169,13 @@ function EnProcesoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
-          Tu orden está en proceso
+          {t('tracking.processingTitle')}
         </h2>
         <p className="text-gray-600">
           Orden #{orderTicketLabel(order)} | Cliente: {order.customerName}
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          Fecha estimada: {order.estimatedDate}
+          {t('tracking.processingMessage', { estimatedDate: formatDate(order.estimatedDate) })}
         </p>
       </div>
       <ProgressBar currentStatus="EN PROCESO" />
@@ -177,6 +184,8 @@ function EnProcesoView({ order }: { order: Order }) {
 }
 
 function ListoView({ order }: { order: Order }) {
+  const { t } = useI18n();
+
   return (
     <div className="text-center space-y-5">
       <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
@@ -184,20 +193,14 @@ function ListoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
-          ¡Tu orden está lista para retirar!
+          {t('tracking.readyTitle')}
         </h2>
-        <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)}
-        </p>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
       </div>
       {order.rackNumber && <RackLocation rackNumber={order.rackNumber} />}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
-        <p className="text-green-800 font-medium">
-          Puedes pasar a recogerla cuando gustes
-        </p>
-        <p className="text-green-700 text-sm">
-          ⭐️ Después de recogerla, te invitaremos a contarnos cómo lo hicimos.
-        </p>
+        <p className="text-green-800 font-medium">{t('tracking.readyPickupMessage')}</p>
+        <p className="text-green-700 text-sm">{t('tracking.readyReminder')}</p>
       </div>
       <ProgressBar currentStatus="LISTO" />
     </div>
@@ -205,6 +208,8 @@ function ListoView({ order }: { order: Order }) {
 }
 
 function RecordatorioView({ order }: { order: Order }) {
+  const { t } = useI18n();
+
   return (
     <div className="text-center space-y-5">
       <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
@@ -212,17 +217,13 @@ function RecordatorioView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
-          Tu orden lleva {order.daysReady} días lista esperándote
+          {t('tracking.reminderTitle', { daysReady: order.daysReady ?? 0 })}
         </h2>
-        <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)}
-        </p>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
       </div>
       {order.rackNumber && <RackLocation rackNumber={order.rackNumber} />}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-amber-800">
-          Recuerda que puedes pasar en nuestro horario de atención
-        </p>
+        <p className="text-amber-800">{t('tracking.reminderNote')}</p>
       </div>
       <ProgressBar currentStatus="LISTO" />
     </div>
@@ -230,33 +231,27 @@ function RecordatorioView({ order }: { order: Order }) {
 }
 
 function EntregadoView({ order }: { order: Order }) {
+  const { t } = useI18n();
+
   return (
     <div className="text-center space-y-5">
       <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
         <CheckCircle2 className="w-10 h-10 text-gray-400" />
       </div>
       <div>
-        <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
-          Orden entregada
-        </h2>
-        <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)} | {order.customerName}
-        </p>
+        <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">{t('tracking.deliveredTitle')}</h2>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)} | {order.customerName}</p>
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto space-y-3 text-center">
-        <p className="text-gray-600 text-sm">
-          Esta orden ya fue recogida.
-        </p>
-        <p className="text-gray-600 text-sm font-medium">
-          ¡Gracias por tu preferencia!
-        </p>
+        <p className="text-gray-600 text-sm">{t('tracking.deliveredMessage')}</p>
+        <p className="text-gray-600 text-sm font-medium">{t('tracking.deliveredThanks')}</p>
         <a
           href={businessInfo.googleReviewUrl}
           target="_blank"
           rel="noreferrer noopener"
           className="inline-flex items-center justify-center rounded-full bg-[#1B2A4A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          Escribir review en Google
+          {t('tracking.writeReview')}
         </a>
       </div>
       <ProgressBar currentStatus="ENTREGADO" />
@@ -267,6 +262,7 @@ function EntregadoView({ order }: { order: Order }) {
 /* ---------- Brand Identity Section ---------- */
 
 function BrandInfoSection() {
+  const { t } = useI18n();
   return (
     <section className="w-full max-w-3xl mx-auto mt-10 sm:mt-16 space-y-6">
       {/* Dirección y horarios */}
@@ -277,7 +273,7 @@ function BrandInfoSection() {
               <MapPin className="w-5 h-5 text-[#C9A84C]" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white mb-1">Dirección</h4>
+              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.addressTitle')}</h4>
               <p className="text-gray-300 text-sm leading-relaxed">
                 {businessInfo.address}
               </p>
@@ -291,10 +287,10 @@ function BrandInfoSection() {
               <Clock className="w-5 h-5 text-[#C9A84C]" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white mb-1">Horario de Atención</h4>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {businessInfo.hours}
-              </p>
+              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.hoursTitle')}</h4>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {t('brand.hoursValue')}
+                </p>
             </div>
           </CardContent>
         </Card>
@@ -305,7 +301,7 @@ function BrandInfoSection() {
               <Phone className="w-5 h-5 text-[#C9A84C]" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white mb-1">Teléfono</h4>
+              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.phoneTitle')}</h4>
               <p className="text-gray-300 text-sm leading-relaxed">
                 {businessInfo.phone}
               </p>
@@ -317,26 +313,26 @@ function BrandInfoSection() {
       {/* Promociones */}
       <div>
         <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
-          Promociones
+          {t('promotions.title')}
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {businessInfo.promotions.map((promo, i) => (
+          {businessInfo.promotions.map((_, i) => (
             <Card key={i} className="border-[#C9A84C]/20 bg-gradient-to-br from-[#C9A84C]/10 to-transparent backdrop-blur-sm">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <Tag className="w-4 h-4 text-[#C9A84C]" />
-                  <h4 className="text-sm font-semibold text-white">{promo.title}</h4>
+                    <h4 className="text-sm font-semibold text-white">{t(`promotions.${i}.title`)}</h4>
                 </div>
-                <p className="text-gray-300 text-xs leading-relaxed">
-                  {promo.description}
-                </p>
-                {'code' in promo && promo.code && (
-                  <div className="mt-3 inline-block px-3 py-1 bg-[#C9A84C]/20 rounded-full">
-                    <span className="text-xs font-mono font-bold text-[#C9A84C]">
-                      {promo.code}
-                    </span>
-                  </div>
-                )}
+                  <p className="text-gray-300 text-xs leading-relaxed">
+                    {t(`promotions.${i}.description`)}
+                  </p>
+                  {t(`promotions.${i}.code`) && (
+                    <div className="mt-3 inline-block px-3 py-1 bg-[#C9A84C]/20 rounded-full">
+                      <span className="text-xs font-mono font-bold text-[#C9A84C]">
+                        {t(`promotions.${i}.code`)}
+                      </span>
+                    </div>
+                  )}
               </CardContent>
             </Card>
           ))}
@@ -363,6 +359,7 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  const { t } = useI18n();
   const { orders, isLoading } = useOrders();
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
 
@@ -411,12 +408,12 @@ export function TrackingPage() {
         <div className="min-h-screen bg-[#0B1521] flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-300 text-sm">Cargando estado de la orden…</p>
+            <p className="text-gray-300 text-sm">{t('tracking.loadingStatus')}</p>
           </div>
         </div>
       );
     }
-    return <div className="min-h-screen bg-[#0B1521] flex items-center justify-center"><p className="text-gray-300">Orden no encontrada.</p></div>;
+    return <div className="min-h-screen bg-[#0B1521] flex items-center justify-center"><p className="text-gray-300">{t('tracking.orderNotFound')}</p></div>;
   }
 
   let variant: TrackingVariant;
@@ -445,9 +442,15 @@ return (
       <nav className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 sm:py-4 bg-white shadow-sm z-10 relative">
         <BrandLogo size="sm" />
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-          <span className="text-[#1B2A4A] border-b-2 border-[#C9A84C] pb-1">
-            Seguimiento
-          </span>
+          <span className="text-[#1B2A4A] border-b-2 border-[#C9A84C] pb-1">{t('tracking.pageTitle')}</span>
+          {/* Inline toggle for md+ so it sits with the nav */}
+          <div className="ml-4">
+            <LanguageToggle inline />
+          </div>
+        </div>
+        {/* Fixed small-screen toggle (LanguageToggle renders fixed only on md:hidden) */}
+        <div className="md:hidden">
+          <LanguageToggle />
         </div>
       </nav>
 
@@ -456,7 +459,7 @@ return (
         {/* Tarjeta de estado de la orden */}
         <div className="w-full max-w-3xl mx-auto">
           <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
-            Estado de tu orden
+            {t('tracking.statusSection')}
           </h3>
           <Card className="shadow-2xl border-0 overflow-hidden bg-white text-slate-900 rounded-2xl sm:rounded-3xl transform transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
             <CardContent className="p-5 sm:p-8 md:p-12">
@@ -477,12 +480,12 @@ return (
 
         {/* Mensaje de marca */}
         <div className="text-center mt-10 sm:mt-16 max-w-3xl mx-auto px-2">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
-            Mucho más que limpieza. Cuidamos lo que más valoras.
-          </h2>
-          <p className="text-gray-300 text-base sm:text-lg md:text-xl">
-            Descubre todos nuestros servicios.
-          </p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
+              {t('tracking.hero.title')}
+            </h2>
+            <p className="text-gray-300 text-base sm:text-lg md:text-xl">
+              {t('tracking.hero.subtitle')}
+            </p>
         </div>
 
         {/* Sección de identidad de marca */}
