@@ -110,8 +110,8 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-[#1B2A4A] rounded-lg flex items-center justify-center flex-shrink-0">
-          <MapPin className="w-6 h-6 text-[#C9A84C]" />
+        <div className="w-12 h-12 bg-[#3B4BFF] rounded-lg flex items-center justify-center flex-shrink-0">
+          <MapPin className="w-6 h-6 text-white" />
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
@@ -267,8 +267,8 @@ function BrandInfoSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
           <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-[#C9A84C]" />
+            <div className="w-10 h-10 bg-[#3B4BFF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-5 h-5 text-[#3B4BFF]" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-white mb-1">{t('brand.addressTitle')}</h4>
@@ -281,8 +281,8 @@ function BrandInfoSection() {
 
         <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
           <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5 text-[#C9A84C]" />
+            <div className="w-10 h-10 bg-[#3B4BFF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="w-5 h-5 text-[#3B4BFF]" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-white mb-1">{t('brand.hoursTitle')}</h4>
@@ -295,8 +295,8 @@ function BrandInfoSection() {
 
         <Card className="border-white/10 bg-white/5 backdrop-blur-sm sm:col-span-2">
           <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Phone className="w-5 h-5 text-[#C9A84C]" />
+            <div className="w-10 h-10 bg-[#3B4BFF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Phone className="w-5 h-5 text-[#3B4BFF]" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-white mb-1">{t('brand.phoneTitle')}</h4>
@@ -315,18 +315,18 @@ function BrandInfoSection() {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {businessInfo.promotions.map((_, i) => (
-            <Card key={i} className="border-[#C9A84C]/20 bg-gradient-to-br from-[#C9A84C]/10 to-transparent backdrop-blur-sm">
+            <Card key={i} className="border-[#3B4BFF]/20 bg-gradient-to-br from-[#3B4BFF]/10 to-transparent backdrop-blur-sm">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-[#C9A84C]" />
+                  <Tag className="w-4 h-4 text-[#3B4BFF]" />
                     <h4 className="text-sm font-semibold text-white">{t(`promotions.${i}.title`)}</h4>
                 </div>
                   <p className="text-gray-300 text-xs leading-relaxed">
                     {t(`promotions.${i}.description`)}
                   </p>
                   {t(`promotions.${i}.code`) && (
-                    <div className="mt-3 inline-block px-3 py-1 bg-[#C9A84C]/20 rounded-full">
-                      <span className="text-xs font-mono font-bold text-[#C9A84C]">
+                    <div className="mt-3 inline-block px-3 py-1 bg-[#3B4BFF]/10 rounded-full">
+                      <span className="text-xs font-mono font-bold text-[#3B4BFF]">
                         {t(`promotions.${i}.code`)}
                       </span>
                     </div>

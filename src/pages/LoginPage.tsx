@@ -68,8 +68,8 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg border-0">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-16 h-16 bg-[#1B2A4A] rounded-full flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-[#C9A84C]" />
+          <div className="mx-auto w-16 h-16 bg-[#3B4BFF] rounded-full flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('login.title')}</h1>
           <p className="text-sm text-gray-500">{t('login.subtitle')}</p>
@@ -88,7 +88,7 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onPaste={(e) => handlePaste(e, setEmail)}
                 disabled={isLoading}
-                className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
               />
             </div>
             <div className="space-y-2">
@@ -104,7 +104,7 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   onPaste={(e) => handlePaste(e, setPassword)}
                   disabled={isLoading}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C] pr-10"
+                  className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF] pr-10"
                 />
                 <button
                   type="button"
@@ -125,7 +125,7 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-11 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium"
+              className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-medium"
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

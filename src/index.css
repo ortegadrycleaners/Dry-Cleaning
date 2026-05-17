@@ -36,18 +36,33 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 43 55% 54%;
     
-    /* Brand Colors */
-    --navy: 220 45% 20%;
-    --gold: 43 55% 54%;
+    /* Brand Colors (Zivo official palette) */
+    --zivo-indigo: #3B4BFF; /* Zivo Indigo (primary) */
+    --zivo-cream: #FFF4E6; /* Cream */
+    --zivo-mint: #00C896; /* Mint (success/accent) */
+    --zivo-almost-black: #0E0E1A; /* Casi-negro (text) */
+    --zivo-gray: #5C5C73; /* Gris medio (secondary text) */
+    --zivo-gray-light: #E8E8F0; /* Gris claro (borders/separators) */
+    --zivo-offwhite: #FAFAFC; /* Off-white (clean backgrounds) */
+
+    /* Zivo brand color variables */
+    --zivo-blue: var(--zivo-indigo);
+    --zivo-blue-dark: #2F3DE6;
 
     /* Modal Styles */
     --color-dark: #1d1e20;
     --color-gray: #727586;
     --color-gray-border: #dadce0;
     --color-light: #fff;
-    --color-primary: rgb(27 42 74 / var(--tw-bg-opacity, 1));;
-    --color-primary-dark: #374a6f;
-    --color-primary-light: #ebe4ff;
+    --color-primary: var(--zivo-blue);
+    --color-primary-dark: var(--zivo-blue-dark);
+    --color-primary-light: #e9edff;
+
+    /* Background/text defaults to match brand guidelines */
+    --background: 240 12% 99%; /* off-white subtle */
+    --foreground: 230 10% 6%; /* casi-negro for main text */
+    --card: 0 0% 100%;
+    --card-foreground: 230 10% 6%;
     --color-success: #00b090;
     --font-family: 'DM Sans', sans-serif;
     --border-radius: 4px;
@@ -63,7 +78,9 @@
     font-family: 'DM Sans', system-ui, sans-serif;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: var(--zivo-offwhite);
+    color: var(--zivo-almost-black);
+    @apply antialiased;
   }
 }
 
