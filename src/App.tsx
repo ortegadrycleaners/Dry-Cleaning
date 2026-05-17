@@ -7,6 +7,8 @@ import { OrdersProvider } from '@/context/OrdersContext';
 import { NotificationsProvider } from '@/context/NotificationsContext';
 import { Toaster } from '@/components/ui/sonner';
 import { I18nProvider } from '@/i18n';
+import { BrandLogo } from '@/components/BrandLogo';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 
 const LoginPage = lazy(async () => ({
   default: (await import('@/pages/LoginPage')).LoginPage,
@@ -41,6 +43,15 @@ function App() {
       <OrdersProvider>
         <NotificationsProvider>
           <I18nProvider>
+            <nav className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 sm:py-4 bg-white shadow-sm z-10">
+              <BrandLogo size="sm" />
+              <div className="hidden md:flex items-center gap-6">
+                <LanguageToggle inline />
+              </div>
+              <div className="md:hidden">
+                <LanguageToggle />
+              </div>
+            </nav>
             <BrowserRouter>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>

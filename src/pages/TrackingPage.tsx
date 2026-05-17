@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import LanguageToggle from '@/components/ui/LanguageToggle';
 import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
 import { useI18n } from '@/i18n';
@@ -7,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useOrders } from '@/context/OrdersContext';
 import { formatElapsedTime, orderTicketLabel } from '@/lib/utils';
 import { businessInfo } from '@/data/mockData';
-import { BrandLogo } from '@/components/BrandLogo';
 import {
   Loader2,
   CheckCircle2,
@@ -438,21 +436,7 @@ export function TrackingPage() {
 
 return (
     <div className="min-h-screen bg-white font-sans flex flex-col overflow-x-hidden">
-      {/* Navegación superior - marca unificada */}
-      <nav className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 sm:py-4 bg-white shadow-sm z-10 relative">
-        <BrandLogo size="sm" />
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-          <span className="text-[#1B2A4A] border-b-2 border-[#C9A84C] pb-1">{t('tracking.pageTitle')}</span>
-          {/* Inline toggle for md+ so it sits with the nav */}
-          <div className="ml-4">
-            <LanguageToggle inline />
-          </div>
-        </div>
-        {/* Fixed small-screen toggle (LanguageToggle renders fixed only on md:hidden) */}
-        <div className="md:hidden">
-          <LanguageToggle />
-        </div>
-      </nav>
+      {/* Navegación superior: se usa nav global en App.tsx */}
 
       {/* Contenido principal */}
       <main className="flex flex-col flex-1 bg-[#0B1521] text-white px-4 sm:px-6 py-8 sm:py-12 md:py-20 items-center">
