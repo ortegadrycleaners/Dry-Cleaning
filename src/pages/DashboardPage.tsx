@@ -308,7 +308,7 @@ function NotifyCustomerModal({
           <Button
             onClick={handleSend}
             disabled={isSending || (!ready && !usage.mockMode) || usage.killSwitch}
-            className="w-full h-11 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-semibold disabled:opacity-50"
+            className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold disabled:opacity-50"
           >
             {isSending ? (
               <>

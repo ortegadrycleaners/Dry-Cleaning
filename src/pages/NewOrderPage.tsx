@@ -213,6 +213,19 @@ export function NewOrderPage() {
     wizard.closeModal();
   };
 
+  const formatInputDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateValue = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return formatInputDate(date);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header (Zivo dark) */}
@@ -429,30 +442,55 @@ export function NewOrderPage() {
 
                 {/* Quick Select Buttons */}
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(1)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]"
-                  >
-                    {t('newOrder.quickDate1')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(3)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]"
-                  >
-                    {t('newOrder.quickDate3')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(5)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]"
-                  >
-                    {t('newOrder.quickDate5')}
-                  </Button>
+                  {(() => {
+                    const d1 = getDateValue(1);
+                    const d3 = getDateValue(3);
+                    const d5 = getDateValue(5);
+                    const sel1 = orderForm.estimatedDate === d1;
+                    const sel3 = orderForm.estimatedDate === d3;
+                    const sel5 = orderForm.estimatedDate === d5;
+
+                    return (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(1)}
+                          className={
+                            sel1
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate1')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(3)}
+                          className={
+                            sel3
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate3')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(5)}
+                          className={
+                            sel5
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate5')}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Date Picker */}
