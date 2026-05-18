@@ -238,7 +238,7 @@ function EntregadoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">{t('tracking.deliveredTitle')}</h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)} | {order.customerName}</p>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto space-y-3 text-center">
         <p className="text-gray-600 text-sm">{t('tracking.deliveredMessage')}</p>
