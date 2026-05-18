@@ -117,7 +117,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'notifications.type.ready': 'Lista',
     'notifications.type.reminder': 'Recordatorio',
     'notifications.type.urgent': 'Urgente',
-    'brand.hoursValue': 'Lunes - Viernes 8am - 6pm | Sábados 10am - 5pm',
+    'brand.hoursValue': 'Lunes a Viernes 8am - 6pm | Sábados 10am - 5pm',
     'promotions.0.title': '20% en tu primera orden',
     'promotions.0.description': 'Trae este cupón y recibe un descuento especial en tu primer servicio.',
     'promotions.0.code': 'BIENVENIDO20',
