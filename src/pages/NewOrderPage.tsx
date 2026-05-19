@@ -152,6 +152,7 @@ export function NewOrderPage() {
     customerSearch.selectCustomer(customer);
     setValue('phone', customer.phone);
     setValue('name', customer.lastName);
+    setCustomerName(customer.lastName || '');
   };
 
   const openNewCustomerModal = () => {
@@ -212,19 +213,40 @@ export function NewOrderPage() {
     wizard.closeModal();
   };
 
+  const formatInputDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateValue = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return formatInputDate(date);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              <span className="text-sm font-medium">{t('common.back')}</span>
-            </button>
+      {/* Header (Zivo dark) */}
+      <header className="bg-[#0E0E1A] sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <img src="/svg/zivo-wordmark-white.svg" alt="zivo" className="h-6 sm:h-8 w-auto" />
+              <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
+                Estás en <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-sm text-[#FAFAFC]/90 hover:text-white flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline"> Volver al dashboard</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -259,7 +281,7 @@ export function NewOrderPage() {
                     orderForm.setOrderId(e.target.value);
                     setSubmitError(null);
                   }}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                  className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
                 />
                 {/* Validación manual para orderId */}
                 {!orderForm.orderId.trim() && (
@@ -284,7 +306,7 @@ export function NewOrderPage() {
                     setValue('name', e.target.value);
                     setSubmitError(null);
                   }}
-                  className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                  className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
                 />
                 {errors.name && (
                   <p className="text-sm text-red-600">{errors.name.message as string}</p>
@@ -307,7 +329,7 @@ export function NewOrderPage() {
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       onFocus={() => customerSearch.setPhone(customerSearch.phone)}
                       onBlur={() => setTimeout(() => {}, 200)}
-                      className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                      className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
                     />
                   </div>
                   <div className="w-full sm:w-[30%]">
@@ -316,7 +338,7 @@ export function NewOrderPage() {
                       variant="outline"
                       disabled={!customerSearch.phone.trim()}
                       onClick={openNewCustomerModal}
-                      className="h-11 w-full border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
+                      className="h-11 w-full border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]"
                     >
                       {t('newOrder.addNewCustomer')}
                     </Button>
@@ -358,12 +380,12 @@ export function NewOrderPage() {
                     </div>
                     <div className="rounded-md border border-gray-200 bg-white p-3 shadow-lg space-y-3">
                       <p className="text-sm text-gray-500">{t('newOrder.noCustomersFound')}</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={openNewCustomerModal}
-                        className="w-full px-3 py-2 text-sm font-medium text-[#C9A84C] hover:text-[#b89943] border border-[#C9A84C] hover:border-[#b89943] rounded transition-colors"
-                      >
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={openNewCustomerModal}
+                          className="w-full px-3 py-2 text-sm font-medium text-[#3B4BFF] hover:text-[#2F3DE6] border border-[#3B4BFF] hover:bg-[#EEF2FF] hover:border-[#2F3DE6] rounded transition-colors"
+                        >
                         {t('newOrder.addNewCustomer')}
                       </Button>
                     </div>
@@ -404,7 +426,7 @@ export function NewOrderPage() {
                     type="text"
                     placeholder={t('newOrder.notesPlaceholder')}
                     {...register('notes')}
-                    className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                    className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
                   />
                   {errors.notes && (
                     <p className="text-sm text-red-600">{errors.notes.message as string}</p>
@@ -420,30 +442,55 @@ export function NewOrderPage() {
 
                 {/* Quick Select Buttons */}
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(1)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
-                  >
-                    {t('newOrder.quickDate1')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(3)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
-                  >
-                    {t('newOrder.quickDate3')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => orderForm.handleQuickDate(5)}
-                    className="flex-1 h-10 border-gray-200 hover:bg-slate-50 hover:border-[#C9A84C]"
-                  >
-                    {t('newOrder.quickDate5')}
-                  </Button>
+                  {(() => {
+                    const d1 = getDateValue(1);
+                    const d3 = getDateValue(3);
+                    const d5 = getDateValue(5);
+                    const sel1 = orderForm.estimatedDate === d1;
+                    const sel3 = orderForm.estimatedDate === d3;
+                    const sel5 = orderForm.estimatedDate === d5;
+
+                    return (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(1)}
+                          className={
+                            sel1
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate1')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(3)}
+                          className={
+                            sel3
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate3')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(5)}
+                          className={
+                            sel5
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate5')}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Date Picker */}
@@ -456,7 +503,7 @@ export function NewOrderPage() {
                       orderForm.setEstimatedDate(e.target.value);
                       setSubmitError(null);
                     }}
-                    className="pl-10 h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+                    className="pl-10 h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
                   />
                 </div>
                 {orderForm.estimatedDate && (
@@ -475,7 +522,7 @@ export function NewOrderPage() {
                 <Button
                   type="submit"
                   disabled={!orderForm.orderId.trim() || !orderForm.estimatedDate}
-                  className="w-full h-12 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full h-12 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {t('newOrder.createOrder')}
                 </Button>

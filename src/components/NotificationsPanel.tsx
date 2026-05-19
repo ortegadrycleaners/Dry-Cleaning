@@ -60,10 +60,10 @@ export function NotificationsPanel() {
       {/* Botón campana */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 text-[#FAFAFC]/90 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
         aria-label={t('common.notifications')}
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-5 h-5 text-current" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}

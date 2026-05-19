@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
-  Sparkles,
   Plus,
   LogOut,
   Search,
@@ -114,13 +113,13 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
               placeholder="Ej. 14"
               value={rackNumber}
               onChange={(e) => setRackNumber(e.target.value)}
-              className="h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+              className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
           <Button
             onClick={handleConfirm}
-            className="w-full h-11 bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] font-semibold"
+            className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold"
           >
             Confirmar (sin enviar SMS)
           </Button>
@@ -309,7 +308,7 @@ function NotifyCustomerModal({
           <Button
             onClick={handleSend}
             disabled={isSending || (!ready && !usage.mockMode) || usage.killSwitch}
-            className="w-full h-11 bg-[#1B2A4A] hover:bg-[#2a3d66] text-white font-semibold disabled:opacity-50"
+            className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold disabled:opacity-50"
           >
             {isSending ? (
               <>
@@ -366,8 +365,11 @@ function StatusBadge({ order }: { order: Order }) {
 
   if (status === 'ENTREGADO') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">
-        <CheckCircle2 className="w-3 h-3 mr-1" />
+      <span
+        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E8E8F0' }}
+      >
+        <CheckCircle2 className="w-3 h-3 mr-1 text-[#6B7280]" />
         ENTREGADO
       </span>
     );
@@ -375,34 +377,46 @@ function StatusBadge({ order }: { order: Order }) {
 
   if (status === 'LISTO' && daysReady && daysReady >= 2) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-        <AlertTriangle className="w-3 h-3 mr-1" />
-        LISTO ⚠️ {daysReady} {daysReady === 1 ? 'día' : 'días'}
+      <span
+        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
+      >
+        <AlertTriangle className="w-3 h-3 mr-1 text-[#047857]" />
+        LISTO ⚠️ {daysReady} {daysReady === 1 ? 'día' : 'días'}{order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}
       </span>
     );
   }
 
   if (status === 'LISTO') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-        <CheckCircle2 className="w-3 h-3 mr-1" />
-        LISTO
+      <span
+        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
+      >
+        <CheckCircle2 className="w-3 h-3 mr-1 text-[#047857]" />
+        {`LISTO${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
       </span>
     );
   }
 
   if (status === 'EN PROCESO') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-        <Clock className="w-3 h-3 mr-1" />
+      <span
+        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ backgroundColor: '#EEF2FF', color: '#3B4BFF', border: '1px solid rgba(59,75,255,0.08)' }}
+      >
+        <Clock className="w-3 h-3 mr-1 text-[#3B4BFF]" />
         EN PROCESO
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-      <Package className="w-3 h-3 mr-1" />
+    <span
+      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+      style={{ backgroundColor: '#FFF4E6', color: '#8B5E3C', border: '1px solid #F6E9DA' }}
+    >
+      <Package className="w-3 h-3 mr-1 text-[#8B5E3C]" />
       RECIBIDO
     </span>
   );
@@ -531,29 +545,28 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-[#0E0E1A] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#1B2A4A] rounded-full flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-[#C9A84C]" />
+              <img
+                src="/svg/zivo-wordmark-white.svg"
+                alt="zivo"
+                className="h-6 sm:h-8 w-auto"
+              />
+              <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
+                Estás en <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
               </div>
-              <span className="text-lg font-bold text-[#1B2A4A] hidden sm:block">
-                Ortega Dry Cleaners
-              </span>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => navigate('/dashboard/nueva')}
-                className="bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] font-medium"
-              >
+              <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Orden
               </Button>
               <NotificationsPanel />
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 px-3 py-2"
+                className="text-sm text-[#FAFAFC]/90 hover:text-white flex items-center gap-1 px-3 py-2 rounded-md hover:bg-white/5"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Salir</span>
@@ -572,7 +585,7 @@ export function DashboardPage() {
               placeholder="Buscar por teléfono o nº de orden"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 border-gray-200 focus:border-[#C9A84C] focus:ring-[#C9A84C]"
+              className="pl-10 h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
             />
           </div>
         </div>
@@ -587,10 +600,7 @@ export function DashboardPage() {
               <p className="text-gray-500 mb-4">
                 Crea una nueva orden para comenzar
               </p>
-              <Button
-                onClick={() => navigate('/dashboard/nueva')}
-                className="bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] font-medium"
-              >
+              <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
                 <Plus className="w-4 h-4 mr-2" />
                 Nueva Orden
               </Button>
@@ -612,7 +622,7 @@ export function DashboardPage() {
                   {filteredOrders.map((order) => {
                     const alreadyNotified = notifiedOrderIds.has(order.id);
                     return (
-                      <TableRow key={order.id} className="hover:bg-slate-50">
+                        <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
                         <TableCell className="font-medium text-[#1B2A4A]">
                           #{orderTicketLabel(order)}
                         </TableCell>
@@ -621,11 +631,7 @@ export function DashboardPage() {
                         <TableCell className="text-gray-600">{order.estimatedDate}</TableCell>
                         <TableCell>
                           <StatusBadge order={order} />
-                          {order.rackNumber && order.status !== 'ENTREGADO' && (
-                            <span className="ml-2 text-xs text-gray-500">
-                              Rack #{order.rackNumber}
-                            </span>
-                          )}
+                          {/* Rack number shown inside the LISTO badge; remove side label */}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
@@ -643,7 +649,7 @@ export function DashboardPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleMarkReady(order)}
-                                  className="bg-[#1B2A4A] hover:bg-[#2a3d66] text-white text-xs"
+                                  className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
                                   title="Marcar la orden como lista"
                                 >
                                   Marcar Listo
@@ -657,15 +663,15 @@ export function DashboardPage() {
 
                             {order.status === 'LISTO' && !alreadyNotified && (
                               <span className="relative inline-flex group">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenNotify(order)}
-                                  className="bg-[#C9A84C] hover:bg-[#b89943] text-[#1B2A4A] text-xs font-semibold"
-                                  title="Notificar al cliente que su pedido está listo"
-                                >
-                                  <Send className="w-3.5 h-3.5 mr-1" />
-                                  Notificar al cliente
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleOpenNotify(order)}
+                                    className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
+                                    title="Notificar al cliente que su pedido está listo"
+                                  >
+                                    <Send className="w-3.5 h-3.5 mr-1 text-[#3B4BFF]" />
+                                    Notificar al cliente
+                                  </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                                   Notificar al cliente que su pedido está listo
@@ -760,7 +766,7 @@ export function DashboardPage() {
             Ortega Dry Cleaners — Seguimiento de órdenes y atención con claridad.
           </p>
           <p className="inline-flex items-center gap-1 text-gray-500 whitespace-nowrap">
-            <Zap className="w-4 h-4 text-[#C9A84C]" />
+            <Zap className="w-4 h-4 text-[#3B4BFF]" />
             Powered by Zivo
           </p>
         </div>

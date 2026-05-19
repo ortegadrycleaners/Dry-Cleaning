@@ -40,10 +40,10 @@ function ProgressStep({ label, status, isLast }: ProgressStepProps) {
         <div
           className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
             status === 'completed'
-              ? 'bg-green-500 text-white'
+              ? 'bg-[#047857] text-white'
               : status === 'current'
-                ? 'bg-[#1B2A4A] text-white'
-                : 'bg-gray-200 text-gray-400'
+                ? 'bg-[#3B4BFF] text-white'
+                : 'bg-[#EEF2FF] text-[#9CA3AF]'
           }`}
         >
           {status === 'completed' ? (
@@ -63,7 +63,7 @@ function ProgressStep({ label, status, isLast }: ProgressStepProps) {
       {!isLast && (
         <div
           className={`w-8 sm:w-16 h-0.5 mx-0.5 sm:mx-1 transition-colors ${
-            status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
+            status === 'completed' ? 'bg-[#047857]' : 'bg-[#E5E7EB]'
           }`}
         />
       )}
@@ -110,8 +110,8 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-[#1B2A4A] rounded-lg flex items-center justify-center flex-shrink-0">
-          <MapPin className="w-6 h-6 text-[#C9A84C]" />
+        <div className="w-12 h-12 bg-[#3B4BFF] rounded-lg flex items-center justify-center flex-shrink-0">
+          <MapPin className="w-6 h-6 text-white" />
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
@@ -238,7 +238,7 @@ function EntregadoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">{t('tracking.deliveredTitle')}</h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)} | {order.customerName}</p>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto space-y-3 text-center">
         <p className="text-gray-600 text-sm">{t('tracking.deliveredMessage')}</p>
@@ -263,50 +263,37 @@ function BrandInfoSection() {
   const { t } = useI18n();
   return (
     <section className="w-full max-w-3xl mx-auto mt-10 sm:mt-16 space-y-6">
-      {/* Dirección y horarios */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-          <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-[#C9A84C]" />
+      {/* Información de Ortega Dry Cleaners en un solo contenedor */}
+      <Card className="bg-white rounded-[28px] border border-[#F0E8D8] shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <h3 className="text-sm font-semibold tracking-[0.18em] text-[#1B2A4A] uppercase mb-4">
+            Ortega Dry Cleaners
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
+              <Phone className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <div>
+                <p className="text-sm text-[#1B2A4A] font-semibold">{businessInfo.phone}</p>
+                <p className="text-[11px] text-gray-500">Teléfono</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.addressTitle')}</h4>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {businessInfo.address}
-              </p>
+            <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
+              <Clock className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <div>
+                <p className="text-sm text-[#1B2A4A] font-semibold">{t('brand.hoursValue')}</p>
+                <p className="text-[11px] text-gray-500">Horario</p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
-          <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5 text-[#C9A84C]" />
+            <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
+              <MapPin className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <div>
+                <p className="text-sm text-[#1B2A4A] font-semibold">{businessInfo.address}</p>
+                <p className="text-[11px] text-gray-500">Dirección</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.hoursTitle')}</h4>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  {t('brand.hoursValue')}
-                </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-white/10 bg-white/5 backdrop-blur-sm sm:col-span-2">
-          <CardContent className="p-5 flex items-start gap-4">
-            <div className="w-10 h-10 bg-[#C9A84C]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Phone className="w-5 h-5 text-[#C9A84C]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white mb-1">{t('brand.phoneTitle')}</h4>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {businessInfo.phone}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Promociones */}
       <div>
@@ -315,18 +302,18 @@ function BrandInfoSection() {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {businessInfo.promotions.map((_, i) => (
-            <Card key={i} className="border-[#C9A84C]/20 bg-gradient-to-br from-[#C9A84C]/10 to-transparent backdrop-blur-sm">
+            <Card key={i} className="border-[#3B4BFF]/20 bg-gradient-to-br from-[#3B4BFF]/10 to-transparent backdrop-blur-sm">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-[#C9A84C]" />
+                  <Tag className="w-4 h-4 text-[#3B4BFF]" />
                     <h4 className="text-sm font-semibold text-white">{t(`promotions.${i}.title`)}</h4>
                 </div>
                   <p className="text-gray-300 text-xs leading-relaxed">
                     {t(`promotions.${i}.description`)}
                   </p>
                   {t(`promotions.${i}.code`) && (
-                    <div className="mt-3 inline-block px-3 py-1 bg-[#C9A84C]/20 rounded-full">
-                      <span className="text-xs font-mono font-bold text-[#C9A84C]">
+                    <div className="mt-3 inline-block px-3 py-1 bg-[#3B4BFF]/10 rounded-full">
+                      <span className="text-xs font-mono font-bold text-[#3B4BFF]">
                         {t(`promotions.${i}.code`)}
                       </span>
                     </div>
@@ -435,17 +422,17 @@ export function TrackingPage() {
   }
 
 return (
-    <div className="min-h-screen bg-white font-sans flex flex-col overflow-x-hidden">
+    <div className="min-h-screen bg-[#FFF4E6] font-sans flex flex-col overflow-x-hidden">
       {/* Navegación superior: se usa nav global en App.tsx */}
 
       {/* Contenido principal */}
-      <main className="flex flex-col flex-1 bg-[#0B1521] text-white px-4 sm:px-6 py-8 sm:py-12 md:py-20 items-center">
+      <main className="flex flex-col flex-1 px-4 sm:px-6 py-8 sm:py-12 md:py-20 items-center text-[#1B2A4A]">
         {/* Tarjeta de estado de la orden */}
         <div className="w-full max-w-3xl mx-auto">
-          <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
+          <h3 className="text-sm font-semibold text-gray-600 mb-4 uppercase tracking-wider text-center">
             {t('tracking.statusSection')}
           </h3>
-          <Card className="shadow-2xl border-0 overflow-hidden bg-white text-slate-900 rounded-2xl sm:rounded-3xl transform transition-all hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <Card className="shadow-sm border-0 overflow-hidden bg-white text-slate-900 rounded-2xl sm:rounded-3xl transform transition-all">
             <CardContent className="p-5 sm:p-8 md:p-12">
               {variant === 'recibido' && <RecibidoView order={order} />}
               {variant === 'proceso' && <EnProcesoView order={order} />}
@@ -474,6 +461,14 @@ return (
 
         {/* Sección de identidad de marca */}
         <BrandInfoSection />
+
+        {/* Footer: Hosted by zivo */}
+        <footer className="w-full mt-10">
+          <div className="max-w-3xl mx-auto py-6 text-center text-sm text-gray-600 flex items-center justify-center gap-2">
+            <span>Hosted by</span>
+            <img src="/svg/zivo-wordmark.svg" alt="zivo" className="h-4 w-auto inline-block" />
+          </div>
+        </footer>
 
       </main>
     </div>
