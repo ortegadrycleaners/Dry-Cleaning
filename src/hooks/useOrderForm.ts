@@ -32,6 +32,7 @@ interface UseOrderFormReturn {
   presetNotes: PresetNote[];
   clearForm: () => void;
   handleQuickDate: (days: number) => void;
+  formatDateInputValue: (date: Date) => string;
   formatDateDisplay: (dateStr: string) => string;
 }
 
@@ -76,19 +77,19 @@ export function useOrderForm(): UseOrderFormReturn {
       label: 'Sin almidón',
       icon: Leaf,
       selectedClasses: 'border-[#3B4BFF] bg-[#3B4BFF] text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]  ',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]',
     },
     {
       label: 'Con almidón',
       icon: Package,
       selectedClasses: 'border-[#3B4BFF] bg-[#3B4BFF] text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]  ',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]',
     },
     {
       label: 'Solo planchar',
       icon: Sparkles,
       selectedClasses: 'border-[#3B4BFF] bg-[#3B4BFF] text-white',
-      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]    ',
+      unselectedClasses: 'border-slate-300 bg-slate-100 text-slate-500 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]',
     },
     {
       label: 'Limpieza en seco',
@@ -158,6 +159,7 @@ export function useOrderForm(): UseOrderFormReturn {
     presetNotes,
     clearForm,
     handleQuickDate,
+    formatDateInputValue,
     formatDateDisplay,
   };
 }

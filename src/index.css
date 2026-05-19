@@ -9,8 +9,8 @@
   :root {
     --background: 0 0% 98%;
     --foreground: 220 30% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
+    --card: 240 12% 99%;
+    --card-foreground: 230 10% 6%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 30% 15%;
     --primary: 220 45% 20%;
@@ -61,7 +61,7 @@
     /* Background/text defaults to match brand guidelines */
     --background: 240 12% 99%; /* off-white subtle */
     --foreground: 230 10% 6%; /* casi-negro for main text */
-    --card: 0 0% 100%;
+    --card: 240 12% 99%;
     --card-foreground: 230 10% 6%;
     --color-success: #00b090;
     --font-family: 'DM Sans', sans-serif;

@@ -271,24 +271,24 @@ function BrandInfoSection() {
           </h3>
           <div className="space-y-3">
             <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
-              <Phone className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <Phone className="w-[18px] h-[18px] text-[#3B4BFF]" />
               <div>
                 <p className="text-sm text-[#1B2A4A] font-semibold">{businessInfo.phone}</p>
-                <p className="text-[11px] text-gray-500">Teléfono</p>
+                <p className="text-[11px] text-gray-500">{t('brand.phoneTitle')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
-              <Clock className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <Clock className="w-[18px] h-[18px] text-[#3B4BFF]" />
               <div>
                 <p className="text-sm text-[#1B2A4A] font-semibold">{t('brand.hoursValue')}</p>
-                <p className="text-[11px] text-gray-500">Horario</p>
+                <p className="text-[11px] text-gray-500">{t('brand.hoursTitle')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
-              <MapPin className="w-4.5 h-4.5 text-[#3B4BFF]" />
+              <MapPin className="w-[18px] h-[18px] text-[#3B4BFF]" />
               <div>
                 <p className="text-sm text-[#1B2A4A] font-semibold">{businessInfo.address}</p>
-                <p className="text-[11px] text-gray-500">Dirección</p>
+                <p className="text-[11px] text-gray-500">{t('brand.addressTitle')}</p>
               </div>
             </div>
           </div>
