@@ -23,6 +23,9 @@ const STORAGE_KEY = 'tintoreria_notifications';
 
 export const EVENT_NAMES = {
   ORDER_CREATED: 'ORDER_CREATED',
+  ORDER_RECEIVED_TRACKING: 'ORDER_RECEIVED_TRACKING',
+  ORDER_DELAYED: 'ORDER_DELAYED',
+  THANK_YOU_REVIEW: 'THANK_YOU_REVIEW',
   ORDER_READY: 'ORDER_READY',
   PICKUP_REMINDER: 'PICKUP_REMINDER',
   URGENT_REMINDER: 'URGENT_REMINDER',
@@ -44,6 +47,26 @@ function buildMessage(type: NotificationEventType, vars: MessageTemplateVars): s
         `¡${vars.customerName}, tu orden #${vars.orderNumber} está lista! ` +
         (vars.rackNumber ? `Ubicación: Rack #${vars.rackNumber}. ` : '') +
         `Recógela en nuestro horario. Detalles: ${vars.trackingUrl}`
+      );
+
+    case 'ORDER_RECEIVED_TRACKING':
+      return (
+        `Ortega Dry Cleaners: We received your order, ${vars.customerName}! ` +
+        `Estimated ready by ${vars.estimatedDay ? `${vars.estimatedDay}, ` : ''}${vars.estimatedDate ?? 'TBD'}. ` +
+        `Track your order: ${vars.trackingUrl}`
+      );
+
+    case 'ORDER_DELAYED':
+      return (
+        `Ortega Dry Cleaners: Your order needs one more day. ` +
+        `New ready date: ${vars.estimatedDay ? `${vars.estimatedDay}, ` : ''}${vars.estimatedDate ?? 'TBD'}. ` +
+        `Sorry for the delay. ${vars.trackingUrl}`
+      );
+
+    case 'THANK_YOU_REVIEW':
+      return (
+        `Thanks for trusting Ortega Dry Cleaners, ${vars.customerName}! ` +
+        `How did we do? Your feedback helps us a lot: ${vars.reviewUrl ?? vars.trackingUrl}`
       );
 
     case 'PICKUP_REMINDER':
@@ -125,6 +148,15 @@ class NotificationServiceImpl {
       eventBus.on<OrderEvent>(EVENT_NAMES.ORDER_CREATED, (event) =>
         this.handleEvent(event)
       ),
+      eventBus.on<OrderEvent>(EVENT_NAMES.ORDER_RECEIVED_TRACKING, (event) =>
+        this.handleEvent(event)
+      ),
+      eventBus.on<OrderEvent>(EVENT_NAMES.ORDER_DELAYED, (event) =>
+        this.handleEvent(event)
+      ),
+      eventBus.on<OrderEvent>(EVENT_NAMES.THANK_YOU_REVIEW, (event) =>
+        this.handleEvent(event)
+      ),
       eventBus.on<OrderEvent>(EVENT_NAMES.ORDER_READY, (event) =>
         this.handleEvent(event)
       ),
@@ -187,6 +219,8 @@ class NotificationServiceImpl {
       rackNumber: event.payload.rackNumber as string | undefined,
       daysReady: event.payload.daysReady as number | undefined,
       estimatedDate: event.payload.estimatedDate as string | undefined,
+      estimatedDay: event.payload.estimatedDay as string | undefined,
+      reviewUrl: event.payload.reviewUrl as string | undefined,
     });
 
     const notification: Notification = {

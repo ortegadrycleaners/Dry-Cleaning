@@ -9,6 +9,9 @@
 
 export type NotificationEventType =
   | 'ORDER_CREATED'
+  | 'ORDER_RECEIVED_TRACKING'
+  | 'ORDER_DELAYED'
+  | 'THANK_YOU_REVIEW'
   | 'ORDER_READY'
   | 'PICKUP_REMINDER'
   | 'URGENT_REMINDER';
@@ -77,4 +80,22 @@ export interface MessageTemplateVars {
   rackNumber?: string;
   daysReady?: number;
   estimatedDate?: string;
+  estimatedDay?: string;
+  storePhone?: string;
+  reviewUrl?: string;
 }
+
+export interface NotificationTemplateOption {
+  type: NotificationEventType;
+  label: string;
+  description?: string;
+}
+
+export const NOTIFICATION_TEMPLATE_OPTIONS: NotificationTemplateOption[] = [
+  { type: 'ORDER_RECEIVED_TRACKING', label: 'Order received + tracking' },
+  { type: 'ORDER_READY', label: 'Order ready' },
+  { type: 'ORDER_DELAYED', label: 'Order delayed' },
+  { type: 'THANK_YOU_REVIEW', label: 'Thanks + Google review' },
+  { type: 'PICKUP_REMINDER', label: 'Not picked up - day 3' },
+  { type: 'URGENT_REMINDER', label: 'Follow up order - day 5' },
+];

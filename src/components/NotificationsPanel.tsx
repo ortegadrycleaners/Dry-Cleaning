@@ -30,6 +30,24 @@ const TYPE_CONFIG: Record<
     color: 'text-blue-600',
     bg: 'bg-blue-50',
   },
+  ORDER_RECEIVED_TRACKING: {
+    icon: Package,
+    label: 'notifications.type.received',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+  },
+  ORDER_DELAYED: {
+    icon: AlertTriangle,
+    label: 'notifications.type.delayed',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+  },
+  THANK_YOU_REVIEW: {
+    icon: MessageSquare,
+    label: 'notifications.type.thankYou',
+    color: 'text-green-600',
+    bg: 'bg-green-50',
+  },
   ORDER_READY: {
     icon: CheckCircle2,
     label: 'notifications.type.ready',

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -41,8 +41,7 @@ import {
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
-  notifyOrderReady,
-  notifyPickupReminder,
+  notifySmsTemplate,
   previewMessage,
   estimateSmsSegments,
   getUsageStats,
@@ -50,7 +49,7 @@ import {
   isTwilioReady,
   type SmsUsageStats,
 } from '@/services/twilio';
-import type { NotificationEventType } from '@/types/notifications';
+import { NOTIFICATION_TEMPLATE_OPTIONS, type NotificationEventType } from '@/types/notifications';
 import { formatDate } from '@/i18n';
 
 const REMINDER_DAYS = 3;
@@ -177,9 +176,14 @@ function NotifyCustomerModal({
 }: NotifyCustomerModalProps) {
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<NotificationEventType>(templateType);
   // Tick incremental: cada apertura del modal y cada envío refresca usage
   // sin caer en setState-dentro-de-useEffect.
   const [usageTick, setUsageTick] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) setSelectedType(templateType);
+  }, [isOpen, templateType]);
 
   // Limpia error cuando se abre el modal. Usa el cambio de `isOpen` como key
   // efectivo via remount-style: se evita useEffect+setState anidado.
@@ -196,19 +200,23 @@ function NotifyCustomerModal({
   if (!order) return null;
 
   const smsOrder = daysReady !== null ? { ...order, daysReady } : order;
-  const message = previewMessage(smsOrder, templateType);
+  const activeTemplate = NOTIFICATION_TEMPLATE_OPTIONS.find((option) => option.type === selectedType);
+  const message = previewMessage(smsOrder, selectedType);
   const segments = estimateSmsSegments(message);
   const ready = isTwilioReady();
-  const isReminder = templateType === 'PICKUP_REMINDER';
+  const isReminder = selectedType === 'PICKUP_REMINDER' || selectedType === 'URGENT_REMINDER';
 
   const handleSend = async () => {
     if (isSending) return;
     setIsSending(true);
     setErrorMsg(null);
 
-    const result = isReminder
-      ? await notifyPickupReminder({ order: smsOrder, operatorId, daysReady })
-      : await notifyOrderReady({ order: smsOrder, operatorId });
+    const result = await notifySmsTemplate({
+      order: smsOrder,
+      operatorId,
+      type: selectedType,
+      daysReady,
+    });
 
     setIsSending(false);
     setUsageTick((t) => t + 1);
@@ -239,6 +247,32 @@ function NotifyCustomerModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">Template</Label>
+            <div className="flex flex-wrap gap-2">
+              {NOTIFICATION_TEMPLATE_OPTIONS.map((option) => {
+                const isActive = option.type === selectedType;
+                return (
+                  <Button
+                    key={option.type}
+                    type="button"
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedType(option.type)}
+                    className={isActive
+                      ? 'bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
+                  >
+                    {option.label}
+                  </Button>
+                );
+              })}
+            </div>
+            {activeTemplate && (
+              <p className="text-xs text-gray-500">Selected: {activeTemplate.label}</p>
+            )}
+          </div>
+
           <div className="bg-slate-50 p-3 rounded-lg space-y-1">
             <p className="text-sm text-gray-600">
               Orden{' '}

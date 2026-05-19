@@ -6,7 +6,7 @@
  * sin romper consumidores.
  */
 
-export { notifyOrderReady, notifyPickupReminder, previewMessage } from './TwilioService';
+export { notifyOrderReady, notifyPickupReminder, notifySmsTemplate, previewMessage } from './TwilioService';
 export {
   getTwilioConfig,
   isTwilioReady,
