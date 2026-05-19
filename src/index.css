@@ -137,3 +137,14 @@
 .animate-spin-slow {
   animation: spin 2s linear infinite;
 }
+
+/* Tooltip size tweak: reduce horizontal padding to avoid oversized floating tooltip */
+@layer utilities {
+  .relative.inline-flex.group > .pointer-events-none.absolute {
+    padding: 2px 6px !important; /* smaller than px-2 (8px) */
+    font-size: 0.75rem !important; /* ensure text-xs size */
+    line-height: 1rem !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+  }
+}

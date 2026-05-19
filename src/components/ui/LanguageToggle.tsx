@@ -9,7 +9,13 @@ export function LanguageToggle({ inline }: { inline?: boolean }) {
   }
 
   const btn = (
-    <Button variant="ghost" size="sm" onClick={toggle} aria-label="Cambiar idioma">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={toggle}
+      aria-label="Cambiar idioma"
+      className={inline ? 'text-[#FAFAFC]/90 hover:text-white' : undefined}
+    >
       {locale === 'es' ? 'ES' : 'EN'}
     </Button>
   )

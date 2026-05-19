@@ -4,7 +4,7 @@ import type { Order } from '@/types';
 import { useI18n } from '@/i18n';
 import { Card, CardContent } from '@/components/ui/card';
 import { useOrders } from '@/context/OrdersContext';
-import { formatElapsedTime, orderTicketLabel } from '@/lib/utils';
+import { daysSince, formatElapsedTime, orderTicketLabel } from '@/lib/utils';
 import { businessInfo } from '@/data/mockData';
 import {
   Loader2,
@@ -18,7 +18,9 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-type TrackingVariant = 'recibido' | 'proceso' | 'listo' | 'recordatorio' | 'entregado';
+import './tracking.css';
+
+type TrackingVariant = 'recibido' | 'proceso' | 'listo' | 'recordatorio' | 'entregado' | 'abandonado';
 
 // 30s en lugar de 15s y con pausa cuando la pestaña no es visible: cuando esta
 // página dispare lecturas a Supabase reduce a la mitad las requests por usuario
@@ -257,6 +259,28 @@ function EntregadoView({ order }: { order: Order }) {
   );
 }
 
+function AbandonadoView({ order }: { order: Order }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="text-center space-y-5">
+      <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+        <AlertTriangle className="w-10 h-10 text-red-500" />
+      </div>
+      <div>
+        <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
+          {t('tracking.abandonedTitle')}
+        </h2>
+        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
+      </div>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+        <p className="text-red-700 text-sm">{t('tracking.abandonedMessage')}</p>
+      </div>
+      <ProgressBar currentStatus="LISTO" />
+    </div>
+  );
+}
+
 /* ---------- Brand Identity Section ---------- */
 
 function BrandInfoSection() {
@@ -300,9 +324,9 @@ function BrandInfoSection() {
         <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
           {t('promotions.title')}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {businessInfo.promotions.map((_, i) => (
-            <Card key={i} className="border-[#3B4BFF]/20 bg-gradient-to-br from-[#3B4BFF]/10 to-transparent backdrop-blur-sm">
+            <Card key={i} className="promo-card border-[#3B4BFF]/20">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <Tag className="w-4 h-4 text-[#3B4BFF]" />
@@ -401,6 +425,12 @@ export function TrackingPage() {
     return <div className="min-h-screen bg-[#0B1521] flex items-center justify-center"><p className="text-gray-300">{t('tracking.orderNotFound')}</p></div>;
   }
 
+  const derivedDaysReady =
+    order.status === 'LISTO'
+      ? daysSince(order.statusUpdatedAt) ?? order.daysReady ?? 0
+      : order.daysReady ?? 0;
+  const orderForView = { ...order, daysReady: derivedDaysReady };
+
   let variant: TrackingVariant;
   switch (order.status) {
     case 'RECIBIDO':
@@ -410,12 +440,15 @@ export function TrackingPage() {
       variant = 'proceso';
       break;
     case 'LISTO':
-      variant = typeof order.daysReady === 'number' && order.daysReady > 2
+      variant = typeof derivedDaysReady === 'number' && derivedDaysReady > 2
         ? 'recordatorio'
         : 'listo';
       break;
     case 'ENTREGADO':
       variant = 'entregado';
+      break;
+    case 'ABANDONADO':
+      variant = 'abandonado';
       break;
     default:
       variant = 'proceso';
@@ -423,6 +456,7 @@ export function TrackingPage() {
 
 return (
     <div className="min-h-screen bg-[#FFF4E6] font-sans flex flex-col overflow-x-hidden">
+      {/* navbar removed to avoid layout break */}
       {/* Navegación superior: se usa nav global en App.tsx */}
 
       {/* Contenido principal */}
@@ -434,11 +468,12 @@ return (
           </h3>
           <Card className="shadow-sm border-0 overflow-hidden bg-white text-slate-900 rounded-2xl sm:rounded-3xl transform transition-all">
             <CardContent className="p-5 sm:p-8 md:p-12">
-              {variant === 'recibido' && <RecibidoView order={order} />}
-              {variant === 'proceso' && <EnProcesoView order={order} />}
-              {variant === 'listo' && <ListoView order={order} />}
-              {variant === 'recordatorio' && <RecordatorioView order={order} />}
-              {variant === 'entregado' && <EntregadoView order={order} />}
+              {variant === 'recibido' && <RecibidoView order={orderForView} />}
+              {variant === 'proceso' && <EnProcesoView order={orderForView} />}
+              {variant === 'listo' && <ListoView order={orderForView} />}
+              {variant === 'recordatorio' && <RecordatorioView order={orderForView} />}
+              {variant === 'entregado' && <EntregadoView order={orderForView} />}
+              {variant === 'abandonado' && <AbandonadoView order={orderForView} />}
             </CardContent>
           </Card>
 

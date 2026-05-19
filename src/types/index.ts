@@ -1,4 +1,4 @@
-export type OrderStatus = 'RECIBIDO' | 'EN PROCESO' | 'LISTO' | 'ENTREGADO';
+export type OrderStatus = 'RECIBIDO' | 'EN PROCESO' | 'LISTO' | 'ENTREGADO' | 'ABANDONADO';
 
 /** id: UUID interno; publicId: identificador opaco Base62 para tracking público. */
 export interface Order {

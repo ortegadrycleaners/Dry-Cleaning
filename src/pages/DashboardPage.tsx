@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useOrders } from '@/context/OrdersContext';
 import type { Order } from '@/types';
-import { orderTicketLabel } from '@/lib/utils';
+import { daysSince, orderTicketLabel } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,8 +39,10 @@ import {
   Zap,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifyOrderReady,
+  notifyPickupReminder,
   previewMessage,
   estimateSmsSegments,
   getUsageStats,
@@ -48,6 +50,18 @@ import {
   isTwilioReady,
   type SmsUsageStats,
 } from '@/services/twilio';
+import type { NotificationEventType } from '@/types/notifications';
+import { formatDate } from '@/i18n';
+
+const REMINDER_DAYS = 3;
+const ABANDON_DAYS = 30;
+
+function resolveDaysReady(order: Order): number | null {
+  if (order.status !== 'LISTO') return null;
+  const derived = daysSince(order.statusUpdatedAt);
+  if (typeof derived === 'number') return derived;
+  return typeof order.daysReady === 'number' ? order.daysReady : null;
+}
 
 /* ---------- Modal: Marcar Listo (sólo cambia estado, no envía SMS) ---------- */
 
@@ -124,9 +138,9 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
             Confirmar (sin enviar SMS)
           </Button>
           <p className="text-xs text-center text-gray-500">
-            El SMS NO se envía aquí. Tras marcar la orden como lista, usa el
-            botón <strong>“Notificar al cliente”</strong>.
-          </p>
+                    El SMS NO se envía aquí. Tras marcar la orden como lista, usa el
+                    botón <strong>“SMS cliente”</strong>.
+                  </p>
           <Button
             variant="ghost"
             onClick={handleClose}
@@ -140,7 +154,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
   );
 }
 
-/* ---------- Modal: Notificar al cliente (único disparador de SMS) ---------- */
+/* ---------- Modal: SMS cliente (único disparador de SMS) ---------- */
 
 interface NotifyCustomerModalProps {
   order: Order | null;
@@ -148,6 +162,8 @@ interface NotifyCustomerModalProps {
   onClose: () => void;
   onSent: () => void;
   operatorId: string;
+  templateType: NotificationEventType;
+  daysReady: number | null;
 }
 
 function NotifyCustomerModal({
@@ -156,6 +172,8 @@ function NotifyCustomerModal({
   onClose,
   onSent,
   operatorId,
+  templateType,
+  daysReady,
 }: NotifyCustomerModalProps) {
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -177,22 +195,26 @@ function NotifyCustomerModal({
 
   if (!order) return null;
 
-  const message = previewMessage(order, 'ORDER_READY');
+  const smsOrder = daysReady !== null ? { ...order, daysReady } : order;
+  const message = previewMessage(smsOrder, templateType);
   const segments = estimateSmsSegments(message);
   const ready = isTwilioReady();
+  const isReminder = templateType === 'PICKUP_REMINDER';
 
   const handleSend = async () => {
     if (isSending) return;
     setIsSending(true);
     setErrorMsg(null);
 
-    const result = await notifyOrderReady({ order, operatorId });
+    const result = isReminder
+      ? await notifyPickupReminder({ order: smsOrder, operatorId, daysReady })
+      : await notifyOrderReady({ order: smsOrder, operatorId });
 
     setIsSending(false);
     setUsageTick((t) => t + 1);
 
     if (result.ok) {
-      toast.success('SMS enviado al cliente', {
+      toast.success(isReminder ? 'Recordatorio enviado al cliente' : 'SMS enviado al cliente', {
         description: `#${order.orderNumber} — ${order.customerName}`,
       });
       onSent();
@@ -201,7 +223,7 @@ function NotifyCustomerModal({
     }
 
     setErrorMsg(result.errorMessage ?? 'No se pudo enviar el SMS.');
-    toast.error('No se envió el SMS', {
+      toast.error(isReminder ? 'No se envió el recordatorio' : 'No se envió el SMS', {
       description: result.errorMessage ?? 'Revisa los detalles en el modal.',
     });
   };
@@ -212,7 +234,7 @@ function NotifyCustomerModal({
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2">
             <Send className="w-5 h-5 text-[#C9A84C]" />
-            Notificar al cliente
+            {isReminder ? 'Recordatorio' : 'SMS cliente'}
           </DialogTitle>
         </DialogHeader>
 
@@ -318,7 +340,7 @@ function NotifyCustomerModal({
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Confirmar y enviar SMS
+                {isReminder ? 'Confirmar y enviar recordatorio' : 'Confirmar y enviar SMS'}
               </>
             )}
           </Button>
@@ -346,22 +368,26 @@ function NotifyCustomerModal({
 
 /* ---------- Helper: ¿esta orden ya fue notificada? ---------- */
 
-function useNotifiedOrderIds(refreshTick: number): Set<string> {
+function useNotifiedOrderIdsByType(
+  type: NotificationEventType,
+  refreshTick: number
+): Set<string> {
   return useMemo(() => {
     const ids = new Set<string>();
     for (const r of getSmsHistory()) {
-      if (r.templateType === 'ORDER_READY') ids.add(r.orderId);
+      if (r.templateType === type) ids.add(r.orderId);
     }
     return ids;
     // refreshTick fuerza recomputo cuando se envía un SMS nuevo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTick]);
+  }, [refreshTick, type]);
 }
 
 /* ---------- Status badge ---------- */
 
 function StatusBadge({ order }: { order: Order }) {
-  const { status, daysReady } = order;
+  const { status } = order;
+  const daysReady = resolveDaysReady(order);
 
   if (status === 'ENTREGADO') {
     return (
@@ -375,26 +401,50 @@ function StatusBadge({ order }: { order: Order }) {
     );
   }
 
-  if (status === 'LISTO' && daysReady && daysReady >= 2) {
+  if (status === 'ABANDONADO') {
     return (
       <span
         className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-        style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
+        style={{ backgroundColor: '#FFF1F2', color: '#B91C1C', border: '1px solid #FECACA' }}
       >
-        <AlertTriangle className="w-3 h-3 mr-1 text-[#047857]" />
-        LISTO ⚠️ {daysReady} {daysReady === 1 ? 'día' : 'días'}{order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}
+        <AlertTriangle className="w-3 h-3 mr-1 text-[#B91C1C]" />
+        ABANDONADO
+      </span>
+    );
+  }
+
+  if (status === 'LISTO' && daysReady && daysReady >= 2) {
+    return (
+      <span className="relative inline-flex group">
+        <span
+          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+          style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
+        >
+          <AlertTriangle className="w-3 h-3 mr-1 text-[#047857]" />
+          {`LISTO ⚠️ ${daysReady} ${daysReady === 1 ? 'día' : 'días'}${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
+        </span>
+
+        <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          {order.statusUpdatedAt ? `Listo desde el ${formatDate(order.statusUpdatedAt)}` : 'Listo'}
+        </span>
       </span>
     );
   }
 
   if (status === 'LISTO') {
     return (
-      <span
-        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-        style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
-      >
-        <CheckCircle2 className="w-3 h-3 mr-1 text-[#047857]" />
-        {`LISTO${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
+      <span className="relative inline-flex group">
+        <span
+          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+          style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
+        >
+          <CheckCircle2 className="w-3 h-3 mr-1 text-[#047857]" />
+          {`LISTO${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
+        </span>
+
+        <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          {order.statusUpdatedAt ? `Listo desde el ${formatDate(order.statusUpdatedAt)}` : 'Listo'}
+        </span>
       </span>
     );
   }
@@ -435,12 +485,15 @@ export function DashboardPage() {
 
   const [notifyOrder, setNotifyOrder] = useState<Order | null>(null);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [notifyTemplateType, setNotifyTemplateType] = useState<NotificationEventType>('ORDER_READY');
+  const [notifyDaysReady, setNotifyDaysReady] = useState<number | null>(null);
 
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
   const [pendingDelivery, setPendingDelivery] = useState<{ orderId: string; timeoutId: number } | null>(null);
-  const notifiedOrderIds = useNotifiedOrderIds(historyTick);
+  const notifiedReadyIds = useNotifiedOrderIdsByType('ORDER_READY', historyTick);
+  const notifiedReminderIds = useNotifiedOrderIdsByType('PICKUP_REMINDER', historyTick);
 
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return orders;
@@ -484,15 +537,21 @@ export function DashboardPage() {
       updateOrderStatus(selectedOrder.id, 'LISTO', rackNumber);
       toast.success('Orden marcada como LISTA', {
         description:
-          'Para enviar el SMS al cliente, usa el botón “Notificar al cliente”.',
+          'Para notificar al cliente, usa el botón “SMS cliente / Recordatorio”.',
       });
     }
     setIsReadyModalOpen(false);
     setSelectedOrder(null);
   };
 
-  const handleOpenNotify = (order: Order) => {
+  const handleOpenNotify = (
+    order: Order,
+    templateType: NotificationEventType,
+    daysReady: number | null
+  ) => {
     setNotifyOrder(order);
+    setNotifyTemplateType(templateType);
+    setNotifyDaysReady(daysReady);
     setIsNotifyModalOpen(true);
   };
 
@@ -538,6 +597,11 @@ export function DashboardPage() {
     toast.success('Orden revertida a LISTO');
   };
 
+  const handleMarkAbandoned = (orderId: string) => {
+    updateOrderStatus(orderId, 'ABANDONADO');
+    toast.success('Orden marcada como ABANDONADA');
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -559,11 +623,8 @@ export function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva Orden
-              </Button>
               <NotificationsPanel />
+              <LanguageToggle inline />
               <button
                 onClick={handleLogout}
                 className="text-sm text-[#FAFAFC]/90 hover:text-white flex items-center gap-1 px-3 py-2 rounded-md hover:bg-white/5"
@@ -577,8 +638,8 @@ export function DashboardPage() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
@@ -587,6 +648,12 @@ export function DashboardPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
             />
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Orden
+            </Button>
           </div>
         </div>
 
@@ -620,7 +687,18 @@ export function DashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((order) => {
-                    const alreadyNotified = notifiedOrderIds.has(order.id);
+                    const daysReady = resolveDaysReady(order);
+                    const isReminder = typeof daysReady === 'number' && daysReady >= REMINDER_DAYS;
+                    const isAbandonEligible = typeof daysReady === 'number' && daysReady >= ABANDON_DAYS;
+                    const templateType: NotificationEventType = isReminder ? 'PICKUP_REMINDER' : 'ORDER_READY';
+                    const alreadyNotified = isReminder
+                      ? notifiedReminderIds.has(order.id)
+                      : notifiedReadyIds.has(order.id);
+                    const notifyLabel = isReminder ? 'Recordatorio' : 'SMS cliente';
+                    const notifyTooltip = isReminder
+                      ? 'Enviar recordatorio al cliente'
+                      : 'Enviar SMS al cliente que su pedido está listo';
+                    const notifiedLabel = isReminder ? 'Recordatorio enviado' : 'Notificado';
                     return (
                         <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
                         <TableCell className="font-medium text-[#1B2A4A]">
@@ -635,15 +713,22 @@ export function DashboardPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCopyTrackingLink(order)}
-                              className="text-xs border-gray-300 text-gray-600 hover:bg-gray-50"
-                            >
-                              <Link className="w-3.5 h-3.5 mr-1" />
-                              Copiar tracking
-                            </Button>
+                            <span className="relative inline-flex group">
+                              <Button
+                                size="icon-sm"
+                                variant="outline"
+                                onClick={() => handleCopyTrackingLink(order)}
+                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                aria-label="Copiar tracking"
+                                title="Copiar tracking"
+                              >
+                                <Link className="w-3.5 h-3.5" />
+                              </Button>
+
+                              <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                {order.statusUpdatedAt ? `Copiar tracking · ${formatDate(order.statusUpdatedAt)}` : 'Copiar tracking'}
+                              </span>
+                            </span>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
                               <span className="relative inline-flex group">
                                 <Button
@@ -665,16 +750,16 @@ export function DashboardPage() {
                               <span className="relative inline-flex group">
                                   <Button
                                     size="sm"
-                                    onClick={() => handleOpenNotify(order)}
+                                    onClick={() => handleOpenNotify(order, templateType, daysReady)}
                                     className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
-                                    title="Notificar al cliente que su pedido está listo"
+                                    title={notifyTooltip}
                                   >
                                     <Send className="w-3.5 h-3.5 mr-1 text-[#3B4BFF]" />
-                                    Notificar al cliente
+                                      {notifyLabel}
                                   </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Notificar al cliente que su pedido está listo
+                                    {notifyTooltip}
                                 </span>
                               </span>
                             )}
@@ -682,7 +767,7 @@ export function DashboardPage() {
                             {order.status === 'LISTO' && alreadyNotified && (
                               <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                                 <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                                Notificado
+                                {notifiedLabel}
                               </span>
                             )}
 
@@ -711,6 +796,23 @@ export function DashboardPage() {
                               </span>
                             )}
 
+                            {order.status === 'LISTO' && isAbandonEligible && (
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkAbandoned(order.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                                  title="Marcar la orden como abandonada"
+                                >
+                                  Abandonado
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Marcar la orden como abandonada
+                                </span>
+                              </span>
+                            )}
+
                             {order.status === 'LISTO' && (
                               <span className="relative inline-flex group">
                                 <Button
@@ -731,6 +833,25 @@ export function DashboardPage() {
                             )}
 
                             {order.status === 'ENTREGADO' && (
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  onClick={() => handleRevertToReady(order.id)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                  title="Revertir"
+                                  aria-label="Revertir"
+                                >
+                                  <Undo className="w-3.5 h-3.5" />
+                                </Button>
+
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  Revertir
+                                </span>
+                              </span>
+                            )}
+
+                            {order.status === 'ABANDONADO' && (
                               <span className="relative inline-flex group">
                                 <Button
                                   size="icon-sm"
@@ -785,6 +906,8 @@ export function DashboardPage() {
         onClose={() => setIsNotifyModalOpen(false)}
         onSent={handleNotified}
         operatorId="backoffice-operator"
+        templateType={notifyTemplateType}
+        daysReady={notifyDaysReady}
       />
     </div>
   );

@@ -16,7 +16,7 @@ de Twilio. Para configurarlo:
    etc.). Mientras `VITE_TWILIO_MOCK=true` la app **no envía nada** a Twilio.
 
 En el dashboard, marca una orden como `LISTO` con su rack, y aparecerá el
-único botón **“Notificar al cliente”** que dispara el SMS tras pasar **17
+único botón **“SMS cliente”** que dispara el SMS tras pasar **17
 capas de protección** (idempotency key, dedup, rate-limit por orden, global
 por minuto, presupuesto diario, kill switch, validación E.164, allowlist QA,
 cooldown anti doble-click, etc.). Detalle completo en

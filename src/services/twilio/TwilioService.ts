@@ -145,6 +145,34 @@ export interface NotifyOrderReadyArgs {
   operatorId: string;
 }
 
+export interface NotifyPickupReminderArgs {
+  order: Order;
+  /** Identificador del operador autenticado (para auditoría). */
+  operatorId: string;
+  /** Días desde que la orden quedó LISTA (derivado de statusUpdatedAt). */
+  daysReady?: number | null;
+}
+
+interface NotifySmsArgs {
+  order: Order;
+  operatorId: string;
+  type: NotificationEventType;
+  daysReady?: number | null;
+}
+
+function eventNameForType(type: NotificationEventType): keyof typeof EVENT_NAMES {
+  switch (type) {
+    case 'ORDER_CREATED':
+      return 'ORDER_CREATED';
+    case 'PICKUP_REMINDER':
+      return 'PICKUP_REMINDER';
+    case 'URGENT_REMINDER':
+      return 'URGENT_REMINDER';
+    default:
+      return 'ORDER_READY';
+  }
+}
+
 /**
  * Único punto que dispara un SMS a Twilio para una orden LISTA.
  *
@@ -159,8 +187,23 @@ export async function notifyOrderReady({
   order,
   operatorId,
 }: NotifyOrderReadyArgs): Promise<SendSmsResult> {
-  const type: NotificationEventType = 'ORDER_READY';
+  return notifySms({ order, operatorId, type: 'ORDER_READY' });
+}
 
+export async function notifyPickupReminder({
+  order,
+  operatorId,
+  daysReady,
+}: NotifyPickupReminderArgs): Promise<SendSmsResult> {
+  return notifySms({ order, operatorId, type: 'PICKUP_REMINDER', daysReady });
+}
+
+async function notifySms({
+  order,
+  operatorId,
+  type,
+  daysReady,
+}: NotifySmsArgs): Promise<SendSmsResult> {
   const guard: GuardResult = runAllGuards(order, type);
   if (!guard.ok) {
     return {
@@ -182,6 +225,7 @@ export async function notifyOrderReady({
     orderNumber: order.orderNumber,
     trackingUrl: buildTrackingUrl(order),
     rackNumber: order.rackNumber,
+    daysReady: typeof daysReady === 'number' ? daysReady : order.daysReady,
     estimatedDate: order.estimatedDate,
   };
   const renderedMessage = renderTemplate(type, ctx);
@@ -225,9 +269,12 @@ export async function notifyOrderReady({
     customerName,
     phone: order.phone,
     timestamp: new Date(sentAt).toISOString(),
-    payload: { rackNumber: order.rackNumber },
+    payload: {
+      rackNumber: order.rackNumber,
+      daysReady: typeof daysReady === 'number' ? daysReady : order.daysReady,
+    },
   };
-  queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_READY, event));
+  queueMicrotask(() => eventBus.emit(EVENT_NAMES[eventNameForType(type)], event));
 
   return {
     ok: true,

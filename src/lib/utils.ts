@@ -53,6 +53,14 @@ export function formatElapsedTime(date: Date, base = new Date()): string {
   return `hace ${days} días`;
 }
 
+export function daysSince(value?: string | Date, base = new Date()): number | null {
+  if (!value) return null;
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return null;
+  const diffMs = Math.max(0, base.getTime() - date.getTime());
+  return Math.floor(diffMs / 86_400_000);
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

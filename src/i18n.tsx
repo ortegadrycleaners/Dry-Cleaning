@@ -46,6 +46,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.deliveredTitle': 'Orden entregada',
     'tracking.deliveredMessage': 'Esta orden ya fue recogida.',
     'tracking.deliveredThanks': '¡Gracias por tu preferencia!',
+    'tracking.abandonedTitle': 'Orden marcada como abandonada',
+    'tracking.abandonedMessage': 'Si ya recogiste tu orden, contáctanos para actualizar el estado.',
     'tracking.writeReview': 'Escribir review en Google',
     'tracking.orderNotFound': 'Orden no encontrada.',
     'tracking.loadingStatus': 'Cargando estado de la orden…',
@@ -57,6 +59,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.status.processing': 'En Proceso',
     'tracking.status.ready': 'Listo',
     'tracking.status.delivered': 'Entregado',
+    'tracking.status.abandoned': 'Abandonado',
     'tracking.section.location': 'Ubicación en tienda',
     'tracking.section.locationValue': 'Rack #{rackNumber}',
     'brand.addressTitle': 'Dirección',
@@ -186,6 +189,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.deliveredTitle': 'Order delivered',
     'tracking.deliveredMessage': 'This order has already been picked up.',
     'tracking.deliveredThanks': 'Thanks for choosing us!',
+    'tracking.abandonedTitle': 'Order marked as abandoned',
+    'tracking.abandonedMessage': 'If you already picked up your order, please contact us to update the status.',
     'tracking.writeReview': 'Write a Google review',
     'tracking.orderNotFound': 'Order not found.',
     'tracking.loadingStatus': 'Loading order status…',
@@ -197,6 +202,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.status.processing': 'In Process',
     'tracking.status.ready': 'Ready',
     'tracking.status.delivered': 'Delivered',
+    'tracking.status.abandoned': 'Abandoned',
     'tracking.section.location': 'Store location',
     'tracking.section.locationValue': 'Rack #{rackNumber}',
     'brand.addressTitle': 'Address',
@@ -332,6 +338,7 @@ export function orderStatusLabel(status: string, locale: Locale = detectBrowserL
     'EN PROCESO': { es: 'En Proceso', en: 'In Process' },
     LISTO: { es: 'Listo', en: 'Ready' },
     ENTREGADO: { es: 'Entregado', en: 'Delivered' },
+    ABANDONADO: { es: 'Abandonado', en: 'Abandoned' },
   };
 
   return mapping[status]?.[locale] ?? status;
