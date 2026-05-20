@@ -17,6 +17,7 @@ import {
   Tag,
   RefreshCw,
 } from 'lucide-react';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 
 import './tracking.css';
 
@@ -109,6 +110,8 @@ function ProgressBar({ currentStatus }: { currentStatus: string }) {
 /* ---------- Rack Location Visual ---------- */
 
 function RackLocation({ rackNumber }: { rackNumber: string }) {
+  const { t } = useI18n();
+
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
       <div className="flex items-center gap-3">
@@ -117,10 +120,10 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-            Ubicación en tienda
+            {t('tracking.section.location')}
           </p>
           <p className="text-lg font-bold text-[#1B2A4A]">
-            Rack #{rackNumber}
+            {t('tracking.section.locationValue', { rackNumber })}
           </p>
         </div>
       </div>
@@ -143,7 +146,7 @@ function RecibidoView({ order }: { order: Order }) {
           {t('tracking.receivedTitle')}
         </h2>
         <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)}
+          {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
         </p>
         <p className="text-gray-500 text-sm mt-1">
           {t('tracking.receivedMessage')}
@@ -172,7 +175,10 @@ function EnProcesoView({ order }: { order: Order }) {
           {t('tracking.processingTitle')}
         </h2>
         <p className="text-gray-600">
-          Orden #{orderTicketLabel(order)} | Cliente: {order.customerName}
+          {t('tracking.orderWithClient', {
+            orderNumber: orderTicketLabel(order),
+            customerName: order.customerName,
+          })}
         </p>
         <p className="text-gray-500 text-sm mt-1">
           {t('tracking.processingMessage', { estimatedDate: formatDate(order.estimatedDate) })}
@@ -195,7 +201,9 @@ function ListoView({ order }: { order: Order }) {
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
           {t('tracking.readyTitle')}
         </h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
+        <p className="text-gray-600">
+          {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
+        </p>
       </div>
       {order.rackNumber && <RackLocation rackNumber={order.rackNumber} />}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
@@ -219,7 +227,9 @@ function RecordatorioView({ order }: { order: Order }) {
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
           {t('tracking.reminderTitle', { daysReady: order.daysReady ?? 0 })}
         </h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
+        <p className="text-gray-600">
+          {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
+        </p>
       </div>
       {order.rackNumber && <RackLocation rackNumber={order.rackNumber} />}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -240,7 +250,9 @@ function EntregadoView({ order }: { order: Order }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">{t('tracking.deliveredTitle')}</h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
+        <p className="text-gray-600">
+          {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
+        </p>
       </div>
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto space-y-3 text-center">
         <p className="text-gray-600 text-sm">{t('tracking.deliveredMessage')}</p>
@@ -271,7 +283,9 @@ function AbandonadoView({ order }: { order: Order }) {
         <h2 className="text-xl font-semibold text-[#1B2A4A] mb-2">
           {t('tracking.abandonedTitle')}
         </h2>
-        <p className="text-gray-600">Orden #{orderTicketLabel(order)}</p>
+        <p className="text-gray-600">
+          {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
+        </p>
       </div>
       <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
         <p className="text-red-700 text-sm">{t('tracking.abandonedMessage')}</p>
@@ -456,8 +470,25 @@ export function TrackingPage() {
 
 return (
     <div className="min-h-screen bg-[#FFF4E6] font-sans flex flex-col overflow-x-hidden">
-      {/* navbar removed to avoid layout break */}
-      {/* Navegación superior: se usa nav global en App.tsx */}
+      <header className="bg-[#0E0E1A] sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <img
+                src="/svg/zivo-wordmark-white.svg"
+                alt="zivo"
+                className="h-6 sm:h-8 w-auto"
+              />
+              <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
+                {t('tracking.header.branch', { branchName: 'Ortega Dry Cleaners' })}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <LanguageToggle inline />
+            </div>
+          </div>
+        </div>
+      </header>
 
       {/* Contenido principal */}
       <main className="flex flex-col flex-1 px-4 sm:px-6 py-8 sm:py-12 md:py-20 items-center text-[#1B2A4A]">
@@ -500,7 +531,7 @@ return (
         {/* Footer: Hosted by zivo */}
         <footer className="w-full mt-10">
           <div className="max-w-3xl mx-auto py-6 text-center text-sm text-gray-600 flex items-center justify-center gap-2">
-            <span>Hosted by</span>
+            <span>{t('tracking.footer.hostedBy')}</span>
             <img src="/svg/zivo-wordmark.svg" alt="zivo" className="h-4 w-auto inline-block" />
           </div>
         </footer>
