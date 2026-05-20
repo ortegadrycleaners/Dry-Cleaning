@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
+/* eslint-disable react-refresh/only-export-components */
 export type Locale = 'es' | 'en';
 export const SUPPORTED_LOCALES: Locale[] = ['es', 'en'];
 export const DEFAULT_LOCALE: Locale = 'es';
@@ -395,7 +396,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = locale;
     try {
       if (typeof window !== 'undefined') window.localStorage.setItem('locale', locale);
-    } catch {}
+    } catch {
+      // Silently ignore localStorage errors (e.g., private mode, quota exceeded, etc.)
+    }
   }, [locale]);
 
   const contextValue = useMemo<I18nContextType>(() => ({

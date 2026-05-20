@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { customerDraftSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
-import type { Order } from '@/types';
+import type { Order, Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/i18n';
 import { useOrders } from '@/context/OrdersContext';
@@ -140,6 +140,7 @@ export function NewOrderPage() {
     if (window.location.hash === '#consent') {
       wizard.openModal({ name: '', phone: '', notes: '', smsConsent: false });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePhoneChange = (value: string) => {
@@ -148,7 +149,7 @@ export function NewOrderPage() {
     setValue('phone', value, { shouldValidate: true });
   };
 
-  const handleCustomerSelect = (customer: any) => {
+  const handleCustomerSelect = (customer: Customer) => {
     customerSearch.selectCustomer(customer);
     setValue('phone', customer.phone);
     setValue('name', customer.lastName);

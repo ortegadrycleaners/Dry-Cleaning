@@ -22,6 +22,8 @@ import { useOrders } from '@/context/OrdersContext';
 import type { Notification, ReminderConfig, OrderEvent } from '@/types/notifications';
 import { DEFAULT_REMINDER_CONFIG } from '@/types/notifications';
 
+/* eslint-disable react-refresh/only-export-components */
+
 interface NotificationsContextType {
   notifications: Notification[];
   unreadCount: number;

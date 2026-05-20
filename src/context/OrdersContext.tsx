@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+/* eslint-disable react-refresh/only-export-components */
 import type { Order, OrderStatus } from '@/types';
 import type { OrderEvent } from '@/types/notifications';
 import { eventBus } from '@/services/EventBus';
@@ -34,7 +35,6 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   // Carga inicial desde Supabase
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
     fetchOrders()
       .then((data) => {
         if (!cancelled) {

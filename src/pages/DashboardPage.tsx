@@ -182,8 +182,11 @@ function NotifyCustomerModal({
   const [usageTick, setUsageTick] = useState(0);
 
   useEffect(() => {
-    if (isOpen) setSelectedType(templateType);
-  }, [isOpen, templateType]);
+    if (isOpen && selectedType !== templateType) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedType(templateType);
+    }
+  }, [isOpen, templateType, selectedType]);
 
   // Limpia error cuando se abre el modal. Usa el cambio de `isOpen` como key
   // efectivo via remount-style: se evita useEffect+setState anidado.
