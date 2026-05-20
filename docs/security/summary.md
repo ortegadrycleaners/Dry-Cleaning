@@ -2,10 +2,11 @@
 
 This folder contains individual markdown reports for each finding:
 
-- rls-public-access.md
-- tracking-token-not-validated.md
-- twilio-client-only-guards.md
-- supabase-env-misconfig-risk.md
-- ts-lint-integrity-issues.md
+## Status Overview
+- ✅ **supabase-env-misconfig-risk.md** — RESOLVED
+- ⏳ **rls-public-access.md** — PENDING
+- ⏳ **tracking-token-not-validated.md** — PENDING
+- ⏳ **twilio-client-only-guards.md** — PENDING
+- ⏳ **ts-lint-integrity-issues.md** — PENDING
 
 Scope: last 5 commits, TypeScript integrity, Supabase connections/RLS, tracking, Twilio. HTML/CSS/UI ignored.
