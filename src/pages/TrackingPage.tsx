@@ -368,12 +368,13 @@ function BrandInfoSection() {
 /* ---------- Refresh Indicator ---------- */
 
 function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
-  const elapsedText = formatElapsedTime(lastRefresh);
+  const { t, locale } = useI18n();
+  const elapsedText = formatElapsedTime(lastRefresh, locale);
 
   return (
     <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mt-4">
       <RefreshCw className="w-3 h-3" />
-      <span>Actualizado {elapsedText}</span>
+      <span>{t('tracking.updated', { elapsedText })}</span>
     </div>
   );
 }
