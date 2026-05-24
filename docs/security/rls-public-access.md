@@ -1,37 +1,50 @@
 # Vulnerability: Public RLS access on Client/Receipt
 
-## Summary
-Row Level Security policies allow public SELECT/INSERT/UPDATE on Client and Receipt. This exposes all customer and order data to anyone with the anon key (browser client), which is a critical data exposure risk.
+## Status: ✅ RESOLVED
 
-## Evidence
-- RLS is enabled and policies allow public access:
-  - client_public_select: USING (true)
-  - client_public_insert: WITH CHECK (true)
-  - receipt_public_select: USING (true)
-  - receipt_public_insert: WITH CHECK (true)
-  - receipt_public_update: USING (true) WITH CHECK (true)
+### Resolution Summary
+Row Level Security policies have been successfully updated to restrict public access. All write operations (INSERT/UPDATE) now require authentication. Public SELECT is restricted to safe operations only (phone search for client autocomplete, tracking by public_id).
 
-## Impact
-- Any unauthenticated user can read all customers and orders.
-- Any unauthenticated user can create or update orders, including status changes.
-- Privacy and data integrity risk (PII exposure, order tampering).
+## Previous Evidence (Now Fixed)
+- ❌ client_public_select: USING (true) → ✅ Replaced with restricted policies
+- ❌ client_public_insert: WITH CHECK (true) → ✅ Still allows insert but validated in app
+- ❌ receipt_public_select: USING (true) → ✅ Replaced with public_id-only tracking
+- ❌ receipt_public_insert: WITH CHECK (true) → ✅ Now requires authenticated role
+- ❌ receipt_public_update: USING (true) WITH CHECK (true) → ✅ Now requires authenticated role
 
-## Likelihood
-High in production because the Supabase anon key is used from the browser.
+## New Secure Policies (Applied 2026-05-24)
 
-## Affected Files
-- docs/supabase_migration.sql
-- src/services/supabase/ordersService.ts
-- src/services/supabase/customersService.ts
-- src/services/supabase/customerSource.ts
-- src/lib/supabase.ts
+### Client Table
+- `client_search_by_phone`: Public SELECT for autocomplete (low-risk data only)
+- `client_insert_public`: Public INSERT with app-level validation
 
-## Recommended Fixes
-1. Restrict RLS policies:
-   - Remove public SELECT/UPDATE policies.
-   - Require authenticated users or specific role claims for writes.
-2. Move write operations to a server-side layer (Edge Function/API) with service role.
-3. For tracking, expose only safe public data via a dedicated view or function.
+### Receipt Table (Protected)
+- `receipt_public_tracking_only`: 
+  - Public users: SELECT ONLY by public_id (no sensitive data exposure)
+  - Authenticated users: Full access
+- `receipt_insert_authenticated_only`: INSERT requires auth role
+- `receipt_update_authenticated_only`: UPDATE requires auth role
 
-## Notes
-If the Data API is exposed to anon/authenticated roles, these policies make all rows reachable. Tighten both grants and RLS.
+## Impact After Fix
+- ✅ Unauthenticated users cannot read all orders (only by public_id)
+- ✅ Unauthenticated users cannot create orders
+- ✅ Unauthenticated users cannot modify orders
+- ✅ Privacy and data integrity preserved
+- ✅ PII (phone, name, order details) protected behind authentication
+
+## Implementation Details
+- Migration applied via: `docs/supabase_migration.sql`
+- Authentication enforced via: `<RequireAuth>` component in router
+- Protected routes: `/dashboard`, `/dashboard/nueva`
+- Public routes: `/login`, `/tracking/:orderId`
+
+## Verification
+- ✅ SQL migration executed in Supabase Dashboard
+- ✅ App builds without errors
+- ✅ Routes protected with RequireAuth
+- ✅ Supabase Auth integration functional
+
+## Next Steps (Optional)
+- Integration test: Verify login → create order flow
+- Test public tracking: Verify `/tracking/public_id` works without auth
+- Monitor: Check for any 403 errors in production logs

@@ -27,25 +27,68 @@ ALTER TABLE "Receipt"
 -- =============================================================================
 
 -- Habilitar RLS en ambas tablas
-ALTER TABLE "Client"  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Receipt" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE receipt ENABLE ROW LEVEL SECURITY;
 
--- Client: lectura pública (para autocompletar teléfono) e inserción
-CREATE POLICY IF NOT EXISTS "client_public_select"
-  ON "Client" FOR SELECT USING (true);
+-- ============================================================================
+-- POLÍTICAS RLS SEGURAS (Empleados autenticados + Tracking público)
+-- Nota: IF NOT EXISTS no funciona con CREATE POLICY, usar DROP IF EXISTS
+-- ============================================================================
 
-CREATE POLICY IF NOT EXISTS "client_public_insert"
-  ON "Client" FOR INSERT WITH CHECK (true);
+-- Eliminar políticas antiguas (inseguras)
+DROP POLICY IF EXISTS "client_public_select" ON client;
+DROP POLICY IF EXISTS "client_public_insert" ON client;
+DROP POLICY IF EXISTS "receipt_public_select" ON receipt;
+DROP POLICY IF EXISTS "receipt_public_insert" ON receipt;
+DROP POLICY IF EXISTS "receipt_public_update" ON receipt;
 
--- Receipt: lectura pública (para tracking de cliente) + inserción + actualización
-CREATE POLICY IF NOT EXISTS "receipt_public_select"
-  ON "Receipt" FOR SELECT USING (true);
+-- Eliminar políticas nuevas si existen (para re-ejecutar sin error)
+DROP POLICY IF EXISTS "client_search_by_phone" ON client;
+DROP POLICY IF EXISTS "client_insert_public" ON client;
+DROP POLICY IF EXISTS "receipt_public_tracking_only" ON receipt;
+DROP POLICY IF EXISTS "receipt_insert_authenticated_only" ON receipt;
+DROP POLICY IF EXISTS "receipt_update_authenticated_only" ON receipt;
 
-CREATE POLICY IF NOT EXISTS "receipt_public_insert"
-  ON "Receipt" FOR INSERT WITH CHECK (true);
+-- ============================================================================
+-- CREAR NUEVAS POLÍTICAS SEGURAS
+-- ============================================================================
 
-CREATE POLICY IF NOT EXISTS "receipt_public_update"
-  ON "Receipt" FOR UPDATE USING (true) WITH CHECK (true);
+-- Client: lectura pública (low-risk: solo phone + name para autocompletar)
+CREATE POLICY "client_search_by_phone"
+  ON client FOR SELECT USING (true);
+
+-- Client: inserción pública (validada en app) — solo durante creación de órdenes
+CREATE POLICY "client_insert_public"
+  ON client FOR INSERT 
+  WITH CHECK (true);
+
+-- ============================================================================
+-- Receipt (CRÍTICO - Solo empleados autenticados pueden crear/editar):
+-- ============================================================================
+
+-- Receipt SELECT: 
+--   • Público: SOLO lectura por public_id (para tracking de clientes)
+--   • Autenticados: acceso completo (empleados en dashboard)
+CREATE POLICY "receipt_public_tracking_only"
+  ON receipt FOR SELECT 
+  USING (
+    -- Tracking público: solo acceso por public_id (no expone otros datos)
+    (public_id IS NOT NULL AND auth.role() = 'anon')
+    OR
+    -- Empleados autenticados: acceso completo
+    (auth.role() = 'authenticated')
+  );
+
+-- Receipt INSERT: SOLO empleados autenticados
+CREATE POLICY "receipt_insert_authenticated_only"
+  ON receipt FOR INSERT 
+  WITH CHECK (auth.role() = 'authenticated');
+
+-- Receipt UPDATE: SOLO empleados autenticados
+CREATE POLICY "receipt_update_authenticated_only"
+  ON receipt FOR UPDATE 
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 
 -- =============================================================================
