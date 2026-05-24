@@ -372,7 +372,7 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
   const elapsedText = formatElapsedTime(lastRefresh, locale);
 
   return (
-    <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mt-4">
+    <div className="flex items-center justify-center gap-2 text-xs text-gray-600 mt-4">
       <RefreshCw className="w-3 h-3" />
       <span>{t('tracking.updated', { elapsedText })}</span>
     </div>
@@ -551,7 +551,7 @@ return (
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 leading-tight">
               {t('tracking.hero.title')}
             </h2>
-            <p className="text-gray-300 text-base sm:text-lg md:text-xl">
+            <p className="text-gray-600 text-base sm:text-lg md:text-xl">
               {t('tracking.hero.subtitle')}
             </p>
         </div>
