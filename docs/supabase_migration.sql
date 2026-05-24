@@ -111,7 +111,97 @@ CREATE INDEX IF NOT EXISTS idx_receipt_order_date ON "Receipt" (order_date DESC)
 
 
 -- =============================================================================
--- 4. Verificar estructura final
+-- 5. Inserción atómica de órdenes
+-- Evita carreras cuando dos envíos intentan usar el mismo order_number al mismo tiempo.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION create_order_atomic(
+  p_order_id UUID,
+  p_public_id TEXT,
+  p_order_number INTEGER,
+  p_phone BIGINT,
+  p_customer_name TEXT,
+  p_deliver_date TIMESTAMPTZ,
+  p_status TEXT DEFAULT 'RECIBIDO',
+  p_notes TEXT DEFAULT NULL
+)
+RETURNS TABLE(order_id UUID, public_id TEXT)
+LANGUAGE plpgsql
+SECURITY INVOKER
+AS $$
+DECLARE
+  v_client_id UUID;
+  v_existing_client RECORD;
+  v_now TIMESTAMPTZ := now();
+BEGIN
+  SELECT id_client, name
+  INTO v_existing_client
+  FROM client
+  WHERE phone_number = p_phone
+  LIMIT 1;
+
+  IF FOUND THEN
+    IF lower(trim(v_existing_client.name)) <> lower(trim(p_customer_name)) THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '22000',
+        MESSAGE = format(
+          'No se pudo insertar la orden porque el número %s ya está registrado con %s.',
+          p_phone,
+          v_existing_client.name
+        );
+    END IF;
+
+    v_client_id := v_existing_client.id_client;
+  ELSE
+    INSERT INTO client (
+      id_client,
+      phone_number,
+      name
+    ) VALUES (
+      gen_random_uuid(),
+      p_phone,
+      p_customer_name
+    )
+    RETURNING id_client INTO v_client_id;
+  END IF;
+
+  BEGIN
+    INSERT INTO receipt (
+      id_order,
+      public_id,
+      order_number,
+      order_date,
+      deliver_date,
+      fk_cliente,
+      status,
+      status_updated_at,
+      notes
+    ) VALUES (
+      p_order_id,
+      p_public_id,
+      p_order_number,
+      v_now,
+      p_deliver_date,
+      v_client_id,
+      p_status,
+      v_now,
+      p_notes
+    )
+    RETURNING id_order, public_id INTO order_id, public_id;
+  EXCEPTION
+    WHEN unique_violation THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '23505',
+        MESSAGE = format('El número de orden %s ya existe.', p_order_number);
+  END;
+
+  RETURN NEXT;
+END;
+$$;
+
+
+-- =============================================================================
+-- 6. Verificar estructura final
 -- =============================================================================
 SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns

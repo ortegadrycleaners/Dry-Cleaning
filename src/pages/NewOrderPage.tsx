@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -26,6 +26,7 @@ export function NewOrderPage() {
   const { t } = useI18n();
   const { orders, addOrder } = useOrders();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<{ publicId: string; orderNumber: string; customerName: string; trackingUrl: string } | null>(null);
 
   // Custom hooks for separated concerns
@@ -171,27 +172,36 @@ export function NewOrderPage() {
   };
 
   const onSubmit = async (data: CustomerFormOutput) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
     setSubmitError(null);
-    if (!orderForm.orderId.trim() || !orderForm.estimatedDate) {
-      setSubmitError(t('newOrder.orderAndDateRequired'));
-      return;
-    }
-
-    if (customerSearch.selectedCustomer) {
-      const result = await createOrder(data);
-      if (result.success) {
-        customerSearch.clearSearch();
+    try {
+      if (!orderForm.orderId.trim() || !orderForm.estimatedDate) {
+        setSubmitError(t('newOrder.orderAndDateRequired'));
+        return;
       }
-      return;
-    }
 
-    const validationError = await validateOrderInputs(data);
-    if (validationError) {
-      setSubmitError(validationError);
-      return;
-    }
+      if (customerSearch.selectedCustomer) {
+        const result = await createOrder(data);
+        if (result.success) {
+          customerSearch.clearSearch();
+        }
+        return;
+      }
 
-    wizard.openModal(data);
+      const validationError = await validateOrderInputs(data);
+      if (validationError) {
+        setSubmitError(validationError);
+        return;
+      }
+
+      wizard.openModal(data);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalSubmit = async (modalData: CustomerFormOutput) => {
@@ -515,10 +525,10 @@ export function NewOrderPage() {
               <div className="pt-4 space-y-3">
                 <Button
                   type="submit"
-                  disabled={!orderForm.orderId.trim() || !orderForm.estimatedDate}
+                  disabled={isSubmitting || !orderForm.orderId.trim() || !orderForm.estimatedDate}
                   className="w-full h-12 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-medium disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {t('newOrder.createOrder')}
+                  {isSubmitting ? t('newOrder.creatingOrder') : t('newOrder.createOrder')}
                 </Button>
                 <button
                   type="button"

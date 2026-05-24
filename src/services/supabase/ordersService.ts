@@ -30,14 +30,14 @@ function normalizePhoneDigits(raw: string): string {
   return String(raw).replace(/\D/g, '');
 }
 
-function normalizeName(raw: string): string {
-  return raw.trim().toLowerCase();
-}
-
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value
   );
+}
+
+function isUniqueViolation(error: { code?: string; message?: string } | null | undefined): boolean {
+  return error?.code === '23505' || Boolean(error?.message?.toLowerCase().includes('unique'));
 }
 
 /** Convierte un numeric de teléfono (ej. 7875550101) al formato (787) 555-0101 */
@@ -146,103 +146,45 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
 
   const orderId = order.id && isUuid(order.id) ? order.id : crypto.randomUUID();
   const publicId = order.publicId?.trim() || generatePublicId(12);
-  const clientId = crypto.randomUUID();
 
-  const { data: existingReceipt, error: receiptQueryError } = await supabase
-    .from('receipt')
-    .select('id_order')
-    .eq('order_number', numericOrderNumber)
-    .maybeSingle();
-
-  if (receiptQueryError) {
-    console.error('[ordersService] insertOrder (receipt check) error:', receiptQueryError.message);
-    return {
-      orderId: null,
-      publicId: null,
-      error: 'Error al verificar el número de orden.',
-      code: 'DATABASE_ERROR',
-    };
-  }
-
-  if (existingReceipt) {
-    return {
-      orderId: null,
-      publicId: null,
-      error: `El número de orden ${numericOrderNumber} ya existe.`,
-      code: 'ORDER_NUMBER_EXISTS',
-    };
-  }
-
-  // 1. Buscar cliente existente por número de teléfono
-  const { data: existingClient, error: clientQueryError } = await supabase
-    .from('client')
-    .select('id_client, phone_number, name')
-    .eq('phone_number', rawPhone)
-    .maybeSingle();
-
-  if (clientQueryError) {
-    console.error('[ordersService] insertOrder (client check) error:', clientQueryError.message);
-    return {
-      orderId: null,
-      publicId: null,
-      error: 'Error al verificar el teléfono del cliente.',
-      code: 'DATABASE_ERROR',
-    };
-  }
-
-  let resolvedClientId: string;
-
-  if (existingClient?.id_client) {
-    if (normalizeName(existingClient.name ?? '') !== normalizeName(order.customerName)) {
-      return {
-        orderId: null,
-        publicId: null,
-        error: `No se pudo insertar la orden porque el número ${formatPhone(rawPhone)} ya está registrado en Customer Data Registration con ${existingClient.name}.`,
-        code: 'PHONE_NAME_MISMATCH',
-      };
-    }
-    resolvedClientId = existingClient.id_client as string;
-  } else {
-    const { error: clientError } = await supabase.from('client').insert({
-      id_client: clientId,
-      phone_number: rawPhone,
-      name: order.customerName,
-    });
-
-    if (clientError) {
-      console.error('[ordersService] insertOrder (client) error:', clientError.message);
-      return {
-        orderId: null,
-        publicId: null,
-        error: 'No se pudo crear el cliente.',
-        code: 'CLIENT_INSERT_FAILED',
-      };
-    }
-
-    resolvedClientId = clientId;
-  }
-
-  // 3. Insertar la orden (receipt)
-  // Convertir estimatedDate de "DD Mes YYYY" a timestamp
   const deliverDate = (() => {
     const parsed = new Date(order.estimatedDate);
     return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
   })();
 
-  const { error: receiptError } = await supabase.from('receipt').insert({
-    id_order: orderId,
-    public_id: publicId,
-    order_number: numericOrderNumber,
-    order_date: new Date().toISOString(),
-    deliver_date: deliverDate,
-    fk_cliente: resolvedClientId,
-    status: order.status,
-    status_updated_at: new Date().toISOString(),
-    notes: order.notes ?? null,
-  });
+  const { data: insertedOrder, error: receiptError } = await supabase
+    .rpc('create_order_atomic', {
+      p_order_id: orderId,
+      p_public_id: publicId,
+      p_order_number: numericOrderNumber,
+      p_phone: rawPhone,
+      p_customer_name: order.customerName,
+      p_deliver_date: deliverDate,
+      p_status: order.status,
+      p_notes: order.notes ?? null,
+    })
+    .single();
 
-  if (receiptError) {
-    console.error('[ordersService] insertOrder (receipt) error:', receiptError.message);
+  if (receiptError || !insertedOrder) {
+    if (isUniqueViolation(receiptError)) {
+      return {
+        orderId: null,
+        publicId: null,
+        error: `El número de orden ${numericOrderNumber} ya existe.`,
+        code: 'ORDER_NUMBER_EXISTS',
+      };
+    }
+
+    if (receiptError?.code === '22000') {
+      return {
+        orderId: null,
+        publicId: null,
+        error: receiptError.message,
+        code: 'PHONE_NAME_MISMATCH',
+      };
+    }
+
+    console.error('[ordersService] insertOrder (receipt rpc) error:', receiptError?.message);
     return {
       orderId: null,
       publicId: null,
@@ -251,7 +193,10 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     };
   }
 
-  return { orderId, publicId };
+  return {
+    orderId: insertedOrder.order_id,
+    publicId: insertedOrder.public_id,
+  };
 }
 
 /** Actualiza el estado de una orden y opcionalmente el número de rack */
