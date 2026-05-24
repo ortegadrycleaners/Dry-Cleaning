@@ -50,7 +50,7 @@ import {
   type SmsUsageStats,
 } from '@/services/twilio';
 import { NOTIFICATION_TEMPLATE_OPTIONS, type NotificationEventType } from '@/types/notifications';
-import { formatDate } from '@/i18n';
+import { useI18n } from '@/i18n';
 
 const REMINDER_DAYS = 3;
 const ABANDON_DAYS = 30;
@@ -72,12 +72,13 @@ interface MarkReadyModalProps {
 }
 
 function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalProps) {
+  const { t } = useI18n();
   const [rackNumber, setRackNumber] = useState('');
   const [error, setError] = useState('');
 
   const handleConfirm = () => {
     if (!rackNumber.trim()) {
-      setError('El número de rack es requerido');
+      setError(t('dashboard.markReady.rackNumberRequired'));
       return;
     }
     onConfirm(rackNumber.trim());
@@ -98,19 +99,20 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-[#1B2A4A]">
-            Marcar Orden como Lista
+            {t('dashboard.markReady.title')}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="bg-slate-50 p-3 rounded-lg">
             <p className="text-sm text-gray-600">
-              Orden{' '}
+              {t('dashboard.markReady.orderLabel')}{' '}
               <span className="font-semibold text-[#1B2A4A]">
                 #{orderTicketLabel(order)}
               </span>
             </p>
             <p className="text-sm text-gray-600">
-              Cliente: <span className="font-medium">{order.customerName}</span>
+              {t('dashboard.markReady.customerLabel')}{' '}
+              <span className="font-medium">{order.customerName}</span>
             </p>
           </div>
           <div className="space-y-2">
@@ -118,12 +120,12 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
               htmlFor="rackNumber"
               className="text-sm font-medium text-gray-700"
             >
-              Número de Rack
+              {t('dashboard.markReady.rackNumberLabel')}
             </Label>
             <Input
               id="rackNumber"
               type="text"
-              placeholder="Ej. 14"
+              placeholder={t('dashboard.markReady.rackNumberPlaceholder')}
               value={rackNumber}
               onChange={(e) => setRackNumber(e.target.value)}
               className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
@@ -134,18 +136,17 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalPro
             onClick={handleConfirm}
             className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold"
           >
-            Confirmar (sin enviar SMS)
+            {t('dashboard.markReady.confirmButton')}
           </Button>
           <p className="text-xs text-center text-gray-500">
-                    El SMS NO se envía aquí. Tras marcar la orden como lista, usa el
-                    botón <strong>“SMS cliente”</strong>.
-                  </p>
+            {t('dashboard.markReady.smsHint')}
+          </p>
           <Button
             variant="ghost"
             onClick={handleClose}
             className="w-full h-10 text-gray-500 hover:text-gray-700"
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
         </div>
       </DialogContent>
@@ -174,6 +175,7 @@ function NotifyCustomerModal({
   templateType,
   daysReady,
 }: NotifyCustomerModalProps) {
+  const { t } = useI18n();
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<NotificationEventType>(templateType);
@@ -225,18 +227,24 @@ function NotifyCustomerModal({
     setUsageTick((t) => t + 1);
 
     if (result.ok) {
-      toast.success(isReminder ? 'Recordatorio enviado al cliente' : 'SMS enviado al cliente', {
-        description: `#${order.orderNumber} — ${order.customerName}`,
-      });
+      toast.success(
+        isReminder ? t('dashboard.notify.sentReminder') : t('dashboard.notify.sentSms'),
+        {
+          description: `#${order.orderNumber} — ${order.customerName}`,
+        }
+      );
       onSent();
       onClose();
       return;
     }
 
-    setErrorMsg(result.errorMessage ?? 'No se pudo enviar el SMS.');
-      toast.error(isReminder ? 'No se envió el recordatorio' : 'No se envió el SMS', {
-      description: result.errorMessage ?? 'Revisa los detalles en el modal.',
-    });
+    setErrorMsg(result.errorMessage ?? t('dashboard.notify.sendError'));
+    toast.error(
+      isReminder ? t('dashboard.notify.failedReminder') : t('dashboard.notify.failedSms'),
+      {
+        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+      }
+    );
   };
 
   return (
@@ -245,13 +253,13 @@ function NotifyCustomerModal({
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2">
             <Send className="w-5 h-5 text-[#C9A84C]" />
-            {isReminder ? 'Recordatorio' : 'SMS cliente'}
+            {isReminder ? t('dashboard.notify.titleReminder') : t('dashboard.notify.titleSms')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Template</Label>
+            <Label className="text-sm font-medium text-gray-700">{t('dashboard.notify.templateLabel')}</Label>
             <div className="flex flex-wrap gap-2">
               {NOTIFICATION_TEMPLATE_OPTIONS.map((option) => {
                 const isActive = option.type === selectedType;
@@ -272,76 +280,77 @@ function NotifyCustomerModal({
               })}
             </div>
             {activeTemplate && (
-              <p className="text-xs text-gray-500">Selected: {activeTemplate.label}</p>
+              <p className="text-xs text-gray-500">
+                {t('dashboard.notify.selectedTemplate', { template: activeTemplate.label })}
+              </p>
             )}
           </div>
 
           <div className="bg-slate-50 p-3 rounded-lg space-y-1">
             <p className="text-sm text-gray-600">
-              Orden{' '}
+              {t('dashboard.notify.orderLabel')}{' '}
               <span className="font-semibold text-[#1B2A4A]">
                 #{orderTicketLabel(order)}
               </span>
             </p>
             <p className="text-sm text-gray-600">
-              Cliente: <span className="font-medium">{order.customerName}</span>
+              {t('dashboard.notify.customerLabel')}{' '}
+              <span className="font-medium">{order.customerName}</span>
             </p>
             <p className="text-sm text-gray-600">
-              Teléfono destino:{' '}
+              {t('dashboard.notify.phoneLabel')}{' '}
               <span className="font-mono">{order.phone}</span>
             </p>
             {order.rackNumber && (
               <p className="text-sm text-gray-600">
-                Rack: <span className="font-medium">#{order.rackNumber}</span>
+                {t('dashboard.notify.rackLabel')}{' '}
+                <span className="font-medium">#{order.rackNumber}</span>
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Mensaje a enviar (plantilla sellada — no editable)
-            </Label>
+            <Label className="text-sm font-medium text-gray-700">{t('dashboard.notify.messageLabel')}</Label>
             <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-800 whitespace-pre-wrap">
               {message}
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{message.length} caracteres</span>
+              <span>{t('dashboard.notify.messageLength', { count: message.length })}</span>
               <span>
-                {segments} segmento{segments !== 1 ? 's' : ''} SMS facturable
-                {segments !== 1 ? 's' : ''}
+                {t('dashboard.notify.messageSegments', { count: segments, plural: segments !== 1 ? 's' : '' })}
               </span>
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-slate-50 p-3 text-xs text-gray-600 space-y-1">
             <div className="flex items-center justify-between">
-              <span>Modo:</span>
+              <span>{t('dashboard.notify.modeLabel')}</span>
               <span className="font-medium">
-                {usage.mockMode ? 'MOCK (no envía a Twilio)' : 'PRODUCCIÓN'}
+                {usage.mockMode ? t('dashboard.notify.mockMode') : t('dashboard.notify.productionMode')}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>SMS último minuto:</span>
+              <span>{t('dashboard.notify.smsLastMinute')}</span>
               <span className="font-medium">
                 {usage.sentLastMinute} / {usage.globalPerMinuteCap}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>SMS últimas 24h:</span>
+              <span>{t('dashboard.notify.smsLast24Hours')}</span>
               <span className="font-medium">
                 {usage.sentLastDay} / {usage.dailyBudget}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Presupuesto restante hoy:</span>
+              <span>{t('dashboard.notify.remainingBudget')}</span>
               <span className="font-medium">{usage.remainingDailyBudget}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>Kill switch:</span>
+              <span>{t('dashboard.notify.killSwitchLabel')}</span>
               <span
                 className={`font-medium ${usage.killSwitch ? 'text-red-600' : 'text-green-600'}`}
               >
-                {usage.killSwitch ? 'ACTIVO' : 'inactivo'}
+                {usage.killSwitch ? t('dashboard.notify.killSwitchActive') : t('dashboard.notify.killSwitchInactive')}
               </span>
             </div>
           </div>
@@ -350,9 +359,9 @@ function NotifyCustomerModal({
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 flex gap-2">
               <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <p>
-                Twilio no está configurado. Define{' '}
-                <code className="font-mono">VITE_NOTIFY_ENDPOINT_URL</code> o
-                ejecuta en modo mock. Ver <strong>TWILIO_SETUP.md</strong>.
+                {t('dashboard.notify.twilioNotConfigured')}{' '}
+                <code className="font-mono">VITE_NOTIFY_ENDPOINT_URL</code>.
+                {t('dashboard.notify.twilioMockHint')}
               </p>
             </div>
           )}
@@ -372,21 +381,18 @@ function NotifyCustomerModal({
             {isSending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Enviando…
+                {t('dashboard.notify.sending')}
               </>
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                {isReminder ? 'Confirmar y enviar recordatorio' : 'Confirmar y enviar SMS'}
+                {isReminder ? t('dashboard.notify.sendReminder') : t('dashboard.notify.sendSms')}
               </>
             )}
           </Button>
 
           <p className="text-[11px] text-center text-gray-500 leading-snug">
-            Acción auditable. Se aplicarán en este orden: kill switch, validación de
-            estado y teléfono, cooldown anti doble-click, dedup por orden,
-            rate-limit por orden / por minuto y presupuesto diario. Reintentos
-            usan idempotency key para no duplicar cargos en Twilio.
+            {t('dashboard.notify.auditNote')}
           </p>
 
           <Button
@@ -395,7 +401,7 @@ function NotifyCustomerModal({
             disabled={isSending}
             className="w-full h-10 text-gray-500 hover:text-gray-700"
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
         </div>
       </DialogContent>
@@ -423,8 +429,10 @@ function useNotifiedOrderIdsByType(
 /* ---------- Status badge ---------- */
 
 function StatusBadge({ order }: { order: Order }) {
+  const { t, translateOrderStatus, formatDate } = useI18n();
   const { status } = order;
   const daysReady = resolveDaysReady(order);
+  const translatedStatus = translateOrderStatus(status);
 
   if (status === 'ENTREGADO') {
     return (
@@ -433,7 +441,7 @@ function StatusBadge({ order }: { order: Order }) {
         style={{ backgroundColor: '#F3F4F6', color: '#374151', border: '1px solid #E8E8F0' }}
       >
         <CheckCircle2 className="w-3 h-3 mr-1 text-[#6B7280]" />
-        ENTREGADO
+        {translatedStatus}
       </span>
     );
   }
@@ -445,7 +453,7 @@ function StatusBadge({ order }: { order: Order }) {
         style={{ backgroundColor: '#FFF1F2', color: '#B91C1C', border: '1px solid #FECACA' }}
       >
         <AlertTriangle className="w-3 h-3 mr-1 text-[#B91C1C]" />
-        ABANDONADO
+        {translatedStatus}
       </span>
     );
   }
@@ -458,11 +466,14 @@ function StatusBadge({ order }: { order: Order }) {
           style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
         >
           <AlertTriangle className="w-3 h-3 mr-1 text-[#047857]" />
-          {`LISTO ⚠️ ${daysReady} ${daysReady === 1 ? 'día' : 'días'}${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
+          {t('dashboard.status.readyDays', {
+            days: daysReady,
+            rack: order.rackNumber ? ` · RACK ${order.rackNumber}` : '',
+          })}
         </span>
 
         <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {order.statusUpdatedAt ? `Listo desde el ${formatDate(order.statusUpdatedAt)}` : 'Listo'}
+          {order.statusUpdatedAt ? t('dashboard.status.readySince', { date: formatDate(order.statusUpdatedAt) }) : t('dashboard.status.ready')}
         </span>
       </span>
     );
@@ -476,11 +487,11 @@ function StatusBadge({ order }: { order: Order }) {
           style={{ backgroundColor: '#E6FAF1', color: '#047857', border: '1px solid #CFF0E3' }}
         >
           <CheckCircle2 className="w-3 h-3 mr-1 text-[#047857]" />
-          {`LISTO${order.rackNumber ? ` · RACK ${order.rackNumber}` : ''}`}
+          {order.rackNumber ? `${translatedStatus} · RACK ${order.rackNumber}` : translatedStatus}
         </span>
 
         <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          {order.statusUpdatedAt ? `Listo desde el ${formatDate(order.statusUpdatedAt)}` : 'Listo'}
+          {order.statusUpdatedAt ? t('dashboard.status.readySince', { date: formatDate(order.statusUpdatedAt) }) : translatedStatus}
         </span>
       </span>
     );
@@ -493,7 +504,7 @@ function StatusBadge({ order }: { order: Order }) {
         style={{ backgroundColor: '#EEF2FF', color: '#3B4BFF', border: '1px solid rgba(59,75,255,0.08)' }}
       >
         <Clock className="w-3 h-3 mr-1 text-[#3B4BFF]" />
-        EN PROCESO
+        {translatedStatus}
       </span>
     );
   }
@@ -504,7 +515,7 @@ function StatusBadge({ order }: { order: Order }) {
       style={{ backgroundColor: '#FFF4E6', color: '#8B5E3C', border: '1px solid #F6E9DA' }}
     >
       <Package className="w-3 h-3 mr-1 text-[#8B5E3C]" />
-      RECIBIDO
+      {translatedStatus}
     </span>
   );
 }
@@ -529,6 +540,7 @@ export function DashboardPage() {
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
   const [pendingDelivery, setPendingDelivery] = useState<{ orderId: string; timeoutId: number } | null>(null);
+  const { t, formatDate } = useI18n();
   const notifiedReadyIds = useNotifiedOrderIdsByType('ORDER_READY', historyTick);
   const notifiedReminderIds = useNotifiedOrderIdsByType('PICKUP_REMINDER', historyTick);
 
@@ -553,13 +565,13 @@ export function DashboardPage() {
     const url = buildTrackingUrl(order);
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Enlace de tracking copiado', {
+      toast.success(t('dashboard.clipboard.success'), {
         description: `#${order.orderNumber} — ${order.customerName}`,
       });
     } catch (error) {
       console.error('[DashboardPage] Copy tracking link failed:', error);
-      toast.error('No se pudo copiar el enlace', {
-        description: 'Verifica permisos del navegador.',
+      toast.error(t('dashboard.clipboard.error'), {
+        description: t('dashboard.clipboard.errorDescription'),
       });
     }
   };
@@ -572,9 +584,8 @@ export function DashboardPage() {
   const handleConfirmReady = (rackNumber: string) => {
     if (selectedOrder) {
       updateOrderStatus(selectedOrder.id, 'LISTO', rackNumber);
-      toast.success('Orden marcada como LISTA', {
-        description:
-          'Para notificar al cliente, usa el botón “SMS cliente / Recordatorio”.',
+      toast.success(t('dashboard.markReady.success'), {
+        description: t('dashboard.markReady.successDescription'),
       });
     }
     setIsReadyModalOpen(false);
@@ -601,15 +612,15 @@ export function DashboardPage() {
     const timeoutId = window.setTimeout(() => {
       updateOrderStatus(orderId, 'ENTREGADO');
       setPendingDelivery(null);
-      toast.success('Pedido marcado como ENTREGADO');
+      toast.success(t('dashboard.delivery.markedDelivered'));
     }, 5000);
 
     setPendingDelivery({ orderId, timeoutId });
 
-    toast.warning('Pedido marcado como entregado', {
-      description: 'Se notificará al cliente en 5 segundos. Haz clic para revertir.',
+    toast.warning(t('dashboard.delivery.willNotify'), {
+      description: t('dashboard.delivery.willNotifyDescription'),
       action: {
-        label: 'Revertir',
+        label: t('dashboard.delivery.revert'),
         onClick: () => handleCancelDelivery(),
       },
       duration: 5000,
@@ -620,23 +631,23 @@ export function DashboardPage() {
     if (pendingDelivery) {
       clearTimeout(pendingDelivery.timeoutId);
       setPendingDelivery(null);
-      toast.success('Entrega cancelada');
+      toast.success(t('dashboard.delivery.cancelled'));
     }
   };
 
   const handleRevertToReceived = (orderId: string) => {
     updateOrderStatus(orderId, 'RECIBIDO');
-    toast.success('Orden revertida a RECIBIDO');
+    toast.success(t('dashboard.status.revertedReceived'));
   };
 
   const handleRevertToReady = (orderId: string) => {
     updateOrderStatus(orderId, 'LISTO');
-    toast.success('Orden revertida a LISTO');
+    toast.success(t('dashboard.status.revertedReady'));
   };
 
   const handleMarkAbandoned = (orderId: string) => {
     updateOrderStatus(orderId, 'ABANDONADO');
-    toast.success('Orden marcada como ABANDONADA');
+    toast.success(t('dashboard.status.markedAbandoned'));
   };
 
   const handleLogout = async () => {
@@ -656,7 +667,7 @@ export function DashboardPage() {
                 className="h-6 sm:h-8 w-auto"
               />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
-                Estás en <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
+                {t('dashboard.header.currentLocation')} <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -667,7 +678,7 @@ export function DashboardPage() {
                 className="text-sm text-[#FAFAFC]/90 hover:text-white flex items-center gap-1 px-3 py-2 rounded-md hover:bg-white/5"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Salir</span>
+                <span className="hidden sm:inline">{t('dashboard.header.logout')}</span>
               </button>
             </div>
           </div>
@@ -680,7 +691,7 @@ export function DashboardPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Buscar por teléfono o nº de orden"
+              placeholder={t('dashboard.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
@@ -689,7 +700,7 @@ export function DashboardPage() {
           <div className="ml-4 flex-shrink-0">
             <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
               <Plus className="w-4 h-4 mr-2" />
-              Nueva Orden
+              {t('dashboard.newOrder')}
             </Button>
           </div>
         </div>
@@ -699,14 +710,14 @@ export function DashboardPage() {
             <div className="p-12 text-center">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No hay órdenes activas
+                {t('dashboard.empty.title')}
               </h3>
               <p className="text-gray-500 mb-4">
-                Crea una nueva orden para comenzar
+                {t('dashboard.empty.subtitle')}
               </p>
               <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
                 <Plus className="w-4 h-4 mr-2" />
-                Nueva Orden
+                {t('dashboard.newOrder')}
               </Button>
             </div>
           ) : (
@@ -714,12 +725,12 @@ export function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="font-semibold text-gray-700">Nº orden</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Cliente</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Teléfono</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Fecha Estimada</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Estado</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Acciones</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.orderNumber')}</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.customer')}</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.phone')}</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.estimatedDate')}</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.status')}</TableHead>
+                    <TableHead className="font-semibold text-gray-700">{t('dashboard.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -731,11 +742,11 @@ export function DashboardPage() {
                     const alreadyNotified = isReminder
                       ? notifiedReminderIds.has(order.id)
                       : notifiedReadyIds.has(order.id);
-                    const notifyLabel = isReminder ? 'Recordatorio' : 'SMS cliente';
+                    const notifyLabel = isReminder ? t('dashboard.actions.reminder') : t('dashboard.actions.notifyCustomer');
                     const notifyTooltip = isReminder
-                      ? 'Enviar recordatorio al cliente'
-                      : 'Enviar SMS al cliente que su pedido está listo';
-                    const notifiedLabel = isReminder ? 'Recordatorio enviado' : 'Notificado';
+                      ? t('dashboard.actions.reminderTooltip')
+                      : t('dashboard.actions.notifyCustomerTooltip');
+                    const notifiedLabel = isReminder ? t('dashboard.actions.reminderSent') : t('dashboard.actions.notified');
                     return (
                         <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
                         <TableCell className="font-medium text-[#1B2A4A]">
@@ -756,14 +767,18 @@ export function DashboardPage() {
                                 variant="outline"
                                 onClick={() => handleCopyTrackingLink(order)}
                                 className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                aria-label="Copiar tracking"
-                                title="Copiar tracking"
+                                aria-label={t('dashboard.actions.copyTrackingLabel')}
+                                title={t('dashboard.actions.copyTrackingLabel')}
                               >
                                 <Link className="w-3.5 h-3.5" />
                               </Button>
 
                               <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                {order.statusUpdatedAt ? `Copiar tracking · ${formatDate(order.statusUpdatedAt)}` : 'Copiar tracking'}
+                                {order.statusUpdatedAt
+                                  ? t('dashboard.actions.copyTrackingTooltipWithDate', {
+                                      date: formatDate(order.statusUpdatedAt),
+                                    })
+                                  : t('dashboard.actions.copyTrackingLabel')}
                               </span>
                             </span>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
@@ -772,13 +787,13 @@ export function DashboardPage() {
                                   size="sm"
                                   onClick={() => handleMarkReady(order)}
                                   className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
-                                  title="Marcar la orden como lista"
+                                  title={t('dashboard.actions.markReady')}
                                 >
-                                  Marcar Listo
+                                  {t('dashboard.actions.markReady')}
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Marcar la orden como lista
+                                  {t('dashboard.actions.markReady')}
                                 </span>
                               </span>
                             )}
@@ -815,20 +830,20 @@ export function DashboardPage() {
                                   onClick={() => handleMarkDelivered(order.id)}
                                   disabled={pendingDelivery?.orderId === order.id}
                                   className="bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
-                                  title="Marcar la orden como retirada por el cliente"
+                                  title={t('dashboard.actions.markDelivered')}
                                 >
                                   {pendingDelivery?.orderId === order.id ? (
                                     <>
                                       <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                                      Procesando...
+                                      {t('dashboard.actions.processing')}
                                     </>
                                   ) : (
-                                    'Entregado'
+                                    t('dashboard.actions.markDelivered')
                                   )}
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Marcar la orden como retirada por el cliente
+                                  {t('dashboard.actions.markDeliveredTooltip')}
                                 </span>
                               </span>
                             )}
@@ -839,13 +854,13 @@ export function DashboardPage() {
                                   size="sm"
                                   onClick={() => handleMarkAbandoned(order.id)}
                                   className="bg-red-600 hover:bg-red-700 text-white text-xs"
-                                  title="Marcar la orden como abandonada"
+                                  title={t('dashboard.actions.markAbandoned')}
                                 >
-                                  Abandonado
+                                  {t('dashboard.actions.abandoned')}
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Marcar la orden como abandonada
+                                  {t('dashboard.actions.markAbandonedTooltip')}
                                 </span>
                               </span>
                             )}
@@ -857,14 +872,14 @@ export function DashboardPage() {
                                   variant="outline"
                                   onClick={() => handleRevertToReceived(order.id)}
                                   className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title="Revertir"
-                                  aria-label="Revertir"
+                                  title={t('dashboard.actions.revert')}
+                                  aria-label={t('dashboard.actions.revert')}
                                 >
                                   <Undo className="w-3.5 h-3.5" />
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Revertir
+                                  {t('dashboard.actions.revert')}
                                 </span>
                               </span>
                             )}
@@ -876,14 +891,14 @@ export function DashboardPage() {
                                   variant="outline"
                                   onClick={() => handleRevertToReady(order.id)}
                                   className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title="Revertir"
-                                  aria-label="Revertir"
+                                  title={t('dashboard.actions.revert')}
+                                  aria-label={t('dashboard.actions.revert')}
                                 >
                                   <Undo className="w-3.5 h-3.5" />
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Revertir
+                                  {t('dashboard.actions.revert')}
                                 </span>
                               </span>
                             )}
@@ -895,14 +910,14 @@ export function DashboardPage() {
                                   variant="outline"
                                   onClick={() => handleRevertToReady(order.id)}
                                   className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title="Revertir"
-                                  aria-label="Revertir"
+                                  title={t('dashboard.actions.revert')}
+                                  aria-label={t('dashboard.actions.revert')}
                                 >
                                   <Undo className="w-3.5 h-3.5" />
                                 </Button>
 
                                 <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  Revertir
+                                  {t('dashboard.actions.revert')}
                                 </span>
                               </span>
                             )}
