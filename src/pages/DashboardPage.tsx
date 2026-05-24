@@ -69,19 +69,30 @@ interface MarkReadyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (rackNumber: string) => void;
+  validateRackNumber?: (rackNumber: string) => string | null;
 }
 
-function MarkReadyModal({ order, isOpen, onClose, onConfirm }: MarkReadyModalProps) {
+function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber }: MarkReadyModalProps) {
   const { t } = useI18n();
   const [rackNumber, setRackNumber] = useState('');
   const [error, setError] = useState('');
 
   const handleConfirm = () => {
-    if (!rackNumber.trim()) {
+    const trimmedRack = rackNumber.trim();
+    if (!trimmedRack) {
       setError(t('dashboard.markReady.rackNumberRequired'));
       return;
     }
-    onConfirm(rackNumber.trim());
+
+    if (validateRackNumber) {
+      const validationError = validateRackNumber(trimmedRack);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
+
+    onConfirm(trimmedRack);
     setRackNumber('');
     setError('');
   };
@@ -576,6 +587,30 @@ export function DashboardPage() {
     }
   };
 
+  const normalizePhoneDigits = (phone: string) => phone.replace(/\D/g, '');
+
+  const validateRackAssignment = (rackNumber: string): string | null => {
+    if (!selectedOrder) return null;
+    const normalizedRack = rackNumber.trim().toLowerCase();
+    const normalizedPhone = normalizePhoneDigits(selectedOrder.phone);
+
+    const conflictingOrder = orders.find((order) => {
+      if (!order.rackNumber) return false;
+      if (order.id === selectedOrder.id) return false;
+      if (order.rackNumber.trim().toLowerCase() !== normalizedRack) return false;
+      const orderPhone = normalizePhoneDigits(order.phone);
+      return orderPhone !== normalizedPhone;
+    });
+
+    if (conflictingOrder) {
+      return t('dashboard.markReady.rackOccupiedBy', {
+        rackNumber,
+        customerName: conflictingOrder.customerName,
+      });
+    }
+    return null;
+  };
+
   const handleMarkReady = (order: Order) => {
     setSelectedOrder(order);
     setIsReadyModalOpen(true);
@@ -950,6 +985,7 @@ export function DashboardPage() {
         isOpen={isReadyModalOpen}
         onClose={() => setIsReadyModalOpen(false)}
         onConfirm={handleConfirmReady}
+        validateRackNumber={validateRackAssignment}
       />
 
       <NotifyCustomerModal

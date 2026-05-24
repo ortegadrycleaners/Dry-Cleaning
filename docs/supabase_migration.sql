@@ -20,6 +20,35 @@ ALTER TABLE "Receipt"
   ADD CONSTRAINT IF NOT EXISTS receipt_status_check
   CHECK (status IN ('RECIBIDO', 'EN PROCESO', 'LISTO', 'ENTREGADO'));
 
+-- Constraint: un rack solo puede estar asignado a un cliente distinto
+CREATE OR REPLACE FUNCTION enforce_rack_single_customer()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.rack_number IS NULL OR trim(NEW.rack_number) = '' THEN
+    RETURN NEW;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM receipt
+    WHERE trim(rack_number) = trim(NEW.rack_number)
+      AND fk_cliente <> NEW.fk_cliente
+      AND id_order <> NEW.id_order
+  ) THEN
+    RAISE EXCEPTION 'El rack % ya está asignado a otro cliente.', NEW.rack_number;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER receipt_rack_single_customer
+BEFORE INSERT OR UPDATE ON receipt
+FOR EACH ROW
+EXECUTE FUNCTION enforce_rack_single_customer();
+
 
 -- =============================================================================
 -- 2. Row Level Security (RLS)
