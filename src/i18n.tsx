@@ -285,7 +285,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.deliveredTitle': 'Order delivered',
     'tracking.deliveredMessage': 'This order has already been picked up.',
     'tracking.deliveredThanks': 'Hope everything came out great. If we did a good job, a quick review on Google would mean a lot.',
-    'tracking.updated': 'Updated {elapsedText}',
+    'tracking.updated': 'Updated {elapsedText} ago',
     'tracking.abandonedTitle': 'Order marked as abandoned',
     'tracking.abandonedMessage': 'If you already picked up your order, please contact us to update the status.',
     'tracking.writeReview': 'Write a Google review',
