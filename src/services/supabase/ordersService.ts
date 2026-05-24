@@ -326,3 +326,44 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
     phone_number: clientData?.phone_number ?? 0,
   });
 }
+
+/** Busca una orden por su public_id para la página de tracking pública.
+ *  RLS automáticamente valida que (public_id = ? AND auth.role() = 'anon')
+ *  Solo retorna la orden si el visitante la puede ver.
+ */
+export async function fetchOrderByPublicId(publicId: string): Promise<Order | null> {
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(`
+      id_order,
+      public_id,
+      order_number,
+      order_date,
+      deliver_date,
+      status,
+      status_updated_at,
+      rack_number,
+      days_ready,
+      notes,
+      client:fk_cliente (
+        name,
+        phone_number
+      )
+    `)
+    .eq('public_id', publicId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('[ordersService] fetchOrderByPublicId error:', error?.message);
+    return null;
+  }
+
+  const clientData = Array.isArray(data.client)
+    ? (data.client[0] as { name: string; phone_number: number } | null)
+    : (data.client as { name: string; phone_number: number } | null);
+  return rowToOrder({
+    ...data,
+    name: clientData?.name ?? '',
+    phone_number: clientData?.phone_number ?? 0,
+  });
+}

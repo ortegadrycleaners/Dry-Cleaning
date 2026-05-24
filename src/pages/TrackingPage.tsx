@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
 import { useI18n } from '@/i18n';
 import { Card, CardContent } from '@/components/ui/card';
-import { useOrders } from '@/context/OrdersContext';
+import { fetchOrderByPublicId } from '@/services/supabase/ordersService';
 import { daysSince, formatElapsedTime, orderTicketLabel } from '@/lib/utils';
 import { businessInfo } from '@/data/mockData';
 import {
@@ -384,12 +384,44 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { t } = useI18n();
-  const { orders, isLoading } = useOrders();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
 
+  // Carga inicial: fetch de la orden específica por public_id
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOrder = async () => {
+      if (!orderId) {
+        setIsLoading(false);
+        return;
+      }
+
+      const fetchedOrder = await fetchOrderByPublicId(orderId);
+      if (!cancelled) {
+        setOrder(fetchedOrder);
+        setIsLoading(false);
+      }
+    };
+
+    loadOrder();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  // Polling: actualiza la orden cada 30s (solo si visible)
   const refreshStatus = useCallback(() => {
     setLastRefresh(new Date());
-  }, []);
+
+    // Re-fetch de la orden específica
+    if (orderId) {
+      fetchOrderByPublicId(orderId).then((fetchedOrder) => {
+        setOrder(fetchedOrder);
+      });
+    }
+  }, [orderId]);
 
   useEffect(() => {
     let intervalId: number | null = null;
@@ -423,8 +455,6 @@ export function TrackingPage() {
       stop();
     };
   }, [refreshStatus]);
-
-  const order = orders.find((o) => o.publicId === orderId || o.id === orderId);
   if (!order) {
     // Mientras carga, mostrar un spinner en lugar de redirigir inmediatamente
     if (isLoading) {
