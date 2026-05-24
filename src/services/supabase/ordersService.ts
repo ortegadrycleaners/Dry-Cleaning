@@ -133,7 +133,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     };
   }
 
-  const rawPhone = parseInt(rawPhoneDigits, 10);
+  const rawPhone = rawPhoneDigits;
   const numericOrderNumber = parseInt(order.orderNumber.trim(), 10);
   if (Number.isNaN(numericOrderNumber) || numericOrderNumber <= 0) {
     return {
@@ -184,11 +184,11 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       };
     }
 
-    console.error('[ordersService] insertOrder (receipt rpc) error:', receiptError?.message);
+    console.error('[ordersService] insertOrder (receipt rpc) error:', receiptError);
     return {
       orderId: null,
       publicId: null,
-      error: 'No se pudo crear la orden. Verifica que el número de orden no exista.',
+      error: receiptError?.message ?? 'No se pudo crear la orden. Verifica que el número de orden no exista.',
       code: 'RECEIPT_INSERT_FAILED',
     };
   }

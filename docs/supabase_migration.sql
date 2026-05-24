@@ -144,11 +144,14 @@ CREATE INDEX IF NOT EXISTS idx_receipt_order_date ON "Receipt" (order_date DESC)
 -- Evita carreras cuando dos envíos intentan usar el mismo order_number al mismo tiempo.
 -- =============================================================================
 
+DROP FUNCTION IF EXISTS create_order_atomic(UUID, TEXT, INTEGER, BIGINT, TEXT, TIMESTAMPTZ, TEXT, TEXT);
+DROP FUNCTION IF EXISTS create_order_atomic(UUID, TEXT, INTEGER, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION create_order_atomic(
   p_order_id UUID,
   p_public_id TEXT,
   p_order_number INTEGER,
-  p_phone BIGINT,
+  p_phone TEXT,
   p_customer_name TEXT,
   p_deliver_date TIMESTAMPTZ,
   p_status TEXT DEFAULT 'RECIBIDO',
@@ -162,11 +165,12 @@ DECLARE
   v_client_id UUID;
   v_existing_client RECORD;
   v_now TIMESTAMPTZ := now();
+  v_inserted_public_id TEXT;
 BEGIN
   SELECT id_client, name
   INTO v_existing_client
   FROM client
-  WHERE phone_number = p_phone
+  WHERE phone_number::text = p_phone
   LIMIT 1;
 
   IF FOUND THEN
@@ -216,7 +220,7 @@ BEGIN
       v_now,
       p_notes
     )
-    RETURNING id_order, public_id INTO order_id, public_id;
+    RETURNING id_order, receipt.public_id INTO order_id, v_inserted_public_id;
   EXCEPTION
     WHEN unique_violation THEN
       RAISE EXCEPTION USING
@@ -224,6 +228,7 @@ BEGIN
         MESSAGE = format('El número de orden %s ya existe.', p_order_number);
   END;
 
+  public_id := v_inserted_public_id;
   RETURN NEXT;
 END;
 $$;
