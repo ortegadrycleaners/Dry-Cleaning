@@ -102,17 +102,8 @@ export const businessInfo = {
   googleReviewUrl: 'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR',
   promotions: [
     {
-      title: '20% en tu primera orden',
-      description: 'Trae este cupón y recibe un descuento especial en tu primer servicio.',
-      code: 'BIENVENIDO20',
-    },
-    {
-      title: 'Programa de Fidelidad',
-      description: 'Acumula 5 órdenes y la 6ta tiene un 15% de descuento automático.',
-    },
-    {
-      title: 'Servicio Express',
-      description: 'Entrega en 24 horas disponible por un cargo adicional. Consulta en mostrador.',
+      title: 'U.S. Navy Uniform Dry Cleaning',
+      description: 'Military Dry Cleaning Special — pricing by quantity',
     },
   ],
 };

@@ -334,21 +334,28 @@ function BrandInfoSection() {
       </Card>
 
       {/* Promociones */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
-          {t('promotions.title')}
-        </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {businessInfo.promotions.map((_, i) => (
-            <Card key={i} className="promo-card border-[#3B4BFF]/20">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-[#3B4BFF]" />
+      <div className="flex justify-center w-full">
+        <div className="w-full max-w-3xl">
+          <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider text-center">
+            {t('promotions.title')}
+          </h3>
+          <div className="flex justify-center">
+            {businessInfo.promotions.map((_, i) => (
+              <Card key={i} className="promo-card border-[#3B4BFF]/20 w-full max-w-2xl">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Tag className="w-4 h-4 text-[#3B4BFF]" />
                     <h4 className="text-sm font-semibold text-white">{t(`promotions.${i}.title`)}</h4>
-                </div>
-                  <p className="text-gray-300 text-xs leading-relaxed">
-                    {t(`promotions.${i}.description`)}
-                  </p>
+                  </div>
+                  <div className="text-gray-300 text-xs leading-relaxed">
+                    {t(`promotions.${i}.description`)
+                      .split('\n')
+                      .map((line, idx) => (
+                        <p key={idx} className="m-0">
+                          {line}
+                        </p>
+                      ))}
+                  </div>
                   {t(`promotions.${i}.code`) && (
                     <div className="mt-3 inline-block px-3 py-1 bg-[#3B4BFF]/10 rounded-full">
                       <span className="text-xs font-mono font-bold text-[#3B4BFF]">
@@ -356,9 +363,10 @@ function BrandInfoSection() {
                       </span>
                     </div>
                   )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </section>
