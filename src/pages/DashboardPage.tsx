@@ -562,6 +562,7 @@ export function DashboardPage() {
       const ticket = orderTicketLabel(order);
       return (
         order.phone.toLowerCase().includes(query) ||
+        order.customerName.toLowerCase().includes(query) ||
         order.id.toLowerCase().includes(query) ||
         (order.publicId ?? '').toLowerCase().includes(query) ||
         ticket.toLowerCase().includes(query)
