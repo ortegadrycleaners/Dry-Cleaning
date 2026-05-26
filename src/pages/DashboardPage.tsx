@@ -971,12 +971,10 @@ export function DashboardPage() {
 
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
         <div className="border-t border-gray-200 pt-4 flex items-center justify-between gap-4 text-sm text-gray-600">
-          <p className="truncate">
-            Ortega Dry Cleaners — Seguimiento de órdenes y atención con claridad.
-          </p>
+          <p className="truncate">{t('dashboard.footer.message')}</p>
           <p className="inline-flex items-center gap-1 text-gray-500 whitespace-nowrap">
             <Zap className="w-4 h-4 text-[#3B4BFF]" />
-            Powered by Zivo
+            {t('dashboard.footer.poweredBy')}
           </p>
         </div>
       </footer>
