@@ -356,13 +356,6 @@ function BrandInfoSection() {
                         </p>
                       ))}
                   </div>
-                  {t(`promotions.${i}.code`) && (
-                    <div className="mt-3 inline-block px-3 py-1 bg-[#3B4BFF]/10 rounded-full">
-                      <span className="text-xs font-mono font-bold text-[#3B4BFF]">
-                        {t(`promotions.${i}.code`)}
-                      </span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}
