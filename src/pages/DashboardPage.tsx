@@ -39,6 +39,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
+import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifySmsTemplate,
@@ -693,6 +694,7 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
+      <ReminderTaskHandler />
       <header className="bg-[#0E0E1A] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

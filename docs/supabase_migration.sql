@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS public.receipt_notification (
   idempotency_key text NULL,
   metadata jsonb NULL,
   read boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (idempotency_key) WHERE idempotency_key IS NOT NULL
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_receipt_notification_idempotency_key ON public.receipt_notification (idempotency_key) WHERE idempotency_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_receipt_notification_receipt_id ON public.receipt_notification (receipt_id);
 CREATE INDEX IF NOT EXISTS idx_receipt_notification_created_at ON public.receipt_notification (created_at);
 
@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS public.receipt_reminder_task (
   message text NULL,
   attempted_at timestamptz NULL,
   sent_at timestamptz NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (receipt_id, milestone, status) WHERE status = 'pending'
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_receipt_reminder_task_pending_unique ON public.receipt_reminder_task (receipt_id, milestone) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_receipt_reminder_task_receipt_id ON public.receipt_reminder_task (receipt_id);
 CREATE INDEX IF NOT EXISTS idx_receipt_reminder_task_status ON public.receipt_reminder_task (status);
 CREATE INDEX IF NOT EXISTS idx_receipt_reminder_task_created_at ON public.receipt_reminder_task (created_at);
@@ -71,13 +71,13 @@ RETURNS TABLE(receipt_id uuid, milestone int) AS $$
 WITH due AS (
   SELECT r.id_order::uuid AS receipt_id,
          CASE
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
          END AS milestone
   FROM receipt r
   WHERE r.status = 'LISTO'
-    AND (CASE WHEN p_tz IS NULL THEN r.status_updated_at::date ELSE (r.status_updated_at AT TIME ZONE p_tz)::date END) IN (
+    AND (CASE WHEN p_tz IS NULL THEN r.order_date::date ELSE (r.order_date AT TIME ZONE p_tz)::date END) IN (
       (current_date - INTERVAL '3 days')::date,
       (current_date - INTERVAL '5 days')::date,
       (current_date - INTERVAL '30 days')::date
@@ -103,16 +103,17 @@ RETURNS TABLE(notification_id uuid, receipt_id uuid, milestone int, notification
 WITH due AS (
   SELECT r.id_order::uuid AS receipt_id,
          CASE
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
          END AS milestone,
          COALESCE(r.order_number::text, '') AS order_number,
-         COALESCE(r.customer_name::text, '') AS customer_name,
-         COALESCE(r.phone::text, '') AS phone
+         COALESCE(c.name::text, '') AS customer_name,
+         COALESCE(c.phone_number::text, '') AS phone
   FROM receipt r
+  LEFT JOIN client c ON r.fk_cliente = c.id_client
   WHERE r.status = 'LISTO'
-    AND (CASE WHEN p_tz IS NULL THEN r.status_updated_at::date ELSE (r.status_updated_at AT TIME ZONE p_tz)::date END) IN (
+    AND (CASE WHEN p_tz IS NULL THEN r.order_date::date ELSE (r.order_date AT TIME ZONE p_tz)::date END) IN (
       (current_date - INTERVAL '3 days')::date,
       (current_date - INTERVAL '5 days')::date,
       (current_date - INTERVAL '30 days')::date
@@ -170,16 +171,17 @@ RETURNS TABLE(task_id uuid, receipt_id uuid, milestone int) AS $$
 WITH due AS (
   SELECT r.id_order::uuid AS receipt_id,
          CASE
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
-           WHEN ((CASE WHEN p_tz IS NULL THEN r.status_updated_at ELSE (r.status_updated_at AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '3 days')::date THEN 3
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '5 days')::date THEN 5
+           WHEN ((CASE WHEN p_tz IS NULL THEN r.order_date ELSE (r.order_date AT TIME ZONE p_tz) END)::date) = (current_date - INTERVAL '30 days')::date THEN 30
          END AS milestone,
          r.order_number::text,
-         r.customer_name::text,
-         r.phone::text
+         c.name::text as customer_name,
+         c.phone_number::text as phone
   FROM receipt r
+  LEFT JOIN client c ON r.fk_cliente = c.id_client
   WHERE r.status = 'LISTO'
-    AND (CASE WHEN p_tz IS NULL THEN r.status_updated_at::date ELSE (r.status_updated_at AT TIME ZONE p_tz)::date END) IN (
+    AND (CASE WHEN p_tz IS NULL THEN r.order_date::date ELSE (r.order_date AT TIME ZONE p_tz)::date END) IN (
       (current_date - INTERVAL '3 days')::date,
       (current_date - INTERVAL '5 days')::date,
       (current_date - INTERVAL '30 days')::date
@@ -196,7 +198,7 @@ ins AS (
     format('Recordatorio: %s, tu orden #%s lleva %s días lista. Recógela pronto.', d.customer_name, d.order_number, d.milestone),
     'pending'
   FROM due d
-  ON CONFLICT (receipt_id, milestone, status) DO NOTHING
+  ON CONFLICT (receipt_id, milestone) WHERE status = 'pending' DO NOTHING
   RETURNING id, receipt_id, milestone
 )
 SELECT id, receipt_id, milestone FROM ins;
@@ -219,8 +221,46 @@ $$ LANGUAGE sql VOLATILE;
 -- 5. Admin clicks "Enviar SMS" → frontend calls Edge Function → updates task.status = 'sent'
 --    Or admin clicks "Omitir por ahora" → task.status = 'skipped'
 --
--- 6. Configure Row-Level Security (RLS):
---    ALTER TABLE receipt_reminder_task ENABLE ROW LEVEL SECURITY;
---    CREATE POLICY "allow_anon_read_and_update" ON receipt_reminder_task
---      FOR SELECT USING (true)
---      FOR UPDATE USING (status != 'pending');
+-- 6. Table schema assumptions:
+--    - receipt table: id_order, order_number, order_date, deliver_date, status, fk_cliente
+--    - client table: id_client, name, phone_number
+--    Both tables must exist and fk_cliente must be valid FK
+
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS)
+-- ============================================================================
+
+-- Enable RLS on all reminder tables
+ALTER TABLE public.receipt_notification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.receipt_reminder_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.receipt_reminder_task ENABLE ROW LEVEL SECURITY;
+
+-- receipt_notification: Everyone can read, service role can insert/update
+CREATE POLICY "receipt_notification_select_all" ON public.receipt_notification
+  FOR SELECT USING (true);
+
+CREATE POLICY "receipt_notification_service_role_write" ON public.receipt_notification
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+CREATE POLICY "receipt_notification_update_all" ON public.receipt_notification
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+-- receipt_reminder_log: Service role only (internal tracking)
+CREATE POLICY "receipt_reminder_log_service_role" ON public.receipt_reminder_log
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+-- receipt_reminder_task: Everyone reads, but only update status (not pending creation)
+CREATE POLICY "receipt_reminder_task_select_all" ON public.receipt_reminder_task
+  FOR SELECT USING (true);
+
+CREATE POLICY "receipt_reminder_task_service_role_insert" ON public.receipt_reminder_task
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+CREATE POLICY "receipt_reminder_task_anon_update_status" ON public.receipt_reminder_task
+  FOR UPDATE USING (status = 'pending') 
+  WITH CHECK (status IN ('sent', 'failed', 'skipped') AND status != 'pending');
+
+-- ============================================================================
+-- 7. Configure Row-Level Security (RLS):
+--    ✅ Already configured above - all tables have RLS enabled with proper policies
