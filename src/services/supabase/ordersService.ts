@@ -469,12 +469,5 @@ export async function fetchOrderByPublicId(publicId: string): Promise<Order | nu
     return null;
   }
 
-  const clientData = Array.isArray(data.client)
-    ? (data.client[0] as { name: string; phone_number: number } | null)
-    : (data.client as { name: string; phone_number: number } | null);
-  return rowToOrder({
-    ...data,
-    name: clientData?.name ?? '',
-    phone_number: clientData?.phone_number ?? 0,
-  });
+  return rowToOrder(data as OrderQueryRow);
 }
