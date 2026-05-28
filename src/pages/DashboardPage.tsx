@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -37,6 +37,8 @@ import {
   Link,
   Undo,
   Zap,
+  Funnel,
+  Settings,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
@@ -52,6 +54,7 @@ import {
 } from '@/services/twilio';
 import { NOTIFICATION_TEMPLATE_OPTIONS, type NotificationEventType } from '@/types/notifications';
 import { useI18n } from '@/i18n';
+import { fetchRackConflict, type OrdersViewMode } from '@/services/supabase/ordersService';
 
 const REMINDER_DAYS = 3;
 const ABANDON_DAYS = 30;
@@ -70,7 +73,7 @@ interface MarkReadyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (rackNumber: string) => void;
-  validateRackNumber?: (rackNumber: string) => string | null;
+  validateRackNumber?: (rackNumber: string) => string | null | Promise<string | null>;
 }
 
 function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber }: MarkReadyModalProps) {
@@ -78,7 +81,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber 
   const [rackNumber, setRackNumber] = useState('');
   const [error, setError] = useState('');
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const trimmedRack = rackNumber.trim();
     if (!trimmedRack) {
       setError(t('dashboard.markReady.rackNumberRequired'));
@@ -86,7 +89,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber 
     }
 
     if (validateRackNumber) {
-      const validationError = validateRackNumber(trimmedRack);
+      const validationError = await Promise.resolve(validateRackNumber(trimmedRack));
       if (validationError) {
         setError(validationError);
         return;
@@ -421,6 +424,64 @@ function NotifyCustomerModal({
   );
 }
 
+function SettingsModal({
+  isOpen,
+  pendingAutoRefresh,
+  onPendingAutoRefreshChange,
+  onClose,
+  onSave,
+}: {
+  isOpen: boolean;
+  pendingAutoRefresh: boolean;
+  onPendingAutoRefreshChange: (value: boolean) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-full max-w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-[#1B2A4A]">
+            {t('dashboard.config.title')}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-gray-600">{t('dashboard.config.description')}</p>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-gray-900">{t('dashboard.config.section.behavior')}</p>
+            <p className="text-sm text-gray-500 mb-4">{t('dashboard.config.section.behaviorDescription')}</p>
+            <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-slate-50 px-4 py-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pendingAutoRefresh}
+                onChange={(event) => onPendingAutoRefreshChange(event.target.checked)}
+                className="h-4 w-4 text-[#3B4BFF]"
+              />
+              <div>
+                <p className="font-medium text-gray-900">{t('dashboard.config.autoRefreshLabel')}</p>
+                <p className="text-sm text-gray-500">{t('dashboard.config.autoRefreshDescription')}</p>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={onClose} className="h-11">
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={onSave} className="h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white">
+              {t('dashboard.config.save')}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ---------- Helper: ¿esta orden ya fue notificada? ---------- */
 
 function useNotifiedOrderIdsByType(
@@ -537,8 +598,23 @@ function StatusBadge({ order }: { order: Order }) {
 export function DashboardPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const { orders, updateOrderStatus } = useOrders();
+  const {
+    orders,
+    updateOrderStatus,
+    page,
+    totalPages,
+    goToPage,
+    isLoading,
+    viewMode,
+    setViewMode,
+    autoRefreshAfterStatusChange,
+    setAutoRefreshAfterStatusChange,
+  } = useOrders();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement | null>(null);
+  const [pendingAutoRefresh, setPendingAutoRefresh] = useState<boolean>(autoRefreshAfterStatusChange);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
@@ -553,6 +629,29 @@ export function DashboardPage() {
   const [historyTick, setHistoryTick] = useState(0);
   const [pendingDelivery, setPendingDelivery] = useState<{ orderId: string; timeoutId: number } | null>(null);
   const { t, formatDate } = useI18n();
+  const viewModeOptions = [
+    {
+      value: 'ACTIVE' as OrdersViewMode,
+      label: t('dashboard.config.mode.active'),
+      description: t('dashboard.config.mode.activeDescription'),
+    },
+    {
+      value: 'PENDING' as OrdersViewMode,
+      label: t('dashboard.config.mode.pending'),
+      description: t('dashboard.config.mode.pendingDescription'),
+    },
+    {
+      value: 'READY' as OrdersViewMode,
+      label: t('dashboard.config.mode.ready'),
+      description: t('dashboard.config.mode.readyDescription'),
+    },
+    {
+      value: 'DELIVERED' as OrdersViewMode,
+      label: t('dashboard.config.mode.delivered'),
+      description: t('dashboard.config.mode.deliveredDescription'),
+    },
+  ];
+
   const notifiedReadyIds = useNotifiedOrderIdsByType('ORDER_READY', historyTick);
   const notifiedReminderIds = useNotifiedOrderIdsByType('PICKUP_REMINDER', historyTick);
 
@@ -589,20 +688,9 @@ export function DashboardPage() {
     }
   };
 
-  const normalizePhoneDigits = (phone: string) => phone.replace(/\D/g, '');
-
-  const validateRackAssignment = (rackNumber: string): string | null => {
+  const validateRackAssignment = async (rackNumber: string): Promise<string | null> => {
     if (!selectedOrder) return null;
-    const normalizedRack = rackNumber.trim().toLowerCase();
-    const normalizedPhone = normalizePhoneDigits(selectedOrder.phone);
-
-    const conflictingOrder = orders.find((order) => {
-      if (!order.rackNumber) return false;
-      if (order.id === selectedOrder.id) return false;
-      if (order.rackNumber.trim().toLowerCase() !== normalizedRack) return false;
-      const orderPhone = normalizePhoneDigits(order.phone);
-      return orderPhone !== normalizedPhone;
-    });
+    const conflictingOrder = await fetchRackConflict(selectedOrder.id, rackNumber);
 
     if (conflictingOrder) {
       return t('dashboard.markReady.rackOccupiedBy', {
@@ -672,6 +760,21 @@ export function DashboardPage() {
     }
   };
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!filterMenuRef.current?.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    if (isFilterOpen) {
+      window.addEventListener('mousedown', handleOutsideClick);
+      return () => window.removeEventListener('mousedown', handleOutsideClick);
+    }
+
+    return undefined;
+  }, [isFilterOpen]);
+
   const handleRevertToReceived = (orderId: string) => {
     updateOrderStatus(orderId, 'RECIBIDO');
     toast.success(t('dashboard.status.revertedReceived'));
@@ -735,12 +838,77 @@ export function DashboardPage() {
               className="pl-10 h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
             />
           </div>
-          <div className="ml-4 flex-shrink-0">
+          <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+            <div ref={filterMenuRef} className="relative">
+              <Button
+                size="icon-sm"
+                variant="outline"
+                onClick={() => setIsFilterOpen((current) => !current)}
+                title={t('dashboard.filter.open')}
+                aria-label={t('dashboard.filter.open')}
+              >
+                <Funnel className="w-4 h-4" />
+              </Button>
+
+              {isFilterOpen ? (
+                <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
+                  <p className="text-sm font-semibold text-slate-900 mb-2">{t('dashboard.filter.title')}</p>
+                  <div className="space-y-2">
+                    {viewModeOptions.map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 hover:border-slate-300 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="dashboardFilterMode"
+                          value={option.value}
+                          checked={viewMode === option.value}
+                          onChange={() => {
+                            setViewMode(option.value);
+                            setIsFilterOpen(false);
+                          }}
+                          className="mt-1 h-4 w-4 text-[#3B4BFF]"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900">{option.label}</p>
+                          <p className="text-sm text-gray-500">{option.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <Button
+              size="icon-sm"
+              variant="outline"
+              onClick={() => {
+                setPendingAutoRefresh(autoRefreshAfterStatusChange);
+                setIsSettingsOpen(true);
+              }}
+              title={t('dashboard.config.open')}
+              aria-label={t('dashboard.config.open')}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+
             <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
               <Plus className="w-4 h-4 mr-2" />
               {t('dashboard.newOrder')}
             </Button>
           </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
+          <span>{t('dashboard.config.currentModeLabel')}</span>
+          <span className="font-medium text-slate-700">{t(`dashboard.config.mode.${viewMode.toLowerCase()}`)}</span>
+        </div>
+
+        <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
+          <span>{isLoading ? 'Cargando órdenes...' : `Página ${page} de ${totalPages}`}</span>
+          <span>{orders.length} órdenes activas</span>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -759,7 +927,8 @@ export function DashboardPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
@@ -786,178 +955,63 @@ export function DashboardPage() {
                       : t('dashboard.actions.notifyCustomerTooltip');
                     const notifiedLabel = isReminder ? t('dashboard.actions.reminderSent') : t('dashboard.actions.notified');
                     return (
-                        <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
-                        <TableCell className="font-medium text-[#1B2A4A]">
-                          #{orderTicketLabel(order)}
-                        </TableCell>
+                      <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
+                        <TableCell className="font-medium text-[#1B2A4A]">#{orderTicketLabel(order)}</TableCell>
                         <TableCell>{order.customerName}</TableCell>
                         <TableCell className="text-gray-600">{order.phone}</TableCell>
                         <TableCell className="text-gray-600">{order.estimatedDate}</TableCell>
-                        <TableCell>
-                          <StatusBadge order={order} />
-                          {/* Rack number shown inside the LISTO badge; remove side label */}
-                        </TableCell>
+                        <TableCell><StatusBadge order={order} /></TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="relative inline-flex group">
+                            <Button
+                              size="icon-sm"
+                              variant="outline"
+                              onClick={() => handleCopyTrackingLink(order)}
+                              className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                              aria-label={t('dashboard.actions.copyTrackingLabel')}
+                              title={t('dashboard.actions.copyTrackingLabel')}
+                            >
+                              <Link className="w-3.5 h-3.5" />
+                            </Button>
+                            {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleMarkReady(order)}
+                                className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
+                              >
+                                {t('dashboard.actions.markReady')}
+                              </Button>
+                            )}
+                            {order.status === 'LISTO' && !alreadyNotified && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleOpenNotify(order, templateType, daysReady)}
+                                className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
+                              >
+                                {notifyLabel}
+                              </Button>
+                            )}
+                            {order.status === 'LISTO' && (
                               <Button
                                 size="icon-sm"
                                 variant="outline"
-                                onClick={() => handleCopyTrackingLink(order)}
+                                onClick={() => handleRevertToReceived(order.id)}
                                 className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                aria-label={t('dashboard.actions.copyTrackingLabel')}
-                                title={t('dashboard.actions.copyTrackingLabel')}
+                                aria-label={t('dashboard.actions.revert')}
                               >
-                                <Link className="w-3.5 h-3.5" />
+                                <Undo className="w-3.5 h-3.5" />
                               </Button>
-
-                              <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                {order.statusUpdatedAt
-                                  ? t('dashboard.actions.copyTrackingTooltipWithDate', {
-                                      date: formatDate(order.statusUpdatedAt),
-                                    })
-                                  : t('dashboard.actions.copyTrackingLabel')}
-                              </span>
-                            </span>
-                            {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleMarkReady(order)}
-                                  className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
-                                  title={t('dashboard.actions.markReady')}
-                                >
-                                  {t('dashboard.actions.markReady')}
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.markReady')}
-                                </span>
-                              </span>
                             )}
-
-                            {order.status === 'LISTO' && !alreadyNotified && (
-                              <span className="relative inline-flex group">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleOpenNotify(order, templateType, daysReady)}
-                                    className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
-                                    title={notifyTooltip}
-                                  >
-                                    <Send className="w-3.5 h-3.5 mr-1 text-[#3B4BFF]" />
-                                      {notifyLabel}
-                                  </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                    {notifyTooltip}
-                                </span>
-                              </span>
-                            )}
-
-                            {order.status === 'LISTO' && alreadyNotified && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                                <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                                {notifiedLabel}
-                              </span>
-                            )}
-
-                            {order.status === 'LISTO' && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleMarkDelivered(order.id)}
-                                  disabled={pendingDelivery?.orderId === order.id}
-                                  className="bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
-                                  title={t('dashboard.actions.markDelivered')}
-                                >
-                                  {pendingDelivery?.orderId === order.id ? (
-                                    <>
-                                      <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                                      {t('dashboard.actions.processing')}
-                                    </>
-                                  ) : (
-                                    t('dashboard.actions.markDelivered')
-                                  )}
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.markDeliveredTooltip')}
-                                </span>
-                              </span>
-                            )}
-
-                            {order.status === 'LISTO' && isAbandonEligible && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleMarkAbandoned(order.id)}
-                                  className="bg-red-600 hover:bg-red-700 text-white text-xs"
-                                  title={t('dashboard.actions.markAbandoned')}
-                                >
-                                  {t('dashboard.actions.abandoned')}
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.markAbandonedTooltip')}
-                                </span>
-                              </span>
-                            )}
-
-                            {order.status === 'LISTO' && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="icon-sm"
-                                  variant="outline"
-                                  onClick={() => handleRevertToReceived(order.id)}
-                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title={t('dashboard.actions.revert')}
-                                  aria-label={t('dashboard.actions.revert')}
-                                >
-                                  <Undo className="w-3.5 h-3.5" />
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.revert')}
-                                </span>
-                              </span>
-                            )}
-
-                            {order.status === 'ENTREGADO' && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="icon-sm"
-                                  variant="outline"
-                                  onClick={() => handleRevertToReady(order.id)}
-                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title={t('dashboard.actions.revert')}
-                                  aria-label={t('dashboard.actions.revert')}
-                                >
-                                  <Undo className="w-3.5 h-3.5" />
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.revert')}
-                                </span>
-                              </span>
-                            )}
-
-                            {order.status === 'ABANDONADO' && (
-                              <span className="relative inline-flex group">
-                                <Button
-                                  size="icon-sm"
-                                  variant="outline"
-                                  onClick={() => handleRevertToReady(order.id)}
-                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                  title={t('dashboard.actions.revert')}
-                                  aria-label={t('dashboard.actions.revert')}
-                                >
-                                  <Undo className="w-3.5 h-3.5" />
-                                </Button>
-
-                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                                  {t('dashboard.actions.revert')}
-                                </span>
-                              </span>
+                            {(order.status === 'ENTREGADO' || order.status === 'ABANDONADO') && (
+                              <Button
+                                size="icon-sm"
+                                variant="outline"
+                                onClick={() => handleRevertToReady(order.id)}
+                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                aria-label={t('dashboard.actions.revert')}
+                              >
+                                <Undo className="w-3.5 h-3.5" />
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -967,6 +1021,77 @@ export function DashboardPage() {
                 </TableBody>
               </Table>
             </div>
+            <div className="md:hidden space-y-3 px-4 py-3">
+              {filteredOrders.map((order) => {
+                const daysReady = resolveDaysReady(order);
+                const isReminder = typeof daysReady === 'number' && daysReady >= REMINDER_DAYS;
+                const templateType: NotificationEventType = isReminder ? 'PICKUP_REMINDER' : 'ORDER_READY';
+                const alreadyNotified = isReminder
+                  ? notifiedReminderIds.has(order.id)
+                  : notifiedReadyIds.has(order.id);
+                const notifyLabel = isReminder ? t('dashboard.actions.reminder') : t('dashboard.actions.notifyCustomer');
+                return (
+                  <div key={order.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">#{orderTicketLabel(order)}</p>
+                        <p className="text-sm text-gray-600 truncate">{order.customerName} · {order.phone}</p>
+                        <p className="text-xs text-gray-500 mt-1">{order.estimatedDate}</p>
+                      </div>
+                      <StatusBadge order={order} />
+                    </div>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCopyTrackingLink(order)}
+                        className="w-full"
+                      >
+                        {t('dashboard.actions.copyTrackingLabel')}
+                      </Button>
+                      {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkReady(order)}
+                          className="w-full bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white"
+                        >
+                          {t('dashboard.actions.markReady')}
+                        </Button>
+                      )}
+                      {order.status === 'LISTO' && !alreadyNotified && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenNotify(order, templateType, daysReady)}
+                          className="w-full bg-[#FFF4E6] text-[#0E0E1A] hover:bg-[#F7E8CD]"
+                        >
+                          {notifyLabel}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 text-sm">
+              <Button
+                variant="outline"
+                onClick={() => goToPage(Math.max(1, page - 1))}
+                disabled={page <= 1 || isLoading}
+              >
+                Anterior
+              </Button>
+              <span className="text-gray-600">
+                Página {page} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => goToPage(Math.min(totalPages, page + 1))}
+                disabled={page >= totalPages || isLoading}
+              >
+                Siguiente
+              </Button>
+            </div>
+            </>
           )}
         </div>
       </main>
@@ -980,6 +1105,17 @@ export function DashboardPage() {
           </p>
         </div>
       </footer>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        pendingAutoRefresh={pendingAutoRefresh}
+        onPendingAutoRefreshChange={setPendingAutoRefresh}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={() => {
+          setAutoRefreshAfterStatusChange(pendingAutoRefresh);
+          setIsSettingsOpen(false);
+        }}
+      />
 
       <MarkReadyModal
         order={selectedOrder}

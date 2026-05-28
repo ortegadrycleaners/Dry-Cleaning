@@ -13,7 +13,8 @@ import type { OrderEvent } from '@/types/notifications';
 import { eventBus } from '@/services/EventBus';
 import { EVENT_NAMES } from '@/services/NotificationService';
 import {
-  fetchOrders,
+  fetchOrdersPage,
+  type OrdersViewMode,
   insertOrder,
   updateOrderStatusInDb,
   type InsertOrderResult,
@@ -22,24 +23,86 @@ import {
 interface OrdersContextType {
   orders: Order[];
   isLoading: boolean;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  viewMode: OrdersViewMode;
+  setViewMode: (viewMode: OrdersViewMode) => void;
+  autoRefreshAfterStatusChange: boolean;
+  setAutoRefreshAfterStatusChange: (value: boolean) => void;
+  goToPage: (page: number) => void;
+  refreshOrders: (page?: number) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => void;
   addOrder: (order: Order) => Promise<InsertOrderResult>;
 }
+
+const DEFAULT_PAGE_SIZE = 15;
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [totalCount, setTotalCount] = useState(0);
+  const [viewMode, setViewModeState] = useState<OrdersViewMode>(() => {
+    try {
+      const stored = localStorage.getItem('dashboard.orderViewMode');
+      if (stored === 'PENDING' || stored === 'READY' || stored === 'DELIVERED' || stored === 'ACTIVE') {
+        return stored;
+      }
+    } catch {
+      // ignore
+    }
+    return 'ACTIVE';
+  });
+  const [autoRefreshAfterStatusChange, setAutoRefreshAfterStatusChangeState] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('dashboard.autoRefreshAfterStatusChange');
+      return stored === null ? true : stored === '1';
+    } catch {
+      return true;
+    }
+  });
+
+  const loadOrdersPage = useCallback(async (targetPage: number, targetViewMode: OrdersViewMode = viewMode) => {
+    setIsLoading(true);
+    const result = await fetchOrdersPage({ page: targetPage, pageSize, viewMode: targetViewMode });
+
+    if (result.orders.length === 0 && result.totalCount > 0 && targetPage > 1) {
+      const maxPage = Math.max(1, Math.ceil(result.totalCount / result.pageSize));
+      if (targetPage > maxPage) {
+        const fallback = await fetchOrdersPage({ page: maxPage, pageSize: result.pageSize, viewMode: targetViewMode });
+        setOrders(fallback.orders);
+        setTotalCount(fallback.totalCount);
+        setPage(fallback.page);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    setOrders(result.orders);
+    setTotalCount(result.totalCount);
+    setPage(result.page);
+    setIsLoading(false);
+  }, [pageSize, viewMode]);
+
+  const refreshOrders = useCallback(
+    async (targetPage: number = page) => {
+      await loadOrdersPage(targetPage, viewMode);
+    },
+    [loadOrdersPage, page, viewMode]
+  );
 
   // Carga inicial desde Supabase
   useEffect(() => {
     let cancelled = false;
-    fetchOrders()
-      .then((data) => {
+    loadOrdersPage(1, viewMode)
+      .then(() => {
         if (!cancelled) {
-          setOrders(data);
-          setIsLoading(false);
+          return;
         }
       })
       .catch((error) => {
@@ -52,6 +115,38 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, [loadOrdersPage, viewMode]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const goToPage = useCallback(
+    (nextPage: number) => {
+      const safePage = Math.max(1, nextPage);
+      void loadOrdersPage(safePage, viewMode);
+    },
+    [loadOrdersPage, viewMode]
+  );
+
+  const setViewMode = useCallback(
+    (nextViewMode: OrdersViewMode) => {
+      setViewModeState(nextViewMode);
+      try {
+        localStorage.setItem('dashboard.orderViewMode', nextViewMode);
+      } catch {
+        // ignore
+      }
+      void loadOrdersPage(1, nextViewMode);
+    },
+    [loadOrdersPage]
+  );
+
+  const setAutoRefreshAfterStatusChange = useCallback((value: boolean) => {
+    setAutoRefreshAfterStatusChangeState(value);
+    try {
+      localStorage.setItem('dashboard.autoRefreshAfterStatusChange', value ? '1' : '0');
+    } catch {
+      // ignore
+    }
   }, []);
 
   /**
@@ -85,32 +180,29 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       updateOrderStatusInDb(orderId, status, rackNumber).then((ok) => {
         if (!ok) {
           console.error('[OrdersContext] No se pudo actualizar el estado en Supabase');
+          return;
+        }
+
+        if (status === 'ENTREGADO') {
+          return;
+        }
+
+        if (autoRefreshAfterStatusChange) {
+          void loadOrdersPage(page);
         }
       });
     },
-    []
+    [loadOrdersPage, page]
   );
 
   const addOrder = useCallback(async (order: Order): Promise<InsertOrderResult> => {
-    setOrders((prev) => [order, ...prev]);
-
     const result = await insertOrder(order);
     if (!result.orderId) {
       console.error('[OrdersContext] No se pudo insertar la orden en Supabase:', result.error);
-      setOrders((prev) => prev.filter((o) => o.id !== order.id));
       return result;
     }
 
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.id !== order.id) return o;
-        return {
-          ...o,
-          id: result.orderId as string,
-          publicId: result.publicId ?? o.publicId,
-        };
-      })
-    );
+    await loadOrdersPage(1);
 
     const event: OrderEvent = {
       type: 'ORDER_CREATED',
@@ -124,11 +216,41 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_CREATED, event));
 
     return result;
-  }, []);
+  }, [loadOrdersPage]);
 
   const value = useMemo<OrdersContextType>(
-    () => ({ orders, isLoading, updateOrderStatus, addOrder }),
-    [orders, isLoading, updateOrderStatus, addOrder]
+    () => ({
+      orders,
+      isLoading,
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+      viewMode,
+      setViewMode,
+      autoRefreshAfterStatusChange,
+      setAutoRefreshAfterStatusChange,
+      goToPage,
+      refreshOrders,
+      updateOrderStatus,
+      addOrder,
+    }),
+    [
+      orders,
+      isLoading,
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+      viewMode,
+      setViewMode,
+      autoRefreshAfterStatusChange,
+      setAutoRefreshAfterStatusChange,
+      goToPage,
+      refreshOrders,
+      updateOrderStatus,
+      addOrder,
+    ]
   );
 
   return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>;

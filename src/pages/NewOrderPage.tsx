@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/i18n';
 import { useOrders } from '@/context/OrdersContext';
 import { findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
+import { fetchOrderNumberExists } from '@/services/supabase/ordersService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +25,7 @@ type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
 export function NewOrderPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { orders, addOrder } = useOrders();
+  const { addOrder } = useOrders();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrderInfo, setCreatedOrderInfo] = useState<{ publicId: string; orderNumber: string; customerName: string; trackingUrl: string } | null>(null);
@@ -61,7 +62,7 @@ export function NewOrderPage() {
       return t('newOrder.orderNumberDigits');
     }
 
-    if (orders.some((order) => order.orderNumber.trim() === trimmedOrderId)) {
+    if (await fetchOrderNumberExists(trimmedOrderId)) {
       return t('newOrder.orderAlreadyExists', { orderNumber: trimmedOrderId });
     }
 

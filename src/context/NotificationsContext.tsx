@@ -18,9 +18,9 @@ import {
 import { toast } from 'sonner';
 import { notificationService, EVENT_NAMES } from '@/services/NotificationService';
 import { eventBus } from '@/services/EventBus';
-import { useOrders } from '@/context/OrdersContext';
 import type { Notification, ReminderConfig, OrderEvent } from '@/types/notifications';
 import { DEFAULT_REMINDER_CONFIG } from '@/types/notifications';
+import { fetchReadyOrdersForReminders } from '@/services/supabase/ordersService';
 
 /* eslint-disable react-refresh/only-export-components */
 
@@ -65,7 +65,6 @@ function showToast(notification: Notification): void {
 }
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const { orders } = useOrders();
   const [notifications, setNotifications] = useState<Notification[]>(() =>
     notificationService.getNotifications()
   );
@@ -96,7 +95,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
    * (relevante cuando esto consulte Supabase): solo se programa un nuevo tick
    * mientras `document.visibilityState === 'visible'`. */
   useEffect(() => {
-    function checkReminders() {
+    let cancelled = false;
+
+    async function checkReminders() {
+      const orders = await fetchReadyOrdersForReminders();
+      if (cancelled) return;
+
       for (const order of orders) {
         if (order.status !== 'LISTO' || typeof order.daysReady !== 'number') continue;
 
@@ -149,7 +153,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
-        checkReminders();
+        void checkReminders();
         startTimer();
       } else {
         clearTimer();
@@ -157,16 +161,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
 
     if (document.visibilityState === 'visible') {
-      checkReminders();
+      void checkReminders();
       startTimer();
     }
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      cancelled = true;
       document.removeEventListener('visibilitychange', handleVisibility);
       clearTimer();
     };
-  }, [orders, reminderConfig]);
+  }, [reminderConfig]);
 
   /* ---------- Acciones ---------- */
   const markAsRead = useCallback((id: string) => {

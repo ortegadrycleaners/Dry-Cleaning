@@ -14,6 +14,57 @@ import { generatePublicId } from '@/lib/utils';
 import { formatDate } from '@/i18n';
 import type { Order, OrderStatus } from '@/types';
 
+const ORDER_SELECT = `
+  id_order,
+  public_id,
+  order_number,
+  order_date,
+  deliver_date,
+  status,
+  status_updated_at,
+  rack_number,
+  days_ready,
+  notes,
+  client:fk_cliente (
+    name,
+    phone_number
+  )
+`;
+
+type OrderClientRow = {
+  name: string;
+  phone_number: number;
+};
+
+type OrderQueryRow = {
+  id_order: string;
+  public_id?: string | null;
+  order_number: number | string;
+  order_date: string;
+  deliver_date: string;
+  status: OrderStatus;
+  status_updated_at?: string | null;
+  rack_number?: string | null;
+  days_ready?: number | null;
+  notes?: string | null;
+  client?: OrderClientRow | OrderClientRow[] | null;
+};
+
+export type OrdersViewMode = 'ACTIVE' | 'PENDING' | 'READY' | 'DELIVERED';
+
+export interface OrdersPageResult {
+  orders: Order[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface FetchOrdersPageOptions {
+  page?: number;
+  pageSize?: number;
+  viewMode?: OrdersViewMode;
+}
+
 export interface InsertOrderResult {
   orderId: string | null;
   publicId: string | null;
@@ -55,6 +106,14 @@ function formatDisplayDate(iso: string): string {
   return formatDate(iso);
 }
 
+function extractClientData(client: OrderQueryRow['client']): OrderClientRow | null {
+  if (!client) return null;
+  if (Array.isArray(client)) {
+    return client[0] ?? null;
+  }
+  return client;
+}
+
 /** Convierte un timestamp ISO a "YYYY-MM-DD" para el campo createdAt */
 function toDateString(iso: string): string {
   if (!iso) return '';
@@ -62,21 +121,128 @@ function toDateString(iso: string): string {
 }
 
 /** Mapea una fila de Supabase (join receipt + client) al tipo Order de la app */
-function rowToOrder(row: Record<string, unknown>): Order {
+function rowToOrder(row: OrderQueryRow): Order {
+  const clientData = extractClientData(row.client);
   return {
-    id: row.id_order as string,
-    publicId: (row.public_id as string | undefined) ?? undefined,
+    id: row.id_order,
+    publicId: row.public_id ?? undefined,
     orderNumber: String(row.order_number),
-    customerName: (row.name as string) ?? '',
-    phone: formatPhone(row.phone_number as number),
-    estimatedDate: formatDisplayDate(row.deliver_date as string),
-    status: (row.status as OrderStatus) ?? 'RECIBIDO',
-    rackNumber: (row.rack_number as string | undefined) ?? undefined,
-    daysReady: (row.days_ready as number | undefined) ?? undefined,
-    createdAt: toDateString(row.order_date as string),
-    statusUpdatedAt: row.status_updated_at as string | undefined,
-    notes: (row.notes as string | undefined) ?? undefined,
+    customerName: clientData?.name ?? '',
+    phone: formatPhone(clientData?.phone_number ?? 0),
+    estimatedDate: formatDisplayDate(row.deliver_date),
+    status: row.status ?? 'RECIBIDO',
+    rackNumber: row.rack_number ?? undefined,
+    daysReady: row.days_ready ?? undefined,
+    createdAt: toDateString(row.order_date),
+    statusUpdatedAt: row.status_updated_at ?? undefined,
+    notes: row.notes ?? undefined,
   };
+}
+
+export async function fetchOrdersPage({
+  page = 1,
+  pageSize = 15,
+  viewMode = 'ACTIVE',
+}: FetchOrdersPageOptions = {}): Promise<OrdersPageResult> {
+  const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+  const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 15;
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  const query = supabase.from('receipt').select(ORDER_SELECT, { count: 'exact' });
+
+  switch (viewMode) {
+    case 'PENDING':
+      query.in('status', ['RECIBIDO', 'EN PROCESO']);
+      break;
+    case 'READY':
+      query.eq('status', 'LISTO');
+      break;
+    case 'DELIVERED':
+      query.eq('status', 'ENTREGADO');
+      break;
+    default:
+      query.neq('status', 'ENTREGADO').neq('status', 'ABANDONADO');
+      break;
+  }
+
+  const { data, error, count } = await query.order('order_date', { ascending: false }).range(from, to);
+
+  if (error) {
+    console.error('[ordersService] fetchOrdersPage error:', error.message);
+    return {
+      orders: [],
+      totalCount: 0,
+      page: safePage,
+      pageSize: safePageSize,
+    };
+  }
+
+  return {
+    orders: (data ?? []).map((row) => rowToOrder(row as OrderQueryRow)),
+    totalCount: count ?? 0,
+    page: safePage,
+    pageSize: safePageSize,
+  };
+}
+
+export async function fetchOrderNumberExists(orderNumber: string | number): Promise<boolean> {
+  const numericOrderNumber = parseInt(String(orderNumber).trim(), 10);
+  if (Number.isNaN(numericOrderNumber)) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('receipt')
+    .select('id_order')
+    .eq('order_number', numericOrderNumber)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[ordersService] fetchOrderNumberExists error:', error.message);
+    return false;
+  }
+
+  return data !== null;
+}
+
+export async function fetchRackConflict(orderId: string, rackNumber: string): Promise<Order | null> {
+  const normalizedRack = rackNumber.trim();
+  if (!normalizedRack) return null;
+
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(ORDER_SELECT)
+    .eq('rack_number', normalizedRack)
+    .neq('id_order', orderId)
+    .neq('status', 'ENTREGADO')
+    .neq('status', 'ABANDONADO')
+    .order('order_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[ordersService] fetchRackConflict error:', error.message);
+    return null;
+  }
+
+  return data ? rowToOrder(data as OrderQueryRow) : null;
+}
+
+export async function fetchReadyOrdersForReminders(): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(ORDER_SELECT)
+    .eq('status', 'LISTO')
+    .order('status_updated_at', { ascending: false });
+
+  if (error) {
+    console.error('[ordersService] fetchReadyOrdersForReminders error:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => rowToOrder(row as OrderQueryRow));
 }
 
 /** Carga todas las órdenes uniendo receipt + client, ordenadas por fecha desc */
