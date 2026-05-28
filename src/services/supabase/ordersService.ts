@@ -433,6 +433,11 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
  *  Solo retorna la orden si el visitante la puede ver.
  */
 export async function fetchOrderByPublicId(publicId: string): Promise<Order | null> {
+  // Soporta links legacy basados en UUID.
+  if (isUuid(publicId)) {
+    return fetchOrderById(publicId);
+  }
+
   const { data, error } = await supabase
     .from('receipt')
     .select(`
