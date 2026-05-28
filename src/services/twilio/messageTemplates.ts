@@ -23,11 +23,14 @@ export interface TemplateContext {
   rackNumber?: string;
   daysReady?: number;
   estimatedDate?: string;
-  /** Nombre comercial (configurable por entorno; default 'Tintoreria'). */
+  estimatedDay?: string;
+  storePhone?: string;
+  reviewUrl?: string;
+  /** Nombre comercial (configurable por entorno; default 'Ortega Dry Cleaners'). */
   brandName?: string;
 }
 
-const DEFAULT_BRAND = 'Tintoreria';
+const DEFAULT_BRAND = 'Ortega Dry Cleaners';
 
 function brand(ctx: TemplateContext): string {
   return (ctx.brandName ?? DEFAULT_BRAND).trim() || DEFAULT_BRAND;
@@ -39,22 +42,36 @@ function brand(ctx: TemplateContext): string {
  * Diseñadas para caber en 1 SMS GSM-7 (≤160 chars) en el caso típico.
  */
 export function renderTemplate(type: NotificationEventType, ctx: TemplateContext): string {
+  const estimatedDate = ctx.estimatedDate?.trim() || 'TBD';
+  const estimatedDay = ctx.estimatedDay?.trim();
+  const dayPrefix = estimatedDay ? `${estimatedDay}, ` : '';
+  const storePhone = ctx.storePhone?.trim() || 'N/A';
+  const reviewUrl = ctx.reviewUrl?.trim() || ctx.trackingUrl;
   switch (type) {
     case 'ORDER_CREATED': {
       const fecha = ctx.estimatedDate ? ` Lista aprox: ${ctx.estimatedDate}.` : '';
       return `${brand(ctx)}: Hola ${ctx.customerName}, recibimos tu orden #${ctx.orderNumber}.${fecha} Sigue: ${ctx.trackingUrl}`;
     }
+    case 'ORDER_RECEIVED_TRACKING': {
+      return `${brand(ctx)}: We received your order, ${ctx.customerName}! Estimated ready by ${dayPrefix}${estimatedDate}. Track your order: ${ctx.trackingUrl}`;
+    }
+    case 'ORDER_DELAYED': {
+      return `${brand(ctx)}: Your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the delay. ${ctx.trackingUrl}`;
+    }
+    case 'THANK_YOU_REVIEW': {
+      return `Thanks for trusting ${brand(ctx)}, ${ctx.customerName}! How did we do? Your feedback helps us a lot: ${reviewUrl}`;
+    }
     case 'ORDER_READY': {
-      const rack = ctx.rackNumber ? ` Rack #${ctx.rackNumber}.` : '';
-      return `${brand(ctx)}: ${ctx.customerName}, tu orden #${ctx.orderNumber} esta lista para recoger.${rack} Detalle: ${ctx.trackingUrl}`;
+      return `Hi ${ctx.customerName}, your order is ready at ${brand(ctx)}. Stop by whenever works for you. Details: ${ctx.trackingUrl}`;
     }
     case 'PICKUP_REMINDER': {
-      const dias = ctx.daysReady ?? 0;
-      return `${brand(ctx)}: Recordatorio. Tu orden #${ctx.orderNumber} lleva ${dias} dias lista. Pasa a recogerla. ${ctx.trackingUrl}`;
+      return `${brand(ctx)}: Hi ${ctx.customerName}, your order has been waiting for 3 days. Stop by whenever you can: ${ctx.trackingUrl}`;
     }
     case 'URGENT_REMINDER': {
-      const dias = ctx.daysReady ?? 0;
-      return `${brand(ctx)}: URGENTE ${ctx.customerName}, tu orden #${ctx.orderNumber} lleva ${dias} dias en rack. Recogela pronto. ${ctx.trackingUrl}`;
+      return `Hi ${ctx.customerName}, your order has been ready for 5 days at ${brand(ctx)}. Stop by this week - if you need anything, call us at ${storePhone}. ${ctx.trackingUrl}`;
+    }
+    case 'DAY_30_REMINDER': {
+      return `Hi ${ctx.customerName}, your order has been ready for 30 days at ${brand(ctx)}. Please contact us to arrange pickup. ${ctx.trackingUrl}`;
     }
     default:
       return `${brand(ctx)}: Notificacion de tu orden #${ctx.orderNumber}. ${ctx.trackingUrl}`;

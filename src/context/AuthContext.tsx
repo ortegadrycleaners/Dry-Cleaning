@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+/* eslint-disable react-refresh/only-export-components */
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 

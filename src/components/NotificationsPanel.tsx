@@ -6,6 +6,7 @@
  */
 import { useState } from 'react';
 import { useNotifications } from '@/context/NotificationsContext';
+import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import {
   Bell,
@@ -19,48 +20,71 @@ import {
 } from 'lucide-react';
 import type { NotificationEventType } from '@/types/notifications';
 
+type TypeConfig = { icon: typeof Bell; label: string; color: string; bg: string };
+
+const DEFAULT_TYPE_CONFIG: TypeConfig = {
+  icon: Bell,
+  label: 'common.notifications',
+  color: 'text-slate-600',
+  bg: 'bg-slate-50',
+};
+
 const TYPE_CONFIG: Record<
   NotificationEventType,
-  { icon: typeof Bell; label: string; color: string; bg: string }
+  TypeConfig
 > = {
   ORDER_CREATED: {
     icon: Package,
-    label: 'Confirmación',
+    label: 'notifications.type.confirmation',
     color: 'text-blue-600',
     bg: 'bg-blue-50',
   },
+  ORDER_RECEIVED_TRACKING: {
+    icon: Package,
+    label: 'notifications.type.received',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+  },
+  ORDER_DELAYED: {
+    icon: AlertTriangle,
+    label: 'notifications.type.delayed',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+  },
+  THANK_YOU_REVIEW: {
+    icon: MessageSquare,
+    label: 'notifications.type.thankYou',
+    color: 'text-green-600',
+    bg: 'bg-green-50',
+  },
   ORDER_READY: {
     icon: CheckCircle2,
-    label: 'Lista',
+    label: 'notifications.type.ready',
     color: 'text-green-600',
     bg: 'bg-green-50',
   },
   PICKUP_REMINDER: {
     icon: AlertTriangle,
-    label: 'Recordatorio',
+    label: 'notifications.type.reminder',
     color: 'text-amber-600',
     bg: 'bg-amber-50',
   },
   URGENT_REMINDER: {
     icon: OctagonAlert,
-    label: 'Urgente',
+    label: 'notifications.type.urgent',
+    color: 'text-red-600',
+    bg: 'bg-red-50',
+  },
+  DAY_30_REMINDER: {
+    icon: OctagonAlert,
+    label: 'notifications.type.urgent',
     color: 'text-red-600',
     bg: 'bg-red-50',
   },
 };
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
-}
-
 export function NotificationsPanel() {
+  const { t, timeAgo } = useI18n();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -69,10 +93,10 @@ export function NotificationsPanel() {
       {/* Botón campana */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        aria-label="Notificaciones"
+        className="relative p-2 text-[#FAFAFC]/90 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+        aria-label={t('common.notifications')}
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-5 h-5 text-current" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -95,7 +119,7 @@ export function NotificationsPanel() {
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#1B2A4A]" />
                 <h3 className="text-sm font-semibold text-[#1B2A4A]">
-                  Notificaciones
+                  {t('common.notifications')}
                 </h3>
                 {unreadCount > 0 && (
                   <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
@@ -112,7 +136,7 @@ export function NotificationsPanel() {
                     className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
                   >
                     <CheckCheck className="w-3.5 h-3.5 mr-1" />
-                    Leer todo
+                    {t('notifications.markAllAsRead')}
                   </Button>
                 )}
                 <button
@@ -130,15 +154,15 @@ export function NotificationsPanel() {
                 <div className="px-4 py-8 text-center">
                   <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-sm text-gray-500">
-                    No hay notificaciones aún
+                    {t('notifications.noItems')}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Las notificaciones aparecerán aquí al crear o actualizar órdenes
+                    {t('notifications.noItemsSub')}
                   </p>
                 </div>
               ) : (
                 notifications.map((notification) => {
-                  const config = TYPE_CONFIG[notification.type];
+                  const config = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE_CONFIG;
                   const Icon = config.icon;
 
                   return (
@@ -160,7 +184,7 @@ export function NotificationsPanel() {
                             <span
                               className={`text-xs font-semibold ${config.color}`}
                             >
-                              {config.label}
+                              {t(config.label)}
                             </span>
                             <span className="text-[10px] text-gray-400 flex-shrink-0">
                               {timeAgo(notification.createdAt)}
@@ -174,7 +198,7 @@ export function NotificationsPanel() {
                           </p>
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 uppercase">
-                              {notification.channel}
+                              {t('notifications.channelLabel', { channel: notification.channel })}
                             </span>
                             <span
                               className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
@@ -186,10 +210,10 @@ export function NotificationsPanel() {
                               }`}
                             >
                               {notification.status === 'sent'
-                                ? 'Enviado'
+                                ? t('notifications.status.sent')
                                 : notification.status === 'failed'
-                                  ? 'Fallido'
-                                  : 'Pendiente'}
+                                  ? t('notifications.status.failed')
+                                  : t('notifications.status.pending')}
                             </span>
                             {!notification.read && (
                               <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
@@ -207,8 +231,10 @@ export function NotificationsPanel() {
             {notifications.length > 0 && (
               <div className="px-4 py-2.5 bg-slate-50 border-t border-gray-200">
                 <p className="text-[10px] text-gray-400 text-center">
-                  {notifications.length} notificación{notifications.length !== 1 ? 'es' : ''} ·
-                  Cada enlace incluye token de seguridad único
+                  {t('notifications.footer', {
+                    count: notifications.length,
+                    plural: notifications.length !== 1 ? 'es' : '',
+                  })}
                 </p>
               </div>
             )}

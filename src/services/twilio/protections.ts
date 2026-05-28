@@ -143,6 +143,14 @@ export function checkOrderState(order: Order, type: NotificationEventType): Guar
       );
     }
   }
+  if (type === 'PICKUP_REMINDER' || type === 'URGENT_REMINDER' || type === 'DAY_30_REMINDER') {
+    if (order.status !== 'LISTO') {
+      return fail(
+        'INVALID_ORDER_STATE',
+        `La orden #${order.orderNumber} no está LISTA (estado actual: ${order.status}).`,
+      );
+    }
+  }
   if (!order.customerName?.trim()) {
     return fail('INVALID_ORDER_STATE', 'La orden no tiene nombre de cliente asociado.');
   }

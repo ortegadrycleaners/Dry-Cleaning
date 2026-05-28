@@ -1,0 +1,338 @@
+/* === TOKENS BASE (necesarios para todo) === */
+:root {
+  --indigo: #3B4BFF;
+  --indigo-soft: #EEF0FF;
+  --cream: #FFF4E6;
+  --mint: #00C896;
+  --mint-soft: #E6FBF4;
+  --almost-black: #0E0E1A;
+  --gray-mid: #5C5C73;
+  --gray-soft: #8B8BA0;
+  --gray-light: #E8E8F0;
+  --gray-lighter: #F2F2F7;
+  --off-white: #FAFAFC;
+  --white: #FFFFFF;
+}
+
+/* === TRACKING PAGE (fondo cream, contenedor móvil) === */
+.tracking-page {
+  background: var(--cream);
+  min-height: 100vh;
+  padding: 28px 20px;
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tracking-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.business-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--almost-black);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.business-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* === CARD PRINCIPAL === */
+.tracking-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gray-mid);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.tracking-card {
+  background: white;
+  border-radius: 18px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 2px 16px rgba(14, 14, 26, 0.04);
+}
+
+.tracking-icon {
+  width: 72px;
+  height: 72px;
+  background: var(--cream);
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.tracking-icon.success {
+  background: var(--mint-soft);
+}
+
+.tracking-status-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.tracking-order-num {
+  font-size: 13px;
+  color: var(--gray-mid);
+  margin-bottom: 4px;
+}
+
+.tracking-eta {
+  font-size: 13px;
+  color: var(--gray-mid);
+  margin-bottom: 20px;
+}
+
+.tracking-eta strong {
+  color: var(--almost-black);
+  font-weight: 600;
+}
+
+.tracking-message {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--almost-black);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+/* === PROGRESS BAR === */
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  margin-bottom: 20px;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gray-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.progress-dot.done  { background: var(--mint); }
+.progress-dot.current {
+  background: var(--indigo);
+  box-shadow: 0 0 0 4px var(--indigo-soft);
+}
+
+.progress-line {
+  flex: 1;
+  height: 2px;
+  background: var(--gray-light);
+  margin-top: -28px; /* alinea con el centro del dot */
+  z-index: 0;
+}
+
+.progress-line.done { background: var(--mint); }
+
+.progress-label {
+  font-size: 11px;
+  color: var(--gray-mid);
+  font-weight: 500;
+}
+
+.progress-label.active {
+  color: var(--almost-black);
+  font-weight: 600;
+}
+
+/* === INFO CARD (datos del negocio) === */
+.info-card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 18px;
+}
+
+.info-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--almost-black);
+  margin-bottom: 10px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--gray-mid);
+}
+
+/* === REVIEW TEASER (estado "lista") === */
+.review-teaser {
+  background: var(--indigo-soft);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--indigo);
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* === REVIEW CTA (estado "entregada") === */
+.review-cta {
+  background: var(--almost-black);
+  border-radius: 14px;
+  padding: 24px;
+  margin-top: 20px;
+  text-align: center;
+  color: white;
+}
+
+.review-cta .stars {
+  color: #FFD700;
+  font-size: 22px;
+  margin-bottom: 8px;
+  letter-spacing: 4px;
+}
+
+.review-cta h4 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.review-cta p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 14px;
+  line-height: 1.55;
+}
+
+.review-cta-btn {
+  background: white;
+  color: var(--almost-black);
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.review-cta-secondary {
+  display: block;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  margin-top: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* === FOOTER === */
+.powered-by {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 11px;
+  color: var(--gray-soft);
+  letter-spacing: 0.04em;
+}
+
+.powered-by strong {
+  color: var(--gray-mid);
+  font-weight: 700;
+}
+
+/* === PROMO CARD OVERRIDES (mejor legibilidad) === */
+.promo-card {
+  background: var(--white) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  color: var(--almost-black);
+}
+.promo-card h4 {
+  color: var(--almost-black) !important;
+}
+.promo-card p {
+  color: var(--gray-soft);
+}
+.promo-card .inline-block {
+  background: rgba(59, 75, 255, 0.06) !important;
+}
+.promo-card .inline-block span {
+  color: var(--indigo) !important;
+}
+
+/* === NAVBAR (simplified) === */
+.tracking-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tracking-navbar button {
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tracking-navbar button:hover {
+  background: rgba(27,42,74,0.04);
+}
+
+/* header wrapper (white background instead of transparent) */
+.tracking-header-wrapper {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-light);
+}
+.tracking-header-wrapper .tracking-navbar a {
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.tracking-header-wrapper .tracking-navbar a:hover {
+  background: rgba(27,42,74,0.04);
+}

@@ -7,21 +7,27 @@ import './CustomerModal.css';
 
 type CustomerData = z.infer<typeof customerSchema>;
 
+interface SubmitResult {
+  success: boolean;
+  error?: string;
+}
+
 interface CustomerModalProps {
   isOpen: boolean;
   initialData?: Partial<CustomerData>;
-  onSubmit: (data: CustomerData) => void;
+  onSubmit: (data: CustomerData) => Promise<SubmitResult>;
   onClose: () => void;
 }
 
 export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialData, onSubmit, onClose }) => {
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<CustomerData>({
     resolver: zodResolver(customerSchema),
     mode: 'onChange',
-    defaultValues: { name: '', phone: '', smsConsent: false, notes: '' },
+    defaultValues: { name: '', phone: '', smsConsent: false },
   });
 
   React.useEffect(() => {
@@ -29,7 +35,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
       reset({
         name: initialData?.name || '',
         phone: initialData?.phone || '',
-        notes: initialData?.notes || '',
         smsConsent: initialData?.smsConsent || false,
       });
       // Update URL hash when modal opens
@@ -37,15 +42,19 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
     }
   }, [isOpen, initialData, reset]);
 
-  const onSubmitForm: SubmitHandler<CustomerData> = (data) => {
+  const onSubmitForm: SubmitHandler<CustomerData> = async (data) => {
     setIsSubmitting(true);
-    // Simulación de carga para feedback visual
-    setTimeout(() => {
-      onSubmit(data);
+    setSubmitError(null);
+    const result = await onSubmit(data);
+    setIsSubmitting(false);
+
+    if (result.success) {
       setShowSuccess(true);
-      setIsSubmitting(false);
       reset();
-    }, 800);
+    } else {
+      setShowSuccess(false);
+      setSubmitError(result.error ?? 'No se pudo registrar el cliente. Por favor revisa los datos e intenta de nuevo.');
+    }
   };
 
   const handleClose = () => {
@@ -81,6 +90,11 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
             </div>
 
             <form id="customerForm" onSubmit={handleSubmit(onSubmitForm)} autoComplete="off">
+            {submitError && (
+              <div className="error-message" style={{ marginBottom: '1rem' }}>
+                {submitError}
+              </div>
+            )}
               {/* Full Name */}
               <div className="form-group">
                 <label htmlFor="name" className="form-label">Full Name</label>
@@ -107,40 +121,30 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                 {errors.phone && <span className="error-message">{errors.phone.message}</span>}
               </div>
 
-              {/* Order Notes */}
-              <div className="form-group">
-                <label htmlFor="notes" className="form-label">Order Notes</label>
-                <textarea
-                  id="notes"
-                  className="form-input"
-                  placeholder="Additional notes (optional)"
-                  {...register('notes')}
-                  maxLength={200}
-                />
-              </div>
-
               {/* SMS Consent - MANDATORY */}
               <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1B2A4A', marginBottom: '0.5rem' }}>
-                    ✓ Explicit Consent (Required)
+                <div className="checkbox-description">
+                  <p className="checkbox-title">
+                    Explicit Consent (Required)
                   </p>
-                  <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                  <p className="checkbox-subtitle">
                     By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.
                   </p>
                 </div>
-                <label className="custom-checkbox">
-                  <input
-                    type="checkbox"
-                    id="smsConsent"
-                    {...register('smsConsent')}
-                    required
-                  />
-                  <span className="checkmark"></span>
-                </label>
-                <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
-                  I accept and authorize the registration of my data and SMS notifications
-                </span>
+                <div className="checkbox-row">
+                  <label className="custom-checkbox">
+                    <input
+                      type="checkbox"
+                      id="smsConsent"
+                      {...register('smsConsent')}
+                      required
+                    />
+                    <span className="checkmark"></span>
+                  </label>
+                  <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
+                    I accept and authorize the registration of my data and SMS notifications
+                  </span>
+                </div>
                 {errors.smsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.smsConsent.message}</span>}
               </div>
 

@@ -95,23 +95,15 @@ export const mockCustomers: Customer[] = [
 ];
 
 export const businessInfo = {
-  name: 'Tintorería Elegance',
-  address: 'Calle Fortaleza 23, San Juan, PR 00901',
-  hours: 'Lun–Vie 8am–6pm | Sáb 9am–2pm',
-  phone: '(787) 555-0200',
+  name: 'Ortega Dry Cleaners',
+  address: '5330 Ortega Blvd, Jacksonville, FL 32210, United States',
+  hours: 'Lunes a Viernes 8am - 6pm | Sábados 10am - 5pm',
+  phone: '(904) 666-0809',
+  googleReviewUrl: 'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR',
   promotions: [
     {
-      title: '20% en tu primera orden',
-      description: 'Trae este cupón y recibe un descuento especial en tu primer servicio.',
-      code: 'BIENVENIDO20',
-    },
-    {
-      title: 'Programa de Fidelidad',
-      description: 'Acumula 5 órdenes y la 6ta tiene un 15% de descuento automático.',
-    },
-    {
-      title: 'Servicio Express',
-      description: 'Entrega en 24 horas disponible por un cargo adicional. Consulta en mostrador.',
+      title: 'U.S. Navy Uniform Dry Cleaning',
+      description: 'Military Dry Cleaning Special — pricing by quantity',
     },
   ],
 };

@@ -18,6 +18,7 @@ import type { NotificationEventType, OrderEvent } from '@/types/notifications';
 import { eventBus } from '@/services/EventBus';
 import { EVENT_NAMES } from '@/services/NotificationService';
 import { getCustomerForOrder } from '@/services/supabase/customerSource';
+import { businessInfo } from '@/data/mockData';
 import { getTwilioConfig } from './config';
 import { recordSmsSent, runAllGuards, type GuardResult } from './protections';
 import { renderTemplate, type TemplateContext } from './messageTemplates';
@@ -45,23 +46,58 @@ function buildIdempotencyKey(orderId: string, type: NotificationEventType): stri
 
 /* ---------- Tracking URL ---------- */
 
-function buildTrackingUrl(orderId: string): string {
+function resolveTrackingId(order: Pick<Order, 'id' | 'publicId'>): string {
+  return order.publicId?.trim() || order.id;
+}
+
+function buildTrackingUrl(order: Pick<Order, 'id' | 'publicId'>): string {
   // El token real lo genera el backend al persistir la notificación; el
   // frontend solo arma una URL de preview a la página de tracking.
-  return `${window.location.origin}/tracking/${orderId}`;
+  return `${window.location.origin}/tracking/${resolveTrackingId(order)}`;
+}
+
+function resolveEstimatedDateParts(order: Order): { estimatedDate: string; estimatedDay?: string } {
+  const tryParse = (value?: string): Date | null => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const parsed = tryParse(order.estimatedDate) ?? tryParse(order.statusUpdatedAt) ?? tryParse(order.createdAt);
+  if (!parsed) {
+    return { estimatedDate: order.estimatedDate?.trim() || 'TBD' };
+  }
+
+  return {
+    estimatedDate: parsed.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }),
+    estimatedDay: parsed.toLocaleDateString('en-US', { weekday: 'long' }),
+  };
+}
+
+function buildTemplateContext(order: Order, daysReady?: number | null): TemplateContext {
+  const { estimatedDate, estimatedDay } = resolveEstimatedDateParts(order);
+  return {
+    customerName: order.customerName,
+    orderNumber: order.orderNumber,
+    trackingUrl: buildTrackingUrl(order),
+    rackNumber: order.rackNumber,
+    daysReady: typeof daysReady === 'number' ? daysReady : order.daysReady,
+    estimatedDate,
+    estimatedDay,
+    brandName: businessInfo.name,
+    storePhone: businessInfo.phone,
+    reviewUrl: businessInfo.googleReviewUrl,
+  };
 }
 
 /* ---------- Preview de mensaje ---------- */
 
 export function previewMessage(order: Order, type: NotificationEventType): string {
-  const ctx: TemplateContext = {
-    customerName: order.customerName,
-    orderNumber: order.orderNumber,
-    trackingUrl: buildTrackingUrl(order.id),
-    rackNumber: order.rackNumber,
-    daysReady: order.daysReady,
-    estimatedDate: order.estimatedDate,
-  };
+  const ctx: TemplateContext = buildTemplateContext(order);
   return renderTemplate(type, ctx);
 }
 
@@ -141,6 +177,42 @@ export interface NotifyOrderReadyArgs {
   operatorId: string;
 }
 
+export interface NotifyPickupReminderArgs {
+  order: Order;
+  /** Identificador del operador autenticado (para auditoría). */
+  operatorId: string;
+  /** Días desde que la orden quedó LISTA (derivado de statusUpdatedAt). */
+  daysReady?: number | null;
+}
+
+interface NotifySmsArgs {
+  order: Order;
+  operatorId: string;
+  type: NotificationEventType;
+  daysReady?: number | null;
+}
+
+function eventNameForType(type: NotificationEventType): keyof typeof EVENT_NAMES {
+  switch (type) {
+    case 'ORDER_CREATED':
+      return 'ORDER_CREATED';
+    case 'ORDER_RECEIVED_TRACKING':
+      return 'ORDER_RECEIVED_TRACKING';
+    case 'ORDER_DELAYED':
+      return 'ORDER_DELAYED';
+    case 'THANK_YOU_REVIEW':
+      return 'THANK_YOU_REVIEW';
+    case 'PICKUP_REMINDER':
+      return 'PICKUP_REMINDER';
+    case 'URGENT_REMINDER':
+      return 'URGENT_REMINDER';
+    case 'DAY_30_REMINDER':
+      return 'DAY_30_REMINDER';
+    default:
+      return 'ORDER_READY';
+  }
+}
+
 /**
  * Único punto que dispara un SMS a Twilio para una orden LISTA.
  *
@@ -155,8 +227,32 @@ export async function notifyOrderReady({
   order,
   operatorId,
 }: NotifyOrderReadyArgs): Promise<SendSmsResult> {
-  const type: NotificationEventType = 'ORDER_READY';
+  return notifySmsTemplate({ order, operatorId, type: 'ORDER_READY' });
+}
 
+export async function notifyPickupReminder({
+  order,
+  operatorId,
+  daysReady,
+}: NotifyPickupReminderArgs): Promise<SendSmsResult> {
+  return notifySmsTemplate({ order, operatorId, type: 'PICKUP_REMINDER', daysReady });
+}
+
+export async function notifySmsTemplate({
+  order,
+  operatorId,
+  type,
+  daysReady,
+}: NotifySmsArgs): Promise<SendSmsResult> {
+  return notifySms({ order, operatorId, type, daysReady });
+}
+
+async function notifySms({
+  order,
+  operatorId,
+  type,
+  daysReady,
+}: NotifySmsArgs): Promise<SendSmsResult> {
   const guard: GuardResult = runAllGuards(order, type);
   if (!guard.ok) {
     return {
@@ -174,11 +270,8 @@ export async function notifyOrderReady({
   const customerName = customer?.name?.trim() || order.customerName;
 
   const ctx: TemplateContext = {
+    ...buildTemplateContext(order, daysReady),
     customerName,
-    orderNumber: order.orderNumber,
-    trackingUrl: buildTrackingUrl(order.id),
-    rackNumber: order.rackNumber,
-    estimatedDate: order.estimatedDate,
   };
   const renderedMessage = renderTemplate(type, ctx);
 
@@ -221,9 +314,15 @@ export async function notifyOrderReady({
     customerName,
     phone: order.phone,
     timestamp: new Date(sentAt).toISOString(),
-    payload: { rackNumber: order.rackNumber },
+    payload: {
+      rackNumber: order.rackNumber,
+      daysReady: typeof daysReady === 'number' ? daysReady : order.daysReady,
+      estimatedDate: ctx.estimatedDate,
+      estimatedDay: ctx.estimatedDay,
+      reviewUrl: ctx.reviewUrl,
+    },
   };
-  queueMicrotask(() => eventBus.emit(EVENT_NAMES.ORDER_READY, event));
+  queueMicrotask(() => eventBus.emit(EVENT_NAMES[eventNameForType(type)], event));
 
   return {
     ok: true,

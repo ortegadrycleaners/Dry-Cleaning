@@ -36,6 +36,35 @@ export function orderTicketLabel(order: Pick<Order, 'orderNumber' | 'id'>): stri
   return n || order.id;
 }
 
+import type { Locale } from '@/i18n';
+
+export function formatElapsedTime(date: Date, locale: Locale = 'es', base = new Date()): string {
+  const diffMs = Math.max(0, base.getTime() - date.getTime());
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  const isSpanish = locale === 'es';
+
+  if (seconds < 10) return isSpanish ? 'unos segundos' : 'a few seconds';
+  if (seconds < 60) return isSpanish ? `${seconds} segundos` : `${seconds} seconds`;
+  if (minutes === 1) return isSpanish ? 'un minuto' : 'one minute';
+  if (minutes < 60) return isSpanish ? `${minutes} minutos` : `${minutes} minutes`;
+  if (hours === 1) return isSpanish ? 'una hora' : 'one hour';
+  if (hours < 24) return isSpanish ? `${hours} horas` : `${hours} hours`;
+  if (days === 1) return isSpanish ? 'un día' : 'one day';
+  return isSpanish ? `${days} días` : `${days} days`;
+}
+
+export function daysSince(value?: string | Date, base = new Date()): number | null {
+  if (!value) return null;
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return null;
+  const diffMs = Math.max(0, base.getTime() - date.getTime());
+  return Math.floor(diffMs / 86_400_000);
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

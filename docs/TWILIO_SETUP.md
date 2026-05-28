@@ -1,7 +1,7 @@
 # Twilio SMS — Guía de configuración y uso
 
 Esta guía cubre cómo enchufar Twilio al backoffice de la tintorería para que el
-botón **“Notificar al cliente”** envíe un SMS real cuando una orden se marque
+botón **“SMS cliente”** envíe un SMS real cuando una orden se marque
 como `LISTO`.
 
 > **TL;DR**
@@ -256,7 +256,7 @@ supabase secrets set \
    VITE_SMS_KILL_SWITCH=false
    ```
 
-3. Reinicia Vite (`npm run dev`). En el modal de **“Notificar al cliente”** la
+3. Reinicia Vite (`npm run dev`). En el modal de **“SMS cliente”** la
    sección de stats mostrará `Modo: PRODUCCIÓN`.
 
 ---
@@ -270,7 +270,7 @@ backend protege ante un cliente comprometido.
 | # | Capa | Dónde se aplica | Configurable por |
 |---|------|-----------------|------------------|
 | 1 | Operador autenticado en backoffice | RequireAuth + JWT en backend | login |
-| 2 | Botón único “Notificar al cliente” disponible solo en estado `LISTO` | DashboardPage | n/a |
+| 2 | Botón único “SMS cliente” disponible solo en estado `LISTO` | DashboardPage | n/a |
 | 3 | Botón se oculta si la orden ya fue notificada (lectura del historial) | DashboardPage | n/a |
 | 4 | Modal de confirmación con preview del mensaje exacto | NotifyCustomerModal | n/a |
 | 5 | Validación E.164 estricta del teléfono | `phoneValidation.ts` | n/a |
@@ -315,7 +315,7 @@ llamar a Twilio.
 2. En la tabla de órdenes, marca una orden `EN PROCESO` o `RECIBIDO` como
    `LISTO` mediante el botón **“Marcar Listo”** y completa el rack.
    - **Esta acción NO envía SMS.**
-3. Aparece en la fila el botón único **“Notificar al cliente”**.
+3. Aparece en la fila el botón único **“SMS cliente”**.
 4. Al pulsarlo se abre el modal con:
    - Preview literal del SMS (no editable).
    - Conteo de caracteres y segmentos facturables.
