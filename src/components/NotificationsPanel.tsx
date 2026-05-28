@@ -20,9 +20,18 @@ import {
 } from 'lucide-react';
 import type { NotificationEventType } from '@/types/notifications';
 
+type TypeConfig = { icon: typeof Bell; label: string; color: string; bg: string };
+
+const DEFAULT_TYPE_CONFIG: TypeConfig = {
+  icon: Bell,
+  label: 'common.notifications',
+  color: 'text-slate-600',
+  bg: 'bg-slate-50',
+};
+
 const TYPE_CONFIG: Record<
   NotificationEventType,
-  { icon: typeof Bell; label: string; color: string; bg: string }
+  TypeConfig
 > = {
   ORDER_CREATED: {
     icon: Package,
@@ -153,7 +162,7 @@ export function NotificationsPanel() {
                 </div>
               ) : (
                 notifications.map((notification) => {
-                  const config = TYPE_CONFIG[notification.type];
+                  const config = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE_CONFIG;
                   const Icon = config.icon;
 
                   return (

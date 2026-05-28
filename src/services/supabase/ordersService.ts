@@ -50,11 +50,6 @@ type OrderQueryRow = {
   client?: OrderClientRow | OrderClientRow[] | null;
 };
 
-type CreateOrderAtomicRow = {
-  order_id: string;
-  public_id: string;
-};
-
 export type OrdersViewMode = 'ACTIVE' | 'PENDING' | 'READY' | 'DELIVERED';
 
 export interface OrdersPageResult {
@@ -117,6 +112,109 @@ function extractClientData(client: OrderQueryRow['client']): OrderClientRow | nu
     return client[0] ?? null;
   }
   return client;
+}
+
+function normalizeCustomerName(value: string): string {
+  return String(value).trim().toLowerCase();
+}
+
+async function resolveClientId(
+  phoneNumber: number,
+  customerName: string
+): Promise<{ clientId: string | null; error?: InsertOrderResult }> {
+  const { data: existingCustomer, error: existingError } = await supabase
+    .from('client')
+    .select('id_client, name')
+    .eq('phone_number', phoneNumber)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error('[ordersService] resolveClientId (lookup) error:', existingError.message);
+    return {
+      clientId: null,
+      error: {
+        orderId: null,
+        publicId: null,
+        error: 'No se pudo verificar el cliente existente.',
+        code: 'DATABASE_ERROR',
+      },
+    };
+  }
+
+  if (existingCustomer) {
+    if (normalizeCustomerName(existingCustomer.name ?? '') !== normalizeCustomerName(customerName)) {
+      return {
+        clientId: null,
+        error: {
+          orderId: null,
+          publicId: null,
+          error: `El número ${formatPhone(phoneNumber)} ya está registrado con otro nombre.`,
+          code: 'PHONE_NAME_MISMATCH',
+        },
+      };
+    }
+
+    return { clientId: existingCustomer.id_client };
+  }
+
+  const clientId = crypto.randomUUID();
+  const { error: insertError } = await supabase.from('client').insert({
+    id_client: clientId,
+    phone_number: phoneNumber,
+    name: customerName,
+  });
+
+  if (insertError) {
+    if (isUniqueViolation(insertError)) {
+      const { data: conflictedCustomer, error: conflictError } = await supabase
+        .from('client')
+        .select('id_client, name')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+
+      if (conflictError) {
+        console.error('[ordersService] resolveClientId (conflict lookup) error:', conflictError.message);
+        return {
+          clientId: null,
+          error: {
+            orderId: null,
+            publicId: null,
+            error: 'No se pudo registrar el cliente.',
+            code: 'CLIENT_INSERT_FAILED',
+          },
+        };
+      }
+
+      if (conflictedCustomer) {
+        if (normalizeCustomerName(conflictedCustomer.name ?? '') !== normalizeCustomerName(customerName)) {
+          return {
+            clientId: null,
+            error: {
+              orderId: null,
+              publicId: null,
+              error: `El número ${formatPhone(phoneNumber)} ya está registrado con otro nombre.`,
+              code: 'PHONE_NAME_MISMATCH',
+            },
+          };
+        }
+
+        return { clientId: conflictedCustomer.id_client };
+      }
+    }
+
+    console.error('[ordersService] resolveClientId (insert) error:', insertError.message);
+    return {
+      clientId: null,
+      error: {
+        orderId: null,
+        publicId: null,
+        error: 'No se pudo registrar el cliente.',
+        code: 'CLIENT_INSERT_FAILED',
+      },
+    };
+  }
+
+  return { clientId };
 }
 
 /** Convierte un timestamp ISO a "YYYY-MM-DD" para el campo createdAt */
@@ -280,10 +378,6 @@ export async function fetchOrders(): Promise<Order[]> {
   return (data ?? []).map((row) => rowToOrder(row as OrderQueryRow));
 }
 
-/**
- * Inserta un nuevo cliente (si no existe por phone) y una nueva orden en Supabase.
- * Retorna el id_order (UUID) asignado, o null si ocurrió un error.
- */
 export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   const rawPhoneDigits = normalizePhoneDigits(order.phone);
   if (!rawPhoneDigits) {
@@ -295,7 +389,6 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
     };
   }
 
-  const rawPhone = rawPhoneDigits;
   const numericOrderNumber = parseInt(order.orderNumber.trim(), 10);
   if (Number.isNaN(numericOrderNumber) || numericOrderNumber <= 0) {
     return {
@@ -308,6 +401,13 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
 
   const orderId = order.id && isUuid(order.id) ? order.id : crypto.randomUUID();
   const publicId = order.publicId?.trim() || generatePublicId(12);
+  const normalizedCustomerName = order.customerName.trim();
+  const phoneNumber = parseInt(rawPhoneDigits, 10);
+
+  const resolvedClient = await resolveClientId(phoneNumber, normalizedCustomerName);
+  if (resolvedClient.error) {
+    return resolvedClient.error;
+  }
 
   const deliverDate = (() => {
     const parsed = new Date(order.estimatedDate);
@@ -315,17 +415,19 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   })();
 
   const { data: insertedOrder, error: receiptError } = await supabase
-    .rpc('create_order_atomic', {
-      p_order_id: orderId,
-      p_public_id: publicId,
-      p_order_number: numericOrderNumber,
-      p_phone: rawPhone,
-      p_customer_name: order.customerName,
-      p_deliver_date: deliverDate,
-      p_status: order.status,
-      p_notes: order.notes ?? null,
+    .from('receipt')
+    .insert({
+      id_order: orderId,
+      public_id: publicId,
+      order_number: numericOrderNumber,
+      order_date: new Date().toISOString(),
+      deliver_date: deliverDate,
+      fk_cliente: resolvedClient.clientId,
+      status: order.status,
+      status_updated_at: new Date().toISOString(),
+      notes: order.notes ?? null,
     })
-    .returns<CreateOrderAtomicRow[]>()
+    .select('id_order, public_id')
     .single();
 
   if (receiptError || !insertedOrder) {
@@ -338,16 +440,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       };
     }
 
-    if (receiptError?.code === '22000') {
-      return {
-        orderId: null,
-        publicId: null,
-        error: receiptError.message,
-        code: 'PHONE_NAME_MISMATCH',
-      };
-    }
-
-    console.error('[ordersService] insertOrder (receipt rpc) error:', receiptError);
+    console.error('[ordersService] insertOrder (receipt insert) error:', receiptError);
     return {
       orderId: null,
       publicId: null,
@@ -357,7 +450,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
   }
 
   return {
-    orderId: insertedOrder.order_id,
+    orderId: insertedOrder.id_order,
     publicId: insertedOrder.public_id,
   };
 }
