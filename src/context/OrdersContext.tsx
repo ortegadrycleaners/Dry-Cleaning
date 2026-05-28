@@ -96,22 +96,20 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     [loadOrdersPage, page, viewMode]
   );
 
-  // Carga inicial desde Supabase
+  // Carga inicial desde Supabase (async para evitar setState síncrono en el effect)
   useEffect(() => {
     let cancelled = false;
-    loadOrdersPage(1, viewMode)
-      .then(() => {
-        if (!cancelled) {
-          return;
-        }
-      })
-      .catch((error) => {
+    void (async () => {
+      try {
+        await loadOrdersPage(1, viewMode);
+      } catch (error) {
         if (!cancelled) {
           console.error('[OrdersContext] Error loading orders:', error);
           setOrders([]);
           setIsLoading(false);
         }
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };

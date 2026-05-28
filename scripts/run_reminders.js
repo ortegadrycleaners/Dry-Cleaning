@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Example runner: query due reminders and record them after (mock) sending.
-// Requirements: set DATABASE_URL env var (Postgres connection string with service role privileges).
+// Legacy CLI: claims due reminders in Postgres only (no Twilio).
+// Prefer: supabase functions deploy send-reminders && invoke the Edge Function,
+// or the dashboard modal + send-reminder-sms (flow=reminder).
 // Usage: DATABASE_URL="postgres://..." node scripts/run_reminders.js [TIMEZONE]
 
 const { Client } = require('pg');
@@ -27,7 +28,7 @@ async function main() {
       const receiptId = row.receipt_id;
       const milestone = row.milestone;
 
-      // TODO: replace this mock with real SMS sending logic (call your Twilio backend)
+      // Log only; use Edge Function send-reminders for real SMS.
       console.log(`Sending reminder milestone=${milestone} for receipt=${receiptId}`);
 
       // Simulate success and record in DB (idempotent)

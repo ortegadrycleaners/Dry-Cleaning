@@ -36,14 +36,19 @@ supabase secrets set TWILIO_AUTH_TOKEN="tu_token"
 supabase secrets set TWILIO_FROM="+1234567890"
 ```
 
-### 4. Desplegar Edge Functions
+### 4. Ejecutar migración SMS (idempotencia servidor)
+En SQL Editor, ejecuta también:
+- `docs/sms_sends_migration.sql`
+- `docs/reminder_status_updated_at_migration.sql` (hitos 3/5/30 desde `status_updated_at`)
+
+### 5. Desplegar Edge Functions
 Desde la raíz del proyecto, despliega las funciones:
 ```bash
-supabase functions deploy send_reminder_sms --no-verify-jwt
-supabase functions deploy send_reminders --no-verify-jwt
+supabase functions deploy send-reminder-sms
+supabase functions deploy send-reminders --no-verify-jwt
 ```
 
-### 5. Configurar el Cron Job
+### 6. Configurar el Cron Job
 En el Dashboard de Supabase > SQL Editor, ejecuta:
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_cron;

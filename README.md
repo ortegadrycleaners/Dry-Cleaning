@@ -10,8 +10,8 @@ de Twilio. Para configurarlo:
 
 1. Lee la guía paso a paso: [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md).
 2. Copia el archivo de variables: `cp .env.example .env`.
-3. Define `VITE_NOTIFY_ENDPOINT_URL` apuntando a tu Edge Function /
-   API (recomendado: Supabase Edge Function).
+3. Despliega la Edge Function `send-reminder-sms` y configura secretos Twilio
+   (ver [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md)).
 4. Ajusta cuotas (`VITE_SMS_DAILY_BUDGET`, `VITE_SMS_GLOBAL_PER_MINUTE`,
    etc.). Mientras `VITE_TWILIO_MOCK=true` la app **no envía nada** a Twilio.
 

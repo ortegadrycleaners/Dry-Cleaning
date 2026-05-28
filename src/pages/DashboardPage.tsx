@@ -33,7 +33,6 @@ import {
   Send,
   Loader2,
   ShieldAlert,
-  ShieldCheck,
   Link,
   Undo,
   Zap,
@@ -57,7 +56,6 @@ import { useI18n } from '@/i18n';
 import { fetchRackConflict, type OrdersViewMode } from '@/services/supabase/ordersService';
 
 const REMINDER_DAYS = 3;
-const ABANDON_DAYS = 30;
 
 function resolveDaysReady(order: Order): number | null {
   if (order.status !== 'LISTO') return null;
@@ -375,7 +373,8 @@ function NotifyCustomerModal({
               <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <p>
                 {t('dashboard.notify.twilioNotConfigured')}{' '}
-                <code className="font-mono">VITE_NOTIFY_ENDPOINT_URL</code>.
+                <code className="font-mono">VITE_SUPABASE_URL</code> /{' '}
+                <code className="font-mono">send-reminder-sms</code>.
                 {t('dashboard.notify.twilioMockHint')}
               </p>
             </div>
@@ -627,8 +626,7 @@ export function DashboardPage() {
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
-  const [pendingDelivery, setPendingDelivery] = useState<{ orderId: string; timeoutId: number } | null>(null);
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const viewModeOptions = [
     {
       value: 'ACTIVE' as OrdersViewMode,
@@ -732,34 +730,6 @@ export function DashboardPage() {
     setHistoryTick((t) => t + 1);
   };
 
-  const handleMarkDelivered = (orderId: string) => {
-    // Mostrar warning con opción de revertir
-    const timeoutId = window.setTimeout(() => {
-      updateOrderStatus(orderId, 'ENTREGADO');
-      setPendingDelivery(null);
-      toast.success(t('dashboard.delivery.markedDelivered'));
-    }, 5000);
-
-    setPendingDelivery({ orderId, timeoutId });
-
-    toast.warning(t('dashboard.delivery.willNotify'), {
-      description: t('dashboard.delivery.willNotifyDescription'),
-      action: {
-        label: t('dashboard.delivery.revert'),
-        onClick: () => handleCancelDelivery(),
-      },
-      duration: 5000,
-    });
-  };
-
-  const handleCancelDelivery = () => {
-    if (pendingDelivery) {
-      clearTimeout(pendingDelivery.timeoutId);
-      setPendingDelivery(null);
-      toast.success(t('dashboard.delivery.cancelled'));
-    }
-  };
-
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!filterMenuRef.current?.contains(event.target as Node)) {
@@ -783,11 +753,6 @@ export function DashboardPage() {
   const handleRevertToReady = (orderId: string) => {
     updateOrderStatus(orderId, 'LISTO');
     toast.success(t('dashboard.status.revertedReady'));
-  };
-
-  const handleMarkAbandoned = (orderId: string) => {
-    updateOrderStatus(orderId, 'ABANDONADO');
-    toast.success(t('dashboard.status.markedAbandoned'));
   };
 
   const handleLogout = async () => {
@@ -944,16 +909,11 @@ export function DashboardPage() {
                   {filteredOrders.map((order) => {
                     const daysReady = resolveDaysReady(order);
                     const isReminder = typeof daysReady === 'number' && daysReady >= REMINDER_DAYS;
-                    const isAbandonEligible = typeof daysReady === 'number' && daysReady >= ABANDON_DAYS;
                     const templateType: NotificationEventType = isReminder ? 'PICKUP_REMINDER' : 'ORDER_READY';
                     const alreadyNotified = isReminder
                       ? notifiedReminderIds.has(order.id)
                       : notifiedReadyIds.has(order.id);
                     const notifyLabel = isReminder ? t('dashboard.actions.reminder') : t('dashboard.actions.notifyCustomer');
-                    const notifyTooltip = isReminder
-                      ? t('dashboard.actions.reminderTooltip')
-                      : t('dashboard.actions.notifyCustomerTooltip');
-                    const notifiedLabel = isReminder ? t('dashboard.actions.reminderSent') : t('dashboard.actions.notified');
                     return (
                       <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
                         <TableCell className="font-medium text-[#1B2A4A]">#{orderTicketLabel(order)}</TableCell>

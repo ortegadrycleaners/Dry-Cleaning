@@ -18,7 +18,8 @@ import type { NotificationEventType, OrderEvent } from '@/types/notifications';
 import { eventBus } from '@/services/EventBus';
 import { EVENT_NAMES } from '@/services/NotificationService';
 import { getCustomerForOrder } from '@/services/supabase/customerSource';
-import { businessInfo } from '@/data/mockData';
+import { supabase } from '@/lib/supabase';
+import { businessInfo } from '@/config/business';
 import { getTwilioConfig } from './config';
 import { recordSmsSent, runAllGuards, type GuardResult } from './protections';
 import { renderTemplate, type TemplateContext } from './messageTemplates';
@@ -105,11 +106,19 @@ export function previewMessage(order: Order, type: NotificationEventType): strin
 
 const NETWORK_TIMEOUT_MS = 15_000;
 
+function mapInvokeError(data: Record<string, unknown> | null): NotifySmsResponse {
+  const errorCode = (data?.errorCode as TwilioErrorCode | undefined) ?? 'TWILIO_API_ERROR';
+  const errorMessage =
+    (data?.errorMessage as string | undefined) ??
+    (data?.error as string | undefined) ??
+    'No se pudo enviar el SMS.';
+  return { ok: false, errorCode, errorMessage };
+}
+
 async function callBackend(req: NotifySmsRequest): Promise<NotifySmsResponse> {
   const cfg = getTwilioConfig();
 
   if (cfg.mockMode) {
-    // Mock determinista: simula 200ms de latencia y devuelve éxito.
     await new Promise((r) => setTimeout(r, 200));
     return {
       ok: true,
@@ -118,55 +127,84 @@ async function callBackend(req: NotifySmsRequest): Promise<NotifySmsResponse> {
     };
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
-
-  try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Idempotency-Key': req.idempotencyKey,
-    };
-    if (cfg.endpointKey) {
-      headers['Authorization'] = `Bearer ${cfg.endpointKey}`;
-    }
-
-    const res = await fetch(cfg.endpointUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(req),
-      signal: controller.signal,
-      credentials: 'include',
-    });
-
-    if (!res.ok) {
-      const status = res.status;
-      let errorMessage = `HTTP ${status}`;
-      let errorCode: TwilioErrorCode = 'TWILIO_API_ERROR';
-      if (status === 401 || status === 403) errorCode = status === 401 ? 'UNAUTHENTICATED' : 'FORBIDDEN';
-      try {
-        const body = (await res.json()) as Partial<NotifySmsResponse>;
-        errorMessage = body.errorMessage ?? errorMessage;
-        errorCode = body.errorCode ?? errorCode;
-      } catch {
-        /* respuesta no JSON */
+  if (cfg.endpointUrl) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': req.idempotencyKey,
+      };
+      if (cfg.endpointKey) {
+        headers['Authorization'] = `Bearer ${cfg.endpointKey}`;
       }
-      return { ok: false, errorCode, errorMessage };
+      const res = await fetch(cfg.endpointUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(req),
+        signal: controller.signal,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const status = res.status;
+        let errorMessage = `HTTP ${status}`;
+        let errorCode: TwilioErrorCode = 'TWILIO_API_ERROR';
+        if (status === 401 || status === 403) {
+          errorCode = status === 401 ? 'UNAUTHENTICATED' : 'FORBIDDEN';
+        }
+        try {
+          const body = (await res.json()) as Partial<NotifySmsResponse>;
+          errorMessage = body.errorMessage ?? errorMessage;
+          errorCode = body.errorCode ?? errorCode;
+        } catch {
+          /* non-JSON */
+        }
+        return { ok: false, errorCode, errorMessage };
+      }
+      return (await res.json()) as NotifySmsResponse;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return { ok: false, errorCode: 'NETWORK', errorMessage: 'Timeout llamando al servicio de SMS.' };
+      }
+      return {
+        ok: false,
+        errorCode: 'NETWORK',
+        errorMessage: err instanceof Error ? err.message : 'Error de red desconocido.',
+      };
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }
 
-    const body = (await res.json()) as NotifySmsResponse;
-    return body;
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      return { ok: false, errorCode: 'NETWORK', errorMessage: 'Timeout llamando al servicio de SMS.' };
-    }
+  const { data, error } = await supabase.functions.invoke('send-reminder-sms', {
+    body: {
+      flow: 'order_notify',
+      orderId: req.orderId,
+      templateType: req.templateType,
+      idempotencyKey: req.idempotencyKey,
+      operatorId: req.operatorId,
+    },
+  });
+
+  if (error) {
     return {
       ok: false,
       errorCode: 'NETWORK',
-      errorMessage: err instanceof Error ? err.message : 'Error de red desconocido.',
+      errorMessage: error.message ?? 'Error invocando send-reminder-sms.',
     };
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  const payload = data as Record<string, unknown> | null;
+  if (payload?.ok === true) {
+    return {
+      ok: true,
+      messageSid: payload.messageSid as string | undefined,
+      status: (payload.status as string) ?? 'queued',
+      renderedMessage: payload.renderedMessage as string | undefined,
+    };
+  }
+
+  return mapInvokeError(payload);
 }
 
 /* ---------- API pública: notificar orden lista ---------- */

@@ -1,30 +1,33 @@
-# Vulnerability: Twilio protections are client-side only
+# Twilio protections — server-side enforcement
 
-## Summary
-Twilio SMS protections (rate limits, allowlist, kill switch) run in the browser. If the backend endpoint does not enforce the same checks, an attacker can bypass the UI and send SMS at cost.
+## Status: RESOLVED (code)
 
-## Evidence
-- runAllGuards executes only in frontend before calling the backend endpoint.
-- Endpoint key is optional and stored in VITE_ env (public in bundle).
-- No server-side enforcement is shown in this repo.
+SMS rate limits, idempotency, allowlist, and kill switch are enforced in the unified Edge Function `send-reminder-sms` and batch runner `send-reminders`.
 
-## Impact
-- SMS abuse, unexpected costs, and spam risk.
-- Repeated sends despite client-side dedup if backend lacks idempotency checks.
+## Server implementation
 
-## Likelihood
-Medium if endpoint is exposed without auth/rate limits.
+- **Auth:** `order_notify` and `reminder` flows require a valid Supabase JWT (`Authorization: Bearer`).
+- **Idempotency:** `sms_sends` table (`docs/sms_sends_migration.sql`) with `ON CONFLICT` → `DUPLICATE`.
+- **Guards:** `supabase/functions/_shared/guards.ts` — kill switch, daily budget, global per-minute, allowlist, E.164 validation.
+- **Canonical data:** Phone and order state loaded from Postgres with service role; client payload is not trusted for phone numbers on `order_notify`.
 
-## Affected Files
-- src/services/twilio/TwilioService.ts
-- src/services/twilio/protections.ts
-- src/services/twilio/config.ts
-- docs/TWILIO_SETUP.md
+## Client role
 
-## Recommended Fixes
-1. Enforce auth and rate limits on the backend endpoint.
-2. Validate idempotency keys server-side and store send history.
-3. Reject requests that fail order state or allowlist checks server-side.
+Frontend guards in `src/services/twilio/protections.ts` remain for UX (fast feedback). They are not a security boundary.
 
-## Notes
-Client-side guards are useful for UX but never security boundaries.
+## Secrets (Supabase Edge Functions)
+
+| Secret | Purpose |
+|--------|---------|
+| `SMS_KILL_SWITCH` | Block all sends when `true` |
+| `SMS_DAILY_BUDGET` | Max sends per UTC day |
+| `SMS_GLOBAL_PER_MINUTE` | Max sends per rolling minute |
+| `SMS_ALLOWLIST` | Optional CSV E.164 for QA |
+
+## Affected files
+
+- `supabase/functions/send-reminder-sms/index.ts`
+- `supabase/functions/send-reminders/index.ts`
+- `supabase/functions/_shared/guards.ts`
+- `docs/sms_sends_migration.sql`
+- `src/services/twilio/TwilioService.ts`

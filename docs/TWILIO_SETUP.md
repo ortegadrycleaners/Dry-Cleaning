@@ -7,12 +7,11 @@ como `LISTO`.
 > **TL;DR**
 >
 > 1. Crea cuenta Twilio + un número remitente.
-> 2. Crea un endpoint backend (Supabase Edge Function recomendada) que custodia
->    el Auth Token y dispara la API de Twilio.
-> 3. Copia `app/.env.example` a `app/.env` y completa
->    `VITE_NOTIFY_ENDPOINT_URL`.
-> 4. Quita `VITE_TWILIO_MOCK=true` para enviar SMS reales.
-> 5. Lee la sección [Mecanismos de protección](#mecanismos-de-protección).
+> 2. Despliega la Edge Function unificada `send-reminder-sms` (custodia Auth Token).
+> 3. Ejecuta `docs/sms_sends_migration.sql` en Supabase SQL Editor.
+> 4. Copia `.env.example` a `.env` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+> 5. Pon `VITE_TWILIO_MOCK=false` para enviar SMS reales.
+> 6. Lee [Mecanismos de protección](#mecanismos-de-protección).
 
 ---
 
@@ -55,9 +54,26 @@ Cualquier otro backend HTTP también vale (Vercel Function, AWS Lambda, etc.).
 
 ---
 
-## 3. Endpoint backend (ejemplo: Supabase Edge Function)
+## 3. Endpoint backend: `send-reminder-sms` (unificado)
 
-Crea una función `notify-order-ready` que:
+La función `supabase/functions/send-reminder-sms` atiende:
+
+- `flow: 'order_notify'` — SMS desde el dashboard (orden lista, recordatorios manuales).
+- `flow: 'reminder'` — SMS desde el modal de recordatorios automáticos.
+
+Despliegue:
+
+```bash
+supabase functions deploy send-reminder-sms
+supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_FROM=+1...
+```
+
+El frontend invoca vía `supabase.functions.invoke('send-reminder-sms')` con el JWT
+del operador. No hace falta `VITE_NOTIFY_ENDPOINT_URL` salvo override legacy.
+
+### Referencia histórica: `notify-order-ready`
+
+Antes se documentaba una función separada `notify-order-ready` que:
 
 1. **Autentica** al operador (JWT del backoffice o API key + RLS).
 2. Lee la orden por `orderId` desde Supabase y **valida que está en `LISTO`**.

@@ -11,6 +11,7 @@
 import { eventBus } from './EventBus';
 import { generatePublicId } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
   Notification,
   NotificationEventType,
@@ -138,12 +139,25 @@ function saveNotifications(notifications: Notification[]): void {
 
 export type OnNotificationCallback = (notification: Notification) => void;
 
+type NotificationRow = {
+  id?: string;
+  receipt_id?: string;
+  notification_type?: string;
+  order_number?: string;
+  customer_name?: string;
+  phone?: string;
+  message?: string;
+  created_at?: string;
+  read?: boolean;
+  metadata?: { trackingToken?: string; trackingUrl?: string };
+};
+
 /* ---------- Servicio ---------- */
 
 class NotificationServiceImpl {
   private unsubscribers: (() => void)[] = [];
   private onNotification: OnNotificationCallback | null = null;
-  private supabaseChannel: any | null = null;
+  private supabaseChannel: RealtimeChannel | null = null;
 
   /** Conecta un callback de React para recibir notificaciones nuevas en tiempo real. */
   setOnNotification(cb: OnNotificationCallback | null): void {
@@ -193,9 +207,10 @@ class NotificationServiceImpl {
     this.unsubscribers = [];
     if (this.supabaseChannel) {
       try {
-        // v2 channel unsubscribe
-        this.supabaseChannel.unsubscribe();
-      } catch {}
+        void this.supabaseChannel.unsubscribe();
+      } catch {
+        // Channel may already be closed
+      }
       this.supabaseChannel = null;
     }
   }
@@ -213,7 +228,7 @@ class NotificationServiceImpl {
       if (error) throw error;
 
       if (Array.isArray(data)) {
-        const list = data.map((row: any) => this.mapRowToNotification(row));
+        const list = data.map((row) => this.mapRowToNotification(row as NotificationRow));
         // merge with existing local cache but prefer DB entries first
         const existing = loadNotifications();
         const merged = [...list, ...existing.filter(e => !list.some(l => l.id === e.id))];
@@ -230,8 +245,9 @@ class NotificationServiceImpl {
       ch.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'receipt_notification' },
-        (payload: any) => {
-          const row = payload.record ?? payload.new ?? payload;
+        (payload: { record?: NotificationRow; new?: NotificationRow }) => {
+          const row = payload.record ?? payload.new;
+          if (!row) return;
           const notification = this.mapRowToNotification(row);
           const notifications = [notification, ...loadNotifications()];
           saveNotifications(notifications);
@@ -247,7 +263,7 @@ class NotificationServiceImpl {
 
 
 
-  private mapRowToNotification(row: any): Notification {
+  private mapRowToNotification(row: NotificationRow): Notification {
     const metadata = row.metadata ?? {};
     const trackingToken = metadata.trackingToken ?? '';
     const trackingUrl = metadata.trackingUrl ?? `${window.location.origin}/tracking/${row.receipt_id}?token=${trackingToken}`;

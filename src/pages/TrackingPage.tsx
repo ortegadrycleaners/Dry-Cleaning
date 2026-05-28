@@ -5,7 +5,7 @@ import { useI18n } from '@/i18n';
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchOrderByPublicId } from '@/services/supabase/ordersService';
 import { daysSince, formatElapsedTime, orderTicketLabel } from '@/lib/utils';
-import { businessInfo } from '@/data/mockData';
+import { businessInfo } from '@/config/business';
 import {
   Loader2,
   CheckCircle2,

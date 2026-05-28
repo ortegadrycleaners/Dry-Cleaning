@@ -7,6 +7,6 @@ This folder contains individual markdown reports for each finding:
 - ✅ **ts-lint-integrity-issues.md** — RESOLVED (all lint errors fixed)
 - ✅ **rls-public-access.md** — RESOLVED (database migration applied, policies secured)
 - ✅ **tracking-token-not-validated.md** — RESOLVED (tracking query restricted by public_id, RLS enforced)
-- ⏳ **twilio-client-only-guards.md** — PENDING (requires backend endpoint)
+- ✅ **twilio-client-only-guards.md** — RESOLVED (Edge Function + sms_sends table)
 
 Scope: last 5 commits, TypeScript integrity, Supabase connections/RLS, tracking, Twilio. HTML/CSS/UI ignored.

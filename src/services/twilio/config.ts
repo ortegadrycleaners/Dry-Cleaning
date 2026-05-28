@@ -8,11 +8,10 @@
  *
  * Variables (vite, expuestas con prefijo VITE_):
  *
- *   VITE_NOTIFY_ENDPOINT_URL    URL del endpoint backend que dispara Twilio.
- *                               Vacía => modo mock automático.
- *   VITE_NOTIFY_ENDPOINT_KEY    (opcional) API key pública de invocación.
- *                               NUNCA poner aquí el Auth Token de Twilio.
- *   VITE_TWILIO_MOCK            'true' fuerza modo mock incluso con URL.
+ *   VITE_TWILIO_MOCK            'true' no envía SMS reales (simula éxito local).
+ *   VITE_NOTIFY_ENDPOINT_URL    (deprecado) override avanzado; por defecto se usa
+ *                               supabase.functions.invoke('send-reminder-sms').
+ *   VITE_NOTIFY_ENDPOINT_KEY    (deprecado) solo si usas VITE_NOTIFY_ENDPOINT_URL.
  *   VITE_SMS_DAILY_BUDGET       Cap diario de SMS (default 200).
  *   VITE_SMS_PER_ORDER_HOURS    Horas mínimas entre SMS para una misma orden (default 24).
  *   VITE_SMS_GLOBAL_PER_MINUTE  Máximo SMS por minuto global (default 30).
@@ -109,7 +108,7 @@ export function getTwilioConfig(): TwilioRuntimeConfig {
   cachedConfig = {
     endpointUrl,
     endpointKey: readEnv('VITE_NOTIFY_ENDPOINT_KEY'),
-    mockMode: explicitMock || endpointUrl === '',
+    mockMode: explicitMock,
     dailyBudget: parsePositiveInt(readEnv('VITE_SMS_DAILY_BUDGET'), 200),
     perOrderCooldownHours: parsePositiveInt(readEnv('VITE_SMS_PER_ORDER_HOURS'), 24),
     globalPerMinute: parsePositiveInt(readEnv('VITE_SMS_GLOBAL_PER_MINUTE'), 30),
@@ -133,5 +132,8 @@ export function resetTwilioConfigCache(): void {
 /** ¿Está el subsistema configurado para enviar SMS reales? */
 export function isTwilioReady(): boolean {
   const cfg = getTwilioConfig();
-  return !cfg.mockMode && cfg.endpointUrl !== '';
+  if (cfg.mockMode || cfg.killSwitch) return false;
+  const url = readEnv('VITE_SUPABASE_URL');
+  const key = readEnv('VITE_SUPABASE_ANON_KEY');
+  return Boolean(url?.trim() && key?.trim());
 }

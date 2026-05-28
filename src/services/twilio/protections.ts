@@ -122,8 +122,13 @@ export function checkKillSwitch(): GuardResult {
 export function checkConfig(): GuardResult {
   const cfg = getTwilioConfig();
   if (cfg.mockMode) return ok;
-  if (!cfg.endpointUrl) {
-    return fail('NOT_CONFIGURED', 'No se configuró VITE_NOTIFY_ENDPOINT_URL. Revisa TWILIO_SETUP.md.');
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+  const hasSupabase = Boolean(env?.VITE_SUPABASE_URL?.trim() && env?.VITE_SUPABASE_ANON_KEY?.trim());
+  if (!hasSupabase && !cfg.endpointUrl) {
+    return fail(
+      'NOT_CONFIGURED',
+      'Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY, o VITE_NOTIFY_ENDPOINT_URL. Ver TWILIO_SETUP.md.',
+    );
   }
   return ok;
 }

@@ -1,6 +1,6 @@
 # Checklist de validacion URL Base62
 
-1. Ejecutar `npm run dev` dentro de `app/`.
+1. Ejecutar `pnpm dev` en la raiz del proyecto.
 2. Ir a `Nueva Orden` y crear una orden con:
    - `ID de Orden` numerico (ej. `1234`)
    - telefono y apellido validos
