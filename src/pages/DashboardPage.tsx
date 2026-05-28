@@ -715,6 +715,18 @@ export function DashboardPage() {
     setSelectedOrder(null);
   };
 
+  const handleMarkDelivered = (order: Order) => {
+    updateOrderStatus(order.id, 'ENTREGADO');
+    toast.success(t('dashboard.delivery.willNotify'), {
+      description: t('dashboard.delivery.willNotifyDescription'),
+      action: {
+        label: t('dashboard.delivery.revert'),
+        onClick: () => handleRevertToReady(order.id),
+      },
+      duration: 5000,
+    });
+  };
+
   const handleOpenNotify = (
     order: Order,
     templateType: NotificationEventType,
@@ -953,6 +965,15 @@ export function DashboardPage() {
                             )}
                             {order.status === 'LISTO' && (
                               <Button
+                                size="sm"
+                                onClick={() => handleMarkDelivered(order)}
+                                className="bg-[#E6FAF1] hover:bg-[#D7F5E8] text-[#047857] text-xs font-semibold"
+                              >
+                                {t('dashboard.actions.markDelivered')}
+                              </Button>
+                            )}
+                            {order.status === 'LISTO' && (
+                              <Button
                                 size="icon-sm"
                                 variant="outline"
                                 onClick={() => handleRevertToReceived(order.id)}
@@ -1025,6 +1046,15 @@ export function DashboardPage() {
                           className="w-full bg-[#FFF4E6] text-[#0E0E1A] hover:bg-[#F7E8CD]"
                         >
                           {notifyLabel}
+                        </Button>
+                      )}
+                      {order.status === 'LISTO' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkDelivered(order)}
+                          className="w-full bg-[#E6FAF1] text-[#047857] hover:bg-[#D7F5E8]"
+                        >
+                          {t('dashboard.actions.markDelivered')}
                         </Button>
                       )}
                     </div>
