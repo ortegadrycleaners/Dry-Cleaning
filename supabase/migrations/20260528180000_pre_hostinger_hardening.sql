@@ -316,3 +316,46 @@ ins AS (
 )
 SELECT id, receipt_id, milestone FROM ins;
 $$;
+
+-- ==========================================================================
+-- DAILY SMS CRON
+-- ==========================================================================
+-- Requires `pg_cron` and `pg_net` enabled in the Supabase project.
+-- This schedules the Edge Function that actually sends the SMS batch.
+DO $$
+BEGIN
+  -- Try to create extensions if the role has permission; if not, continue.
+  BEGIN
+    CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA net;
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'pg_net not available: %', SQLERRM;
+  END;
+
+  BEGIN
+    CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA cron;
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'pg_cron not available: %', SQLERRM;
+  END;
+
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_net')
+     AND EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+
+    PERFORM cron.unschedule('send-reminders-daily');
+
+    PERFORM cron.schedule(
+      'send-reminders-daily',
+      '0 13 * * *',
+      $$
+        SELECT net.http_post(
+          url := 'https://oicllkpzumewazawnyhz.supabase.co/functions/v1/send-reminders?tz=America/Puerto_Rico',
+          body := '{}'::jsonb,
+          headers := '{"Content-Type":"application/json"}'::jsonb
+        );
+      $$
+    );
+
+  ELSE
+    RAISE NOTICE 'Skipping cron setup because pg_net or pg_cron is not installed';
+  END IF;
+END
+$$ LANGUAGE plpgsql;

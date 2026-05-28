@@ -609,6 +609,7 @@ export function DashboardPage() {
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
   } = useOrders();
+  const { t, formatDate } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -626,7 +627,6 @@ export function DashboardPage() {
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
-  const { t } = useI18n();
   const viewModeOptions = [
     {
       value: 'ACTIVE' as OrdersViewMode,
@@ -935,16 +935,21 @@ export function DashboardPage() {
                         <TableCell><StatusBadge order={order} /></TableCell>
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              size="icon-sm"
-                              variant="outline"
-                              onClick={() => handleCopyTrackingLink(order)}
-                              className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                              aria-label={t('dashboard.actions.copyTrackingLabel')}
-                              title={t('dashboard.actions.copyTrackingLabel')}
-                            >
-                              <Link className="w-3.5 h-3.5" />
-                            </Button>
+                            <span className="relative inline-flex group">
+                              <Button
+                                size="icon-sm"
+                                variant="outline"
+                                onClick={() => handleCopyTrackingLink(order)}
+                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                aria-label={t('dashboard.actions.copyTrackingLabel')}
+                                title={t('dashboard.actions.copyTrackingLabel')}
+                              >
+                                <Link className="w-3.5 h-3.5" />
+                              </Button>
+                              <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                {t('dashboard.actions.copyTrackingTooltipWithDate', { date: order.estimatedDate ?? '' })}
+                              </span>
+                            </span>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
                               <Button
                                 size="sm"
@@ -973,26 +978,36 @@ export function DashboardPage() {
                               </Button>
                             )}
                             {order.status === 'LISTO' && (
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                onClick={() => handleRevertToReceived(order.id)}
-                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                aria-label={t('dashboard.actions.revert')}
-                              >
-                                <Undo className="w-3.5 h-3.5" />
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  onClick={() => handleRevertToReceived(order.id)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                  aria-label={t('dashboard.actions.revert')}
+                                >
+                                  <Undo className="w-3.5 h-3.5" />
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  {t('dashboard.actions.revert')}
+                                </span>
+                              </span>
                             )}
                             {(order.status === 'ENTREGADO' || order.status === 'ABANDONADO') && (
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                onClick={() => handleRevertToReady(order.id)}
-                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                                aria-label={t('dashboard.actions.revert')}
-                              >
-                                <Undo className="w-3.5 h-3.5" />
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="icon-sm"
+                                  variant="outline"
+                                  onClick={() => handleRevertToReady(order.id)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                                  aria-label={t('dashboard.actions.revert')}
+                                >
+                                  <Undo className="w-3.5 h-3.5" />
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  {t('dashboard.actions.revert')}
+                                </span>
+                              </span>
                             )}
                           </div>
                         </TableCell>
