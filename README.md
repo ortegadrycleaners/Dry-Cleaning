@@ -3,17 +3,22 @@
 App backoffice (React + TypeScript + Vite) para gestionar órdenes y enviar
 SMS al cliente cuando una orden queda lista.
 
-## Notificaciones SMS por Twilio
+## Despliegue (orden obligatorio)
 
-El envío real de SMS pasa por un endpoint backend que custodia el Auth Token
-de Twilio. Para configurarlo:
+1. **Etapa 1 — Base sin Twilio:** Supabase + Hostinger con `VITE_TWILIO_MOCK=true`
+   (login, órdenes, tracking). Guía: [`docs/DEPLOYMENT_PHASES.md`](docs/DEPLOYMENT_PHASES.md).
+2. **Etapa 2 — Twilio:** Tras validar la Etapa 1, secretos Twilio + `VITE_TWILIO_MOCK=false`
+   y redeploy del frontend.
 
-1. Lee la guía paso a paso: [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md).
-2. Copia el archivo de variables: `cp .env.example .env`.
-3. Despliega la Edge Function `send-reminder-sms` y configura secretos Twilio
-   (ver [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md)).
-4. Ajusta cuotas (`VITE_SMS_DAILY_BUDGET`, `VITE_SMS_GLOBAL_PER_MINUTE`,
-   etc.). Mientras `VITE_TWILIO_MOCK=true` la app **no envía nada** a Twilio.
+Resumen operativo: [`DEPLOYMENT_PLAN.md`](DEPLOYMENT_PLAN.md).
+
+## Notificaciones SMS por Twilio (Etapa 2)
+
+El envío real usa la Edge Function `send-reminder-sms` (Auth Token solo en servidor).
+
+1. Completa primero la Etapa 1 en [`docs/DEPLOYMENT_PHASES.md`](docs/DEPLOYMENT_PHASES.md).
+2. Luego [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md) y `cp .env.example .env`.
+3. Mientras `VITE_TWILIO_MOCK=true` la app **no envía nada** a Twilio (modo seguro en el primer despliegue).
 
 En el dashboard, marca una orden como `LISTO` con su rack, y aparecerá el
 único botón **“SMS cliente”** que dispara el SMS tras pasar **17

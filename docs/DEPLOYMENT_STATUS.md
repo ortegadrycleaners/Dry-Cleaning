@@ -1,8 +1,9 @@
-# 🚀 REMINDER SYSTEM - DEPLOYMENT STATUS
+# REMINDER SYSTEM — DEPLOYMENT STATUS
 
-**Date:** May 27, 2026  
-**Project:** Dry-Cleaning  
-**Branch:** porRevisar
+> **Orden de despliegue (actualizado):** primero Etapa 1 sin Twilio (`VITE_TWILIO_MOCK=true`),
+> validar en producción, luego Etapa 2 Twilio. Ver [`DEPLOYMENT_PHASES.md`](DEPLOYMENT_PHASES.md).
+
+**Date:** May 27, 2026 (histórico) · **Código:** `supabase/functions/send-reminder-sms`
 
 ---
 

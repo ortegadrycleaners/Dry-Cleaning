@@ -1,96 +1,129 @@
-# 🚀 Plan de Despliegue: Dry-Cleaning App
+# Plan de despliegue — Dry-Cleaning (Ortega / Zivo)
 
-Este plan detalla los pasos para desplegar la aplicación utilizando **Hostinger** para el frontend y **Supabase** como backend (BaaS).
+Hostinger (frontend estático) + Supabase (backend).
 
----
-
-## 📋 Requisitos Previos
-1. Cuenta en [Supabase](https://supabase.com/).
-2. Cuenta en [Hostinger](https://www.hostinger.com/) (Hospedaje compartido o similar con soporte para sitios estáticos).
-3. [Supabase CLI](https://supabase.com/docs/guides/cli) instalado localmente.
-4. Credenciales de **Twilio** (Account SID, Auth Token, From Number) para los recordatorios de SMS.
+> **Orden obligatorio:** primero [Etapa 1 — despliegue base sin Twilio](docs/DEPLOYMENT_PHASES.md#etapa-1--despliegue-base-sin-twilio), después [Etapa 2 — Twilio](docs/DEPLOYMENT_PHASES.md#etapa-2--activación-twilio-después-del-despliegue-base).  
+> Guía detallada: [`docs/DEPLOYMENT_PHASES.md`](docs/DEPLOYMENT_PHASES.md)
 
 ---
 
-## 🏗️ Fase 1: Configuración de Supabase (Backend)
+## Requisitos previos
 
-### 1. Crear el Proyecto
-- Crea un nuevo proyecto en el Dashboard de Supabase.
-- Anota la `URL` del proyecto y la `anon key` (están en Project Settings > API).
-- **Configurar Auth**: En Settings > Auth, añade tu dominio de Hostinger (ej. `https://tudominio.com`) en "Site URL" y "Redirect URLs".
+| Etapa 1 (base) | Etapa 2 (SMS) |
+|----------------|---------------|
+| Supabase | + Cuenta Twilio |
+| Hostinger (o hosting estático) | + Secretos Twilio en Supabase |
+| Supabase CLI (recomendado) | + `VITE_TWILIO_MOCK=false` y redeploy frontend |
 
-### 2. Ejecutar Migraciones SQL
-Copia y pega el contenido de los siguientes archivos en el **SQL Editor** de Supabase:
-1. `docs/supabase_migration.sql`: Crea las tablas y funciones de recordatorios.
-2. `docs/TRACKING_SUPABASE_README.md` (Sección 1): Agrega la columna `public_id` a la tabla `receipt`.
-3. `docs/security/rls-public-access.md`: Asegura que el acceso público al tracking sea seguro.
+---
 
-**Nota importante:** Asegúrate de que las tablas base `receipt` y `client` ya existan en tu base de datos, ya que las tablas de recordatorios dependen de ellas.
+# Etapa 1 — Despliegue base (sin Twilio)
 
-### 3. Configurar Secretos (Twilio)
-Usa la CLI de Supabase para configurar las credenciales de Twilio que usarán las Edge Functions:
+## 1. Supabase — proyecto
+
+- Crear proyecto y anotar URL + `anon key`.
+- **Auth:** añadir dominio de producción en Site URL y Redirect URLs.
+
+## 2. Migraciones SQL
+
+En SQL Editor, en orden:
+
+1. `docs/supabase_migration.sql`
+2. `docs/TRACKING_SUPABASE_README.md` (columna `public_id`)
+3. `docs/security/rls-public-access.md`
+4. `docs/sms_sends_migration.sql`
+5. `docs/reminder_status_updated_at_migration.sql` (si la BD ya existía con lógica antigua)
+
+Las tablas `receipt` y `client` deben existir antes del paso 1.
+
+## 3. Edge Functions (opcional en Etapa 1)
+
+Sin secretos Twilio la app sigue en mock; las funciones solo fallan si se fuerza SMS real.
+
 ```bash
 supabase login
+supabase link
+supabase functions deploy send-reminder-sms
+```
+
+**No desplegar ni invocar `send-reminders` hasta Etapa 2.**
+
+## 4. Frontend — build
+
+`.env.production`:
+
+```env
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+VITE_TWILIO_MOCK=true
+```
+
+```bash
+pnpm install
+pnpm build
+```
+
+## 5. Hostinger
+
+1. Subir contenido de `dist/` a `public_html`.
+2. `.htaccess` para SPA (ver sección al final).
+3. Activar SSL/HTTPS.
+
+## 6. Verificación Etapa 1
+
+- Login y dashboard con datos reales
+- Nueva orden y tracking público
+- SMS en modo MOCK (sin Twilio)
+
+---
+
+# Etapa 2 — Twilio (después de validar Etapa 1)
+
+## 1. Secretos Supabase
+
+```bash
 supabase secrets set TWILIO_ACCOUNT_SID="tu_sid"
 supabase secrets set TWILIO_AUTH_TOKEN="tu_token"
 supabase secrets set TWILIO_FROM="+1234567890"
+supabase secrets set PUBLIC_APP_URL="https://tu-dominio.com"
+supabase functions deploy send-reminder-sms
 ```
 
-### 4. Ejecutar migración SMS (idempotencia servidor)
-En SQL Editor, ejecuta también:
-- `docs/sms_sends_migration.sql`
-- `docs/reminder_status_updated_at_migration.sql` (hitos 3/5/30 desde `status_updated_at`)
+## 2. Batch y cron (opcional)
 
-### 5. Desplegar Edge Functions
-Desde la raíz del proyecto, despliega las funciones:
 ```bash
-supabase functions deploy send-reminder-sms
 supabase functions deploy send-reminders --no-verify-jwt
 ```
 
-### 6. Configurar el Cron Job
-En el Dashboard de Supabase > SQL Editor, ejecuta:
+Cron diario (SQL Editor):
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Programa la detección de recordatorios cada mañana (6 AM UTC)
 SELECT cron.schedule('detect-reminders-daily', '0 6 * * *', $$
   SELECT public.detect_reminders_and_create_tasks('America/Puerto_Rico');
 $$);
 ```
 
----
+## 3. Frontend — activar SMS real
 
-## 🌐 Fase 2: Preparar el Frontend (Vite)
+Cambiar en el host y **volver a build + subir `dist/`**:
 
-### 1. Variables de Entorno de Producción
-Crea un archivo llamado `.env.production` en la raíz del proyecto:
 ```env
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key-de-produccion
+VITE_TWILIO_MOCK=false
 ```
 
-### 2. Construir el Proyecto
-Ejecuta el comando de build para generar los archivos de producción:
-```bash
-pnpm install
-pnpm build
-```
-Esto generará una carpeta `dist/` con todo el contenido listo para subir.
+## 4. Verificación Etapa 2
+
+- SMS “orden lista” en Twilio
+- Reintento → `DUPLICATE`
+- Recordatorio modal (si aplica)
+
+Ver [`docs/TWILIO_SETUP.md`](docs/TWILIO_SETUP.md).
 
 ---
 
-## 🚀 Fase 3: Despliegue en Hostinger
+## `.htaccess` (SPA en Hostinger)
 
-### 1. Subir Archivos
-1. Accede al **hPanel** de Hostinger > Administrador de Archivos.
-2. Ve a la carpeta `public_html`.
-3. Sube **todo el contenido** de la carpeta local `dist/` (no la carpeta en sí, sino lo que hay dentro).
-
-### 2. Configurar el Enrutamiento (SPA)
-Como la app usa `react-router-dom`, necesitas un archivo `.htaccess` en `public_html` para que todas las rutas carguen el `index.html`. Esto evita errores 404 al recargar páginas como `/tracking/XYZ`.
-
-Crea el archivo `.htaccess` con este contenido:
 ```apache
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -103,56 +136,21 @@ Crea el archivo `.htaccess` con este contenido:
 </IfModule>
 ```
 
-### 3. Forzar HTTPS y Seguridad (Opcional pero Recomendado)
-Añade esto a tu `.htaccess` para forzar HTTPS:
+HTTPS (opcional):
+
 ```apache
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 ```
 
-### 4. Activar SSL (HTTPS)
-Asegúrate de que el certificado SSL esté activo en Hostinger para que la conexión con Supabase sea segura. Sin SSL, las peticiones a Supabase fallarán por políticas de seguridad del navegador.
+---
+
+## GitHub Actions (opcional)
+
+Mismo workflow que antes; en Etapa 1 usar `VITE_TWILIO_MOCK=true` en secrets del workflow hasta activar Twilio.
 
 ---
 
-## 🛠️ Fase 4: Automatización (GitHub Actions - Opcional)
-Para evitar subir archivos manualmente cada vez, puedes crear un secreto en GitHub con tus datos FTP y usar este workflow:
+## Mantenimiento local
 
-1. Crea `.github/workflows/deploy.yml`:
-```yaml
-name: Deploy to Hostinger
-on:
-  push:
-    branches: [ main ]
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install & Build
-        run: |
-          pnpm install
-          pnpm build
-      - name: FTP Deploy
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: ./public_html/
-```
-
----
-
-## ✅ Fase 5: Verificación Final
-
-1. **Acceso**: Entra a tu dominio y verifica que la página de Login carga correctamente.
-2. **Autenticación**: Intenta loguearte. Si falla, revisa el "Site URL" en Supabase.
-3. **Base de Datos**: Crea un pedido de prueba y verifica que aparece en el Dashboard de Supabase.
-4. **Tracking**: Abre un enlace de seguimiento ([tu-dominio.com/tracking/XYZ](http://tu-dominio.com/tracking/XYZ)) y confirma que los datos del pedido se muestran.
-5. **Recordatorios**: Monitorea la tabla `receipt_reminder_task` en Supabase para ver si el Cron Job crea las tareas correctamente.
-
----
-
-**Nota:** Si necesitas ejecutar scripts locales de mantenimiento que conecten a la DB, asegúrate de configurar la variable `DATABASE_URL` en tu entorno local apuntando a la cadena de conexión de Supabase (Settings > Database > Connection String).
+`DATABASE_URL` → connection string de Supabase (Settings → Database) para scripts como `scripts/run_reminders.js`.

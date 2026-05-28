@@ -4,14 +4,16 @@ Esta guía cubre cómo enchufar Twilio al backoffice de la tintorería para que 
 botón **“SMS cliente”** envíe un SMS real cuando una orden se marque
 como `LISTO`.
 
-> **TL;DR**
+> **TL;DR — solo después del despliegue base**
 >
-> 1. Crea cuenta Twilio + un número remitente.
-> 2. Despliega la Edge Function unificada `send-reminder-sms` (custodia Auth Token).
-> 3. Ejecuta `docs/sms_sends_migration.sql` en Supabase SQL Editor.
-> 4. Copia `.env.example` a `.env` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-> 5. Pon `VITE_TWILIO_MOCK=false` para enviar SMS reales.
-> 6. Lee [Mecanismos de protección](#mecanismos-de-protección).
+> Esta guía es la **Etapa 2**. Antes debes tener en producción login, órdenes y tracking
+> con `VITE_TWILIO_MOCK=true` ([`DEPLOYMENT_PHASES.md`](DEPLOYMENT_PHASES.md)).
+>
+> 1. Cuenta Twilio + número remitente.
+> 2. Secretos `TWILIO_*` y `PUBLIC_APP_URL` en Supabase; `supabase functions deploy send-reminder-sms`.
+> 3. `docs/sms_sends_migration.sql` (si no se ejecutó en Etapa 1).
+> 4. En producción: `VITE_TWILIO_MOCK=false`, rebuild y redeploy del frontend.
+> 5. Lee [Mecanismos de protección](#mecanismos-de-protección).
 
 ---
 
