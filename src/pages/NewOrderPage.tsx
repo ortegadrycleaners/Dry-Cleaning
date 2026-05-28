@@ -25,6 +25,7 @@ type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
 export function NewOrderPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const baseUrl = import.meta.env.BASE_URL;
   const { addOrder } = useOrders();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -238,7 +239,7 @@ export function NewOrderPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img src="/svg/zivo-wordmark-white.svg" alt="zivo" className="h-6 sm:h-8 w-auto" />
+              <img src={`${baseUrl}svg/zivo-wordmark-white.svg`} alt="zivo" className="h-6 sm:h-8 w-auto" />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
                 Estás en <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
               </div>
@@ -565,7 +566,7 @@ export function NewOrderPage() {
               rel="noopener noreferrer"
               className="mt-3 inline-block text-sm font-medium text-blue-600 hover:underline"
             >
-              {t('tracking.writeReview')}
+              {createdOrderInfo.trackingUrl}
             </a>
             <p className="mt-3 text-xs text-gray-500">{t('newOrder.orderCreatedAutoClose')}</p>
             <div className="mt-4 flex justify-end">

@@ -30,6 +30,7 @@ export const EVENT_NAMES = {
   ORDER_READY: 'ORDER_READY',
   PICKUP_REMINDER: 'PICKUP_REMINDER',
   URGENT_REMINDER: 'URGENT_REMINDER',
+  DAY_30_REMINDER: 'DAY_30_REMINDER',
 } as const;
 
 /* ---------- Plantillas de mensajes ---------- */
@@ -81,6 +82,13 @@ function buildMessage(type: NotificationEventType, vars: MessageTemplateVars): s
       return (
         `URGENTE: ${vars.customerName}, tu orden #${vars.orderNumber} ` +
         `lleva ${vars.daysReady} días en rack. Por favor recógela lo antes posible. ` +
+        `Detalles: ${vars.trackingUrl}`
+      );
+
+    case 'DAY_30_REMINDER':
+      return (
+        `AVISO IMPORTANTE: ${vars.customerName}, tu orden #${vars.orderNumber} ` +
+        `lleva ${vars.daysReady} días en rack. Comunícate con nosotros para coordinar su retiro. ` +
         `Detalles: ${vars.trackingUrl}`
       );
 
@@ -166,6 +174,9 @@ class NotificationServiceImpl {
         this.handleEvent(event)
       ),
       eventBus.on<OrderEvent>(EVENT_NAMES.URGENT_REMINDER, (event) =>
+        this.handleEvent(event)
+      ),
+      eventBus.on<OrderEvent>(EVENT_NAMES.DAY_30_REMINDER, (event) =>
         this.handleEvent(event)
       ),
     );

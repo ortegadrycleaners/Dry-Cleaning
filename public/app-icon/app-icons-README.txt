@@ -1,8 +1,8 @@
-Los app icons están en /Users/valeriariera/Downloads/logo-package/app-icon.
-Por favor copia manualmente los archivos necesarios a public/app-icon/:
-- zivo-app-icon-180.png -> public/app-icon/zivo-app-icon-180.png
-- zivo-app-icon-192.png -> public/app-icon/zivo-app-icon-192.png
-- zivo-app-icon-512.png -> public/app-icon/zivo-app-icon-512.png
-- zivo-app-icon-1024.png -> public/app-icon/zivo-app-icon-1024.png
+Place generated PNG app icons in this folder using these exact names:
+- public/app-icon/zivo-app-icon-180.png
+- public/app-icon/zivo-app-icon-192.png
+- public/app-icon/zivo-app-icon-512.png
+- public/app-icon/zivo-app-icon-1024.png
 
-(Opcional) También puedes usar el SVG: public/app-icon/zivo-app-icon.svg
+You can regenerate PNGs from the source SVG in this repo:
+- public/app-icon/zivo-app-icon.svg

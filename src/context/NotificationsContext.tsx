@@ -41,6 +41,7 @@ function showToast(notification: Notification): void {
     ORDER_READY: 'Orden Lista',
     PICKUP_REMINDER: 'Recordatorio',
     URGENT_REMINDER: 'Recordatorio Urgente',
+    DAY_30_REMINDER: 'Recordatorio 30 días',
   };
 
   const title = titles[notification.type] ?? 'Notificación';
@@ -57,6 +58,7 @@ function showToast(notification: Notification): void {
       toast.warning(title, { description });
       break;
     case 'URGENT_REMINDER':
+    case 'DAY_30_REMINDER':
       toast.error(title, { description });
       break;
     default:

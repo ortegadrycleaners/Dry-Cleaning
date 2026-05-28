@@ -66,6 +66,12 @@ const TYPE_CONFIG: Record<
     color: 'text-red-600',
     bg: 'bg-red-50',
   },
+  DAY_30_REMINDER: {
+    icon: OctagonAlert,
+    label: 'notifications.type.urgent',
+    color: 'text-red-600',
+    bg: 'bg-red-50',
+  },
 };
 
 export function NotificationsPanel() {

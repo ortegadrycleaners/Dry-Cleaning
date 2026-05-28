@@ -126,7 +126,7 @@ export async function searchCustomersByPhone(query: string): Promise<Customer[]>
   const { data, error } = await supabase
     .from('client')
     .select('phone_number, name')
-    .like('phone_number', `%${digits}%`)
+    .filter('phone_number::text', 'like', `%${digits}%`)
     .limit(10);
 
   if (error) {

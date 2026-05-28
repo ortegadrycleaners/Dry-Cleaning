@@ -206,6 +206,8 @@ function eventNameForType(type: NotificationEventType): keyof typeof EVENT_NAMES
       return 'PICKUP_REMINDER';
     case 'URGENT_REMINDER':
       return 'URGENT_REMINDER';
+    case 'DAY_30_REMINDER':
+      return 'DAY_30_REMINDER';
     default:
       return 'ORDER_READY';
   }

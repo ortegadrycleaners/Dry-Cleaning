@@ -14,6 +14,11 @@ interface ReminderTask {
   status: 'pending' | 'sent' | 'failed' | 'skipped';
 }
 
+interface ReminderTaskRealtimePayload {
+  record?: ReminderTask;
+  new?: ReminderTask;
+}
+
 /**
  * ReminderTaskHandler - manages reminder tasks from Supabase realtime
  * and displays the priority modal when a new pending task arrives.
@@ -27,6 +32,8 @@ export const ReminderTaskHandler: React.FC = () => {
 
   // Initialize realtime subscription and load pending tasks on mount
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     const initReminderTasks = async () => {
       try {
         // Load first pending task
@@ -44,7 +51,7 @@ export const ReminderTaskHandler: React.FC = () => {
         }
 
         // Subscribe to new pending tasks
-        const channel = supabase.channel('reminder-tasks-handler');
+        channel = supabase.channel('reminder-tasks-handler');
         channel.on(
           'postgres_changes',
           {
@@ -52,29 +59,35 @@ export const ReminderTaskHandler: React.FC = () => {
             schema: 'public',
             table: 'receipt_reminder_task',
           },
-          (payload: any) => {
-            const newTask = payload.record as ReminderTask;
+          (payload) => {
+            const realtimePayload = payload as unknown as ReminderTaskRealtimePayload;
+            const newTask = realtimePayload.record ?? realtimePayload.new;
+            if (!newTask) return;
             // Only process if status is pending
             if (newTask.status === 'pending') {
-              // If no current task, show the new one; otherwise queue it
-              if (!currentTask || currentTask.status !== 'pending') {
-                setCurrentTask(newTask);
-              }
+              setCurrentTask((prevTask) => {
+                if (!prevTask || prevTask.status !== 'pending') {
+                  return newTask;
+                }
+                return prevTask;
+              });
             }
           }
         );
 
         await channel.subscribe();
-
-        return () => {
-          channel.unsubscribe();
-        };
       } catch (err) {
         console.error('[ReminderTaskHandler] Init error:', err);
       }
     };
 
-    initReminderTasks();
+    void initReminderTasks();
+
+    return () => {
+      if (channel) {
+        void channel.unsubscribe();
+      }
+    };
   }, []);
 
   const handleSendSms = async (taskId: string) => {

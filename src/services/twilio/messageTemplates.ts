@@ -70,6 +70,9 @@ export function renderTemplate(type: NotificationEventType, ctx: TemplateContext
     case 'URGENT_REMINDER': {
       return `Hi ${ctx.customerName}, your order has been ready for 5 days at ${brand(ctx)}. Stop by this week - if you need anything, call us at ${storePhone}. ${ctx.trackingUrl}`;
     }
+    case 'DAY_30_REMINDER': {
+      return `Hi ${ctx.customerName}, your order has been ready for 30 days at ${brand(ctx)}. Please contact us to arrange pickup. ${ctx.trackingUrl}`;
+    }
     default:
       return `${brand(ctx)}: Notificacion de tu orden #${ctx.orderNumber}. ${ctx.trackingUrl}`;
   }

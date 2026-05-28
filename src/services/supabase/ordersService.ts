@@ -50,6 +50,11 @@ type OrderQueryRow = {
   client?: OrderClientRow | OrderClientRow[] | null;
 };
 
+type CreateOrderAtomicRow = {
+  order_id: string;
+  public_id: string;
+};
+
 export type OrdersViewMode = 'ACTIVE' | 'PENDING' | 'READY' | 'DELIVERED';
 
 export interface OrdersPageResult {
@@ -272,16 +277,7 @@ export async function fetchOrders(): Promise<Order[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => {
-    const clientData = Array.isArray(row.client)
-      ? (row.client[0] as { name: string; phone_number: number } | null)
-      : (row.client as { name: string; phone_number: number } | null);
-    return rowToOrder({
-      ...row,
-      name: clientData?.name ?? '',
-      phone_number: clientData?.phone_number ?? 0,
-    });
-  });
+  return (data ?? []).map((row) => rowToOrder(row as OrderQueryRow));
 }
 
 /**
@@ -329,6 +325,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       p_status: order.status,
       p_notes: order.notes ?? null,
     })
+    .returns<CreateOrderAtomicRow[]>()
     .single();
 
   if (receiptError || !insertedOrder) {
@@ -428,14 +425,7 @@ export async function fetchOrderById(orderId: string): Promise<Order | null> {
     return null;
   }
 
-  const clientData = Array.isArray(data.client)
-    ? (data.client[0] as { name: string; phone_number: number } | null)
-    : (data.client as { name: string; phone_number: number } | null);
-  return rowToOrder({
-    ...data,
-    name: clientData?.name ?? '',
-    phone_number: clientData?.phone_number ?? 0,
-  });
+  return rowToOrder(data as OrderQueryRow);
 }
 
 /** Busca una orden por su public_id para la página de tracking pública.
@@ -464,8 +454,16 @@ export async function fetchOrderByPublicId(publicId: string): Promise<Order | nu
     .eq('public_id', publicId)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
     console.error('[ordersService] fetchOrderByPublicId error:', error?.message);
+    return null;
+  }
+
+  if (!data && isUuid(publicId)) {
+    return fetchOrderById(publicId);
+  }
+
+  if (!data) {
     return null;
   }
 

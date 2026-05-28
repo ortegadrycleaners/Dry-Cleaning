@@ -14,7 +14,8 @@ export type NotificationEventType =
   | 'THANK_YOU_REVIEW'
   | 'ORDER_READY'
   | 'PICKUP_REMINDER'
-  | 'URGENT_REMINDER';
+  | 'URGENT_REMINDER'
+  | 'DAY_30_REMINDER';
 
 export interface OrderEvent {
   type: NotificationEventType;
@@ -98,4 +99,5 @@ export const NOTIFICATION_TEMPLATE_OPTIONS: NotificationTemplateOption[] = [
   { type: 'THANK_YOU_REVIEW', label: 'Thanks + Google review' },
   { type: 'PICKUP_REMINDER', label: 'Not picked up - day 3' },
   { type: 'URGENT_REMINDER', label: 'Follow up order - day 5' },
+  { type: 'DAY_30_REMINDER', label: 'Follow up order - day 30' },
 ];

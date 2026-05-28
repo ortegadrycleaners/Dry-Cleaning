@@ -134,7 +134,7 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
 /* ---------- Status Views ---------- */
 
 function RecibidoView({ order }: { order: Order }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
 
   return (
     <div className="text-center space-y-5">
@@ -149,7 +149,7 @@ function RecibidoView({ order }: { order: Order }) {
           {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          {t('tracking.receivedMessage')}
+          {t('tracking.processingMessage', { estimatedDate: formatDate(order.estimatedDate) })}
         </p>
       </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -385,6 +385,7 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { t } = useI18n();
+  const baseUrl = import.meta.env.BASE_URL;
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(() => new Date());
@@ -507,7 +508,7 @@ return (
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <img
-                src="/svg/zivo-wordmark-white.svg"
+                src={`${baseUrl}svg/zivo-wordmark-white.svg`}
                 alt="zivo"
                 className="h-6 sm:h-8 w-auto"
               />
@@ -564,7 +565,7 @@ return (
         <footer className="w-full mt-10">
           <div className="max-w-3xl mx-auto py-6 text-center text-sm text-gray-600 flex items-center justify-center gap-2">
             <span>{t('tracking.footer.hostedBy')}</span>
-            <img src="/svg/zivo-wordmark.svg" alt="zivo" className="h-4 w-auto inline-block" />
+            <img src={`${baseUrl}svg/zivo-wordmark.svg`} alt="zivo" className="h-4 w-auto inline-block" />
           </div>
         </footer>
 

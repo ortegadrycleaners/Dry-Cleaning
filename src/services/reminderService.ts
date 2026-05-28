@@ -80,7 +80,7 @@ export async function sendReminderSms(payload: SendSmsPayload): Promise<SendSmsR
 export async function skipReminderTask(taskId: string): Promise<void> {
   const { error, count } = await supabase
     .from('receipt_reminder_task')
-    .update({ status: 'skipped' })
+    .update({ status: 'skipped' }, { count: 'exact' })
     .eq('id', taskId);
 
   if (error) {

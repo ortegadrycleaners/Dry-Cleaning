@@ -63,7 +63,72 @@ CREATE INDEX IF NOT EXISTS idx_receipt_reminder_task_status ON public.receipt_re
 CREATE INDEX IF NOT EXISTS idx_receipt_reminder_task_created_at ON public.receipt_reminder_task (created_at);
 
 -- ============================================================================
--- FUNCTION 1: claim_due_receipt_reminders
+-- FUNCTION 1: create_order_atomic
+-- Creates/validates client + creates receipt in one transaction
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.create_order_atomic(
+  p_order_id uuid,
+  p_public_id text,
+  p_order_number integer,
+  p_phone text,
+  p_customer_name text,
+  p_deliver_date timestamptz,
+  p_status text,
+  p_notes text DEFAULT NULL
+)
+RETURNS TABLE(order_id uuid, public_id text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_client_id uuid;
+  v_existing_name text;
+BEGIN
+  SELECT c.id_client, c.name
+  INTO v_client_id, v_existing_name
+  FROM public.client c
+  WHERE c.phone_number = p_phone::numeric
+  LIMIT 1;
+
+  IF v_client_id IS NOT NULL THEN
+    IF lower(trim(coalesce(v_existing_name, ''))) <> lower(trim(coalesce(p_customer_name, ''))) THEN
+      RAISE EXCEPTION 'El número % ya está registrado con otro nombre.', p_phone
+        USING ERRCODE = '22000';
+    END IF;
+  ELSE
+    INSERT INTO public.client (id_client, phone_number, name)
+    VALUES (gen_random_uuid(), p_phone::numeric, p_customer_name)
+    RETURNING id_client INTO v_client_id;
+  END IF;
+
+  INSERT INTO public.receipt (
+    id_order,
+    public_id,
+    order_number,
+    order_date,
+    deliver_date,
+    fk_cliente,
+    status,
+    status_updated_at,
+    notes
+  ) VALUES (
+    p_order_id,
+    p_public_id,
+    p_order_number,
+    now(),
+    p_deliver_date,
+    v_client_id,
+    p_status,
+    now(),
+    p_notes
+  );
+
+  RETURN QUERY SELECT p_order_id, p_public_id;
+END;
+$$;
+
+-- ============================================================================
+-- FUNCTION 2: claim_due_receipt_reminders
 -- Atomically reserves reminders and returns only newly claimed ones
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.claim_due_receipt_reminders(p_tz text DEFAULT NULL)
@@ -95,7 +160,7 @@ FROM ins i;
 $$ LANGUAGE sql VOLATILE;
 
 -- ============================================================================
--- FUNCTION 2: claim_and_notify_reminders
+-- FUNCTION 3: claim_and_notify_reminders
 -- Single atomic call: detects due reminders, claims them, and creates notifications
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.claim_and_notify_reminders(p_tz text DEFAULT NULL)

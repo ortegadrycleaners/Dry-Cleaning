@@ -143,7 +143,7 @@ export function checkOrderState(order: Order, type: NotificationEventType): Guar
       );
     }
   }
-  if (type === 'PICKUP_REMINDER' || type === 'URGENT_REMINDER') {
+  if (type === 'PICKUP_REMINDER' || type === 'URGENT_REMINDER' || type === 'DAY_30_REMINDER') {
     if (order.status !== 'LISTO') {
       return fail(
         'INVALID_ORDER_STATE',
