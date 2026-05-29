@@ -951,31 +951,46 @@ export function DashboardPage() {
                               </span>
                             </span>
                             {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMarkReady(order)}
-                                className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
-                              >
-                                {t('dashboard.actions.markReady')}
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkReady(order)}
+                                  className="bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white text-xs font-semibold"
+                                >
+                                  {t('dashboard.actions.markReady')}
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  {t('dashboard.actions.markReady')}
+                                </span>
+                              </span>
                             )}
                             {order.status === 'LISTO' && !alreadyNotified && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleOpenNotify(order, templateType, daysReady)}
-                                className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
-                              >
-                                {notifyLabel}
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenNotify(order, templateType, daysReady)}
+                                  className="bg-[#FFF4E6] hover:bg-[#FFF1DA] text-[#0E0E1A] text-xs font-semibold"
+                                >
+                                  {notifyLabel}
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  {templateType === 'ORDER_READY' ? t('dashboard.actions.notifyCustomerTooltip') : t('dashboard.actions.reminderTooltip')}
+                                </span>
+                              </span>
                             )}
                             {order.status === 'LISTO' && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMarkDelivered(order)}
-                                className="bg-[#E6FAF1] hover:bg-[#D7F5E8] text-[#047857] text-xs font-semibold"
-                              >
-                                {t('dashboard.actions.markDelivered')}
-                              </Button>
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkDelivered(order)}
+                                  className="bg-[#E6FAF1] hover:bg-[#D7F5E8] text-[#047857] text-xs font-semibold"
+                                >
+                                  {t('dashboard.actions.markDelivered')}
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                  {t('dashboard.actions.markDeliveredTooltip')}
+                                </span>
+                              </span>
                             )}
                             {order.status === 'LISTO' && (
                               <span className="relative inline-flex group">
