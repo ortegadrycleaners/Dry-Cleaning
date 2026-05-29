@@ -1,0 +1,108 @@
+<!--
+Temporary consent page template.
+- Edit `EMAIL_TO` below to enable sending consent via email (opens mail client).
+- If you prefer to POST to an endpoint, replace the `handleSubmit` function fetch logic.
+- Upload this file to Hostinger `public_html/` (File Manager or SFTP).
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Consentimiento para SMS</title>
+  <style>
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0;background:#f7f7fb;color:#111}
+    .container{max-width:720px;margin:48px auto;background:#fff;padding:24px;border-radius:8px;box-shadow:0 6px 24px rgba(12,14,26,0.06)}
+    h1{margin:0 0 8px;font-size:20px}
+    p{margin:0 0 16px;color:#444}
+    .form-group{margin-bottom:12px}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    input[type=text],input[type=tel]{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:6px}
+    .checkbox-row{display:flex;align-items:center;gap:12px;margin-top:6px}
+    .btn{display:inline-block;padding:10px 16px;border-radius:8px;background:#0b74ff;color:#fff;border:none;cursor:pointer}
+    .btn:disabled{opacity:0.6;cursor:not-allowed}
+    .success{background:#ecfdf5;border:1px solid #d1fae5;padding:12px;border-radius:6px;color:#065f46;margin-top:12px}
+    .note{font-size:13px;color:#6b7280;margin-top:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Registro de Datos del Cliente</h1>
+    <p>Por favor proporciona tu información. Se requiere consentimiento explícito para proceder.</p>
+
+    <form id="consentForm" autocomplete="off">
+      <div class="form-group">
+        <label for="name">Nombre completo</label>
+        <input id="name" name="name" type="text" placeholder="John Garcia" required />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Teléfono</label>
+        <input id="phone" name="phone" type="tel" placeholder="(787) 555-1234" required />
+      </div>
+
+      <div class="form-group">
+        <label>Consentimiento explícito (obligatorio)</label>
+        <div class="checkbox-row">
+          <input id="smsConsent" name="smsConsent" type="checkbox" required />
+          <div>
+            <div style="font-weight:600">Acepto y autorizo el registro de mis datos y recibir notificaciones por SMS</div>
+            <div style="color:#6b7280;font-size:13px">Los datos se usarán exclusivamente para gestionar el pedido y notificar el estado por SMS.</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" type="submit">Confirmar y Registrar</button>
+    </form>
+
+    <div id="result" style="display:none" class="success">
+      <strong>¡Consentimiento registrado!</strong>
+      <div>Gracias. Esta es una versión temporal; los datos no se enviaron a la plataforma.</div>
+    </div>
+
+    <div class="note">
+      Nota: por seguridad esta plantilla no envía datos al backend automáticamente. Para enviar datos automáticamente, configura el endpoint en el archivo y reemplaza la función JavaScript `handleSubmit`.
+    </div>
+  </div>
+
+  <script>
+    // Edita este valor si quieres que la plantilla abra el cliente de correo con los datos.
+    const EMAIL_TO = '';
+
+    const form = document.getElementById('consentForm');
+    const result = document.getElementById('result');
+
+    function openMailClient(data){
+      if(!EMAIL_TO) return false;
+      const subject = encodeURIComponent('Consentimiento SMS');
+      const body = encodeURIComponent(`Nombre: ${data.name}\nTeléfono: ${data.phone}\nConsentimiento: ${data.smsConsent ? 'Sí' : 'No'}`);
+      window.location.href = `mailto:${EMAIL_TO}?subject=${subject}&body=${body}`;
+      return true;
+    }
+
+    async function handleSubmit(ev){
+      ev.preventDefault();
+      const formData = new FormData(form);
+      const data = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        smsConsent: formData.get('smsConsent') === 'on'
+      };
+
+      // Si EMAIL_TO está configurado, abrimos el cliente de correo con los datos.
+      if(openMailClient(data)){
+        result.style.display = 'block';
+        return;
+      }
+
+      // Por defecto mostramos la pantalla de éxito (temporal)
+      result.style.display = 'block';
+
+      // Si quieres enviar a Supabase u otro endpoint, reemplaza esta sección por un fetch POST:
+      // await fetch('https://your-endpoint.example/consent', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    }
+
+    form.addEventListener('submit', handleSubmit);
+  </script>
+</body>
+</html>
