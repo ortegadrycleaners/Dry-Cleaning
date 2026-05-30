@@ -609,7 +609,7 @@ export function DashboardPage() {
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
   } = useOrders();
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
