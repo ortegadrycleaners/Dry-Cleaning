@@ -18,6 +18,9 @@ const DashboardPage = lazy(async () => ({
 const NewOrderPage = lazy(async () => ({
   default: (await import('@/pages/NewOrderPage')).NewOrderPage,
 }));
+const ConsentExamplePage = lazy(async () => ({
+  default: (await import('@/pages/ConsentExamplePage')).ConsentExamplePage,
+}));
 const TrackingPage = lazy(async () => ({
   default: (await import('@/pages/TrackingPage')).TrackingPage,
 }));
@@ -63,6 +66,7 @@ function App() {
                     </RequireAuth>
                   }
                 />
+                <Route path="/consent-example" element={<ConsentExamplePage />} />
                 <Route
                   path="/tracking/:orderId"
                   element={
