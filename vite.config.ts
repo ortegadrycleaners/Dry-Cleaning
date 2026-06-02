@@ -5,7 +5,7 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: './',
+  base: '/',
   plugins: [mode === 'development' ? inspectAttr() : null, react()].filter(Boolean),
   resolve: {
     alias: {

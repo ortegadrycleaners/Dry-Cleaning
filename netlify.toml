@@ -6,11 +6,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
-
-# Explicit rule for consent example (optional, but ensures proper handling)
-[[redirects]]
-  from = "/consent-example"
-  to = "/index.html"
-  status = 200
-  force = true
