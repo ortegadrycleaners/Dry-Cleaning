@@ -27,6 +27,12 @@ const TrackingPage = lazy(async () => ({
 const NotFoundPage = lazy(async () => ({
   default: (await import('@/pages/NotFoundPage')).default,
 }));
+const TermsPage = lazy(async () => ({
+  default: (await import('@/pages/TermsPage')).TermsPage,
+}));
+const PrivacyPage = lazy(async () => ({
+  default: (await import('@/pages/PrivacyPage')).PrivacyPage,
+}));
 
 function LoadingFallback() {
   return (
@@ -67,6 +73,8 @@ function App() {
                   }
                 />
                 <Route path="/consent-example" element={<ConsentExamplePage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
                 <Route
                   path="/tracking/:orderId"
                   element={

@@ -43,13 +43,19 @@ Temporary consent page template.
 
       <div class="form-group">
         <label>Consentimiento explícito (obligatorio)</label>
-        <div class="checkbox-row">
-          <input id="smsConsent" name="smsConsent" type="checkbox" required />
-          <div>
-            <div style="font-weight:600">Acepto y autorizo el registro de mis datos y recibir notificaciones por SMS</div>
-            <div style="color:#6b7280;font-size:13px">Los datos se usarán exclusivamente para gestionar el pedido y notificar el estado por SMS.</div>
+          <div class="checkbox-row">
+            <input id="smsConsent" name="smsConsent" type="checkbox" required />
+            <div>
+              <div style="font-weight:600">Acepto y autorizo el registro de mis datos y recibir notificaciones por SMS</div>
+              <div style="color:#6b7280;font-size:13px">
+                Los datos se usarán exclusivamente para gestionar el pedido y notificar el estado por SMS.
+                Al marcar esta casilla aceptas nuestros
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style="color:#0b74ff;text-decoration:underline">Términos y Condiciones</a>
+                y nuestra
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style="color:#0b74ff;text-decoration:underline">Política de Privacidad</a>.
+              </div>
+            </div>
           </div>
-        </div>
       </div>
 
       <button class="btn" type="submit">Confirmar y Registrar</button>
