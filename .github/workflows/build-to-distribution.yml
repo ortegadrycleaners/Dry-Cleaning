@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+# Solo un job a la vez para evitar race conditions
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout del código fuente (rama main)
+      - name: Checkout source (main)
+        uses: actions/checkout@v4
+
+      # 2. Instalar pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      # 3. Instalar Node.js con caché de pnpm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # 4. Instalar dependencias
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5. Build de producción (tsc + vite build)
+      - name: Build
+        run: pnpm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

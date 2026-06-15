@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 
 const BRAND = 'Ortega Dry Cleaners';
-const SUPPORT_EMAIL = 'support@ortegadrycleaners.com'; // TODO: confirm real email
-const SUPPORT_PHONE = '[+1-XXX-XXX-XXXX]'; // TODO: update with real phone
-const SUPPORT_ADDRESS = '[Your Business Address]'; // TODO: update with real address
+const SUPPORT_EMAIL = 'info@ortegadrycleaners.com';
+const SUPPORT_PHONE = '+1 904 666 0809';
+const SUPPORT_ADDRESS = '5330 Ortega Blvd, Jacksonville, FL 32210, United States';
 const LAST_UPDATED = 'June 2026';
 
 export function PrivacyPage() {
