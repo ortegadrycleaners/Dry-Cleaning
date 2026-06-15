@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
-import { customerDraftSchema } from '@/lib/customerSchema';
+import { customerDraftSchema, customerSchema } from '@/lib/customerSchema';
 import { generatePublicId } from '@/lib/utils';
 import type { Order, Customer } from '@/types';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +21,7 @@ import { useOrderForm } from '@/hooks/useOrderForm';
 import { useCustomerWizard } from '@/hooks/useCustomerWizard';
 
 type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
+type CustomerModalData = z.infer<typeof customerSchema>;
 
 export function NewOrderPage() {
   const navigate = useNavigate();
@@ -206,7 +207,7 @@ export function NewOrderPage() {
     }
   };
 
-  const handleModalSubmit = async (modalData: CustomerFormOutput) => {
+  const handleModalSubmit = async (modalData: CustomerModalData) => {
     const result = await createCustomer({ name: modalData.name, phone: modalData.phone });
     if (!result.success) {
       return { success: false, error: result.error };
