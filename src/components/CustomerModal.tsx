@@ -27,7 +27,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
   const { register, handleSubmit, reset, formState: { errors, isValid } } = useForm<CustomerData>({
     resolver: zodResolver(customerSchema),
     mode: 'onChange',
-    defaultValues: { name: '', phone: '', smsConsent: false },
+    defaultValues: { name: '', phone: '', smsConsent: false, termsConsent: false },
   });
 
   React.useEffect(() => {
@@ -36,6 +36,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
         name: initialData?.name || '',
         phone: initialData?.phone || '',
         smsConsent: initialData?.smsConsent || false,
+        termsConsent: false,
       });
       // Update URL hash when modal opens
       window.history.replaceState(null, '', '#consent');
@@ -121,6 +122,15 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                 {errors.phone && <span className="error-message">{errors.phone.message}</span>}
               </div>
 
+              {/* Contact Info */}
+              <div style={{ marginTop: '1rem', marginBottom: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#f0f4ff', borderRadius: '0.375rem', borderLeft: '3px solid #3B4BFF' }}>
+                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1B2A4A', marginBottom: '0.35rem' }}>Contact Us</p>
+                <p style={{ fontSize: '0.8rem', color: '#444', margin: 0 }}>
+                  📞 <a href="tel:+19046660809" style={{ color: '#3B4BFF', textDecoration: 'none' }}>+1 904 666 0809</a>
+                  &nbsp;&nbsp;✉️ <a href="mailto:info@ortegadrycleaners.com" style={{ color: '#3B4BFF', textDecoration: 'none' }}>info@ortegadrycleaners.com</a>
+                </p>
+              </div>
+
               {/* SMS Consent - MANDATORY */}
               <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 <div className="checkbox-description">
@@ -146,6 +156,39 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                   </span>
                 </div>
                 {errors.smsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.smsConsent.message}</span>}
+              </div>
+
+              {/* Terms & Privacy Consent - MANDATORY */}
+              <div className="checkbox-group" style={{ marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                <div className="checkbox-description">
+                  <p className="checkbox-title">
+                    Terms &amp; Privacy Policy (Required)
+                  </p>
+                  <p className="checkbox-subtitle">
+                    By checking this box, you confirm that you have read and agree to our{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>Terms of Service</a>
+                    {' '}and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>Privacy Policy</a>.
+                  </p>
+                </div>
+                <div className="checkbox-row">
+                  <label className="custom-checkbox">
+                    <input
+                      type="checkbox"
+                      id="termsConsent"
+                      {...register('termsConsent')}
+                      required
+                    />
+                    <span className="checkmark"></span>
+                  </label>
+                  <span className="checkbox-text" style={{ color: errors.termsConsent ? '#dc2626' : '#333' }}>
+                    I have read and accept the{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>Terms</a>
+                    {' '}and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>Privacy Policy</a>
+                  </span>
+                </div>
+                {errors.termsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.termsConsent.message}</span>}
               </div>
 
               <button type="submit" className="submit-btn" disabled={isSubmitting || !isValid} style={{ marginTop: '1.5rem', opacity: !isValid ? 0.5 : 1, cursor: !isValid ? 'not-allowed' : 'pointer' }}>

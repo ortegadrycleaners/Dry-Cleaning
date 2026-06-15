@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 
 const BRAND = 'Ortega Dry Cleaners';
-const SUPPORT_EMAIL = 'support@ortegadrycleaners.com'; // TODO: confirm real email
-const SUPPORT_PHONE = '[+1-XXX-XXX-XXXX]'; // TODO: update with real phone
+const SUPPORT_EMAIL = 'info@ortegadrycleaners.com';
+const SUPPORT_PHONE = '+1 904 666 0809';
 const MAX_MESSAGES = 4;
 const LAST_UPDATED = 'June 2026';
 

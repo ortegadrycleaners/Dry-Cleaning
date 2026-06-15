@@ -37,6 +37,7 @@ export function useCustomerWizard(): UseCustomerWizardReturn {
       phone: data.phone || '',
       notes: data.notes || '',
       smsConsent: data.smsConsent ?? false,
+      termsConsent: data.termsConsent ?? false,
     });
     setIsModalOpen(true);
   }, []);
