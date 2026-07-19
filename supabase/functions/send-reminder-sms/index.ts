@@ -26,7 +26,7 @@ const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Dry Cleaners';
 const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
 const REVIEW_URL =
   Deno.env.get('REVIEW_URL') ??
-  'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR';
+  'https://www.google.com/search?q=Ortega+Dry+Cleaners+Jacksonville+FL';
 
 const TEMPLATE_TYPES: TemplateType[] = [
   'ORDER_CREATED',

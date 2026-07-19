@@ -37,64 +37,40 @@ export const EVENT_NAMES = {
 /* ---------- Plantillas de mensajes ---------- */
 
 function buildMessage(type: NotificationEventType, vars: MessageTemplateVars): string {
+  const brand = 'Ortega Dry Cleaners';
+  const estimatedDate = vars.estimatedDate?.trim() || 'TBD';
+  const estimatedDay = vars.estimatedDay?.trim();
+  const dayPrefix = estimatedDay ? `${estimatedDay}, ` : '';
+  const storePhone = '(904) 666-0809';
+  const reviewUrl = vars.reviewUrl?.trim() || vars.trackingUrl;
+
   switch (type) {
     case 'ORDER_CREATED':
-      return (
-        `Hola ${vars.customerName}, tu orden #${vars.orderNumber} ha sido recibida. ` +
-        `Fecha estimada: ${vars.estimatedDate ?? 'próximamente'}. ` +
-        `Sigue tu orden aquí: ${vars.trackingUrl}`
-      );
-
-    case 'ORDER_READY':
-      return (
-        `¡${vars.customerName}, tu orden #${vars.orderNumber} está lista! ` +
-        (vars.rackNumber ? `Ubicación: Rack #${vars.rackNumber}. ` : '') +
-        `Recógela en nuestro horario. Detalles: ${vars.trackingUrl}`
-      );
+      return `${brand}: Hi ${vars.customerName}, we got your order #${vars.orderNumber}! Estimated ready: ${dayPrefix}${estimatedDate}. Track it here: ${vars.trackingUrl}`;
 
     case 'ORDER_RECEIVED_TRACKING':
-      return (
-        `Ortega Dry Cleaners: We received your order, ${vars.customerName}! ` +
-        `Estimated ready by ${vars.estimatedDay ? `${vars.estimatedDay}, ` : ''}${vars.estimatedDate ?? 'TBD'}. ` +
-        `Track your order: ${vars.trackingUrl}`
-      );
+      return `${brand}: Hi ${vars.customerName}! Your order is in, estimated ready by ${dayPrefix}${estimatedDate}. Track your order: ${vars.trackingUrl}`;
 
     case 'ORDER_DELAYED':
-      return (
-        `Ortega Dry Cleaners: Your order needs one more day. ` +
-        `New ready date: ${vars.estimatedDay ? `${vars.estimatedDay}, ` : ''}${vars.estimatedDate ?? 'TBD'}. ` +
-        `Sorry for the delay. ${vars.trackingUrl}`
-      );
+      return `${brand}: Hi, your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the wait! ${vars.trackingUrl}`;
 
     case 'THANK_YOU_REVIEW':
-      return (
-        `Thanks for trusting Ortega Dry Cleaners, ${vars.customerName}! ` +
-        `How did we do? Your feedback helps us a lot: ${vars.reviewUrl ?? vars.trackingUrl}`
-      );
+      return `Thanks for choosing ${brand}, ${vars.customerName}! We'd love your feedback: ${reviewUrl}`;
+
+    case 'ORDER_READY':
+      return `Hi ${vars.customerName}, your order is ready at ${brand}! Stop by whenever works for you. Details: ${vars.trackingUrl}`;
 
     case 'PICKUP_REMINDER':
-      return (
-        `Recordatorio: ${vars.customerName}, tu orden #${vars.orderNumber} ` +
-        `lleva ${vars.daysReady} días lista esperándote. ` +
-        `Pasa a recogerla pronto. Info: ${vars.trackingUrl}`
-      );
+      return `${brand}: Hi ${vars.customerName}, your order has been ready for 3 days. Stop by whenever you can! ${vars.trackingUrl}`;
 
     case 'URGENT_REMINDER':
-      return (
-        `URGENTE: ${vars.customerName}, tu orden #${vars.orderNumber} ` +
-        `lleva ${vars.daysReady} días en rack. Por favor recógela lo antes posible. ` +
-        `Detalles: ${vars.trackingUrl}`
-      );
+      return `Hi ${vars.customerName}, your order has been ready for 5 days at ${brand}. Stop by this week - need help? Call us at ${storePhone}. ${vars.trackingUrl}`;
 
     case 'DAY_30_REMINDER':
-      return (
-        `AVISO IMPORTANTE: ${vars.customerName}, tu orden #${vars.orderNumber} ` +
-        `lleva ${vars.daysReady} días en rack. Comunícate con nosotros para coordinar su retiro. ` +
-        `Detalles: ${vars.trackingUrl}`
-      );
+      return `Hi ${vars.customerName}, your order has been ready for 30 days at ${brand}. Please contact us to arrange pickup. ${vars.trackingUrl}`;
 
     default:
-      return `Notificación sobre tu orden #${vars.orderNumber}: ${vars.trackingUrl}`;
+      return `${brand}: Update on your order #${vars.orderNumber}. ${vars.trackingUrl}`;
   }
 }
 
