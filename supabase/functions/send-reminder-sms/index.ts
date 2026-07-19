@@ -17,6 +17,7 @@ import { isValidE164, normalizeToE164 } from '../_shared/phoneValidation.ts';
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN') ?? '';
 const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? Deno.env.get('TWILIO_FROM_NUMBER') ?? '';
+const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -52,13 +53,21 @@ function guardResponse(fail: GuardFail): Response {
 }
 
 async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM) {
-    throw new Error('Twilio is not configured on the server');
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    throw new Error('Twilio is not configured on the server (missing SID/Token)');
+  }
+  if (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_FROM) {
+    throw new Error('Twilio is not configured on the server (need TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM)');
   }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
   const form = new URLSearchParams();
   form.append('To', to);
-  form.append('From', TWILIO_FROM);
+  // Prefer Messaging Service SID over direct From number
+  if (TWILIO_MESSAGING_SERVICE_SID) {
+    form.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
+  } else {
+    form.append('From', TWILIO_FROM);
+  }
   form.append('Body', body);
 
   const resp = await fetch(url, {
