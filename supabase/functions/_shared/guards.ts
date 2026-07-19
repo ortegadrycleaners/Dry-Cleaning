@@ -151,6 +151,36 @@ export async function updateSmsSendSid(
   await admin.from('sms_sends').update({ message_sid: messageSid }).eq('idempotency_key', idempotencyKey);
 }
 
+export interface StatusCallbackUpdate {
+  status: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+}
+
+/** Applied by the twilio-status-callback webhook; matched by message_sid. */
+export async function updateSmsSendStatus(
+  admin: SupabaseClient,
+  messageSid: string,
+  update: StatusCallbackUpdate,
+): Promise<{ matched: boolean }> {
+  const { data, error } = await admin
+    .from('sms_sends')
+    .update({
+      status: update.status,
+      error_code: update.errorCode ?? null,
+      error_message: update.errorMessage ?? null,
+      status_updated_at: new Date().toISOString(),
+    })
+    .eq('message_sid', messageSid)
+    .select('idempotency_key');
+
+  if (error) {
+    console.error('updateSmsSendStatus error:', error);
+    return { matched: false };
+  }
+  return { matched: (data?.length ?? 0) > 0 };
+}
+
 export async function runServerGuards(
   admin: SupabaseClient,
   phoneRaw: string,

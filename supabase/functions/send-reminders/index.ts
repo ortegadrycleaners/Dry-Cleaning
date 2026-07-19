@@ -17,6 +17,9 @@ const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? '';
 const PUBLIC_APP_URL = (Deno.env.get('PUBLIC_APP_URL') ?? '').replace(/\/$/, '');
 const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Dry Cleaners';
 const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
+const STATUS_CALLBACK_URL =
+  Deno.env.get('TWILIO_STATUS_CALLBACK_URL') ||
+  (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/twilio-status-callback` : '');
 
 async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }> {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
@@ -24,6 +27,9 @@ async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }>
   form.append('To', to);
   form.append('From', TWILIO_FROM);
   form.append('Body', body);
+  if (STATUS_CALLBACK_URL) {
+    form.append('StatusCallback', STATUS_CALLBACK_URL);
+  }
   const resp = await fetch(url, {
     method: 'POST',
     headers: {

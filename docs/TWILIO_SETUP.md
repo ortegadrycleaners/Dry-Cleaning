@@ -73,6 +73,37 @@ supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_FROM=+1
 El frontend invoca vía `supabase.functions.invoke('send-reminder-sms')` con el JWT
 del operador. No hace falta `VITE_NOTIFY_ENDPOINT_URL` salvo override legacy.
 
+---
+
+## 3bis. Tracking de entrega: `twilio-status-callback`
+
+Twilio notifica cambios de estado de cada SMS (`queued` → `sent` →
+`delivered`/`undelivered`/`failed`) vía webhook. La función
+`supabase/functions/twilio-status-callback` recibe ese POST y actualiza
+`sms_sends.status` (más `error_code`/`error_message` si Twilio reporta un
+fallo) buscando la fila por `message_sid`.
+
+`send-reminder-sms` y `send-reminders` ya envían `StatusCallback` en cada
+`Messages.create`, apuntando por defecto a
+`${SUPABASE_URL}/functions/v1/twilio-status-callback` (override con el
+secreto opcional `TWILIO_STATUS_CALLBACK_URL` si usas un dominio propio).
+
+Despliegue:
+
+```bash
+# --no-verify-jwt: Twilio no manda un JWT de Supabase, solo X-Twilio-Signature
+supabase functions deploy twilio-status-callback --no-verify-jwt
+supabase secrets set TWILIO_AUTH_TOKEN=...   # ya debería estar seteado
+```
+
+Aplica también la migración `supabase/migrations/20260719000000_sms_status_callback.sql`
+(agrega `status`, `error_code`, `error_message`, `status_updated_at` a `sms_sends`
+más un índice por `message_sid`).
+
+El endpoint valida `X-Twilio-Signature` con el mismo `TWILIO_AUTH_TOKEN` que usa el
+envío — si no coincide devuelve `403` sin tocar la base de datos. Responde `204`
+en éxito (Twilio no necesita cuerpo de respuesta en un status callback).
+
 ### Referencia histórica: `notify-order-ready`
 
 Antes se documentaba una función separada `notify-order-ready` que:

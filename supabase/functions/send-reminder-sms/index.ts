@@ -27,6 +27,9 @@ const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
 const REVIEW_URL =
   Deno.env.get('REVIEW_URL') ??
   'https://www.google.com/search?q=Ortega+Dry+Cleaners+Jacksonville+FL';
+const STATUS_CALLBACK_URL =
+  Deno.env.get('TWILIO_STATUS_CALLBACK_URL') ||
+  (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/twilio-status-callback` : '');
 
 const TEMPLATE_TYPES: TemplateType[] = [
   'ORDER_CREATED',
@@ -69,6 +72,9 @@ async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }>
     form.append('From', TWILIO_FROM);
   }
   form.append('Body', body);
+  if (STATUS_CALLBACK_URL) {
+    form.append('StatusCallback', STATUS_CALLBACK_URL);
+  }
 
   const resp = await fetch(url, {
     method: 'POST',
