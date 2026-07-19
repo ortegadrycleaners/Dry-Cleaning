@@ -45,36 +45,27 @@ export function renderTemplate(type: NotificationEventType, ctx: TemplateContext
   const estimatedDate = ctx.estimatedDate?.trim() || 'TBD';
   const estimatedDay = ctx.estimatedDay?.trim();
   const dayPrefix = estimatedDay ? `${estimatedDay}, ` : '';
-  const storePhone = ctx.storePhone?.trim() || 'N/A';
+  const storePhone = ctx.storePhone?.trim() || '(904) 666-0809';
   const reviewUrl = ctx.reviewUrl?.trim() || ctx.trackingUrl;
   switch (type) {
-    case 'ORDER_CREATED': {
-      const fecha = ctx.estimatedDate ? ` Lista aprox: ${ctx.estimatedDate}.` : '';
-      return `${brand(ctx)}: Hola ${ctx.customerName}, recibimos tu orden #${ctx.orderNumber}.${fecha} Sigue: ${ctx.trackingUrl}`;
-    }
-    case 'ORDER_RECEIVED_TRACKING': {
-      return `${brand(ctx)}: We received your order, ${ctx.customerName}! Estimated ready by ${dayPrefix}${estimatedDate}. Track your order: ${ctx.trackingUrl}`;
-    }
-    case 'ORDER_DELAYED': {
-      return `${brand(ctx)}: Your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the delay. ${ctx.trackingUrl}`;
-    }
-    case 'THANK_YOU_REVIEW': {
-      return `Thanks for trusting ${brand(ctx)}, ${ctx.customerName}! How did we do? Your feedback helps us a lot: ${reviewUrl}`;
-    }
-    case 'ORDER_READY': {
-      return `Hi ${ctx.customerName}, your order is ready at ${brand(ctx)}. Stop by whenever works for you. Details: ${ctx.trackingUrl}`;
-    }
-    case 'PICKUP_REMINDER': {
-      return `${brand(ctx)}: Hi ${ctx.customerName}, your order has been waiting for 3 days. Stop by whenever you can: ${ctx.trackingUrl}`;
-    }
-    case 'URGENT_REMINDER': {
-      return `Hi ${ctx.customerName}, your order has been ready for 5 days at ${brand(ctx)}. Stop by this week - if you need anything, call us at ${storePhone}. ${ctx.trackingUrl}`;
-    }
-    case 'DAY_30_REMINDER': {
+    case 'ORDER_CREATED':
+      return `${brand(ctx)}: Hi ${ctx.customerName}, we got your order #${ctx.orderNumber}! Estimated ready: ${dayPrefix}${estimatedDate}. Track it here: ${ctx.trackingUrl}`;
+    case 'ORDER_RECEIVED_TRACKING':
+      return `${brand(ctx)}: Hi ${ctx.customerName}! Your order is in, estimated ready by ${dayPrefix}${estimatedDate}. Track your order: ${ctx.trackingUrl}`;
+    case 'ORDER_DELAYED':
+      return `${brand(ctx)}: Hi, your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the wait! ${ctx.trackingUrl}`;
+    case 'THANK_YOU_REVIEW':
+      return `Thanks for choosing ${brand(ctx)}, ${ctx.customerName}! We'd love your feedback: ${reviewUrl}`;
+    case 'ORDER_READY':
+      return `Hi ${ctx.customerName}, your order is ready at ${brand(ctx)}! Stop by whenever works for you. Details: ${ctx.trackingUrl}`;
+    case 'PICKUP_REMINDER':
+      return `${brand(ctx)}: Hi ${ctx.customerName}, your order has been ready for 3 days. Stop by whenever you can! ${ctx.trackingUrl}`;
+    case 'URGENT_REMINDER':
+      return `Hi ${ctx.customerName}, your order has been ready for 5 days at ${brand(ctx)}. Stop by this week - need help? Call us at ${storePhone}. ${ctx.trackingUrl}`;
+    case 'DAY_30_REMINDER':
       return `Hi ${ctx.customerName}, your order has been ready for 30 days at ${brand(ctx)}. Please contact us to arrange pickup. ${ctx.trackingUrl}`;
-    }
     default:
-      return `${brand(ctx)}: Notificacion de tu orden #${ctx.orderNumber}. ${ctx.trackingUrl}`;
+      return `${brand(ctx)}: Update on your order #${ctx.orderNumber}. ${ctx.trackingUrl}`;
   }
 }
 
