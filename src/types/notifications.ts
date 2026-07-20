@@ -10,6 +10,7 @@
 export type NotificationEventType =
   | 'ORDER_CREATED'
   | 'ORDER_RECEIVED_TRACKING'
+  | 'ORDER_PROCESSED'
   | 'ORDER_DELAYED'
   | 'THANK_YOU_REVIEW'
   | 'ORDER_READY'
@@ -93,7 +94,7 @@ export interface NotificationTemplateOption {
 }
 
 export const NOTIFICATION_TEMPLATE_OPTIONS: NotificationTemplateOption[] = [
-  { type: 'ORDER_RECEIVED_TRACKING', label: 'Order received + tracking' },
+  { type: 'ORDER_PROCESSED', label: 'Order processed + tracking' },
   { type: 'ORDER_READY', label: 'Order ready' },
   { type: 'ORDER_DELAYED', label: 'Order delayed' },
   { type: 'THANK_YOU_REVIEW', label: 'Thanks + Google review' },

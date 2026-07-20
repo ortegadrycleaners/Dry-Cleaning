@@ -6,6 +6,7 @@
 export type TemplateType =
   | 'ORDER_CREATED'
   | 'ORDER_RECEIVED_TRACKING'
+  | 'ORDER_PROCESSED'
   | 'ORDER_DELAYED'
   | 'THANK_YOU_REVIEW'
   | 'ORDER_READY'
@@ -24,6 +25,10 @@ export interface TemplateContext {
   storePhone?: string;
   reviewUrl?: string;
   brandName?: string;
+  /** Nota de novedad libre escrita por el operador (solo para ORDER_PROCESSED). */
+  customNote?: string;
+  /** Si true, omite la fecha estimada (modo problema/avería). */
+  omitEstimatedDate?: boolean;
 }
 
 const DEFAULT_BRAND = 'Ortega Dry Cleaners';
@@ -45,6 +50,16 @@ export function renderTemplate(type: TemplateType, ctx: TemplateContext): string
       return `${brand(ctx)}: Hi ${ctx.customerName}, we got your order #${ctx.orderNumber}! Estimated ready: ${dayPrefix}${estimatedDate}. Track it here: ${ctx.trackingUrl}`;
     case 'ORDER_RECEIVED_TRACKING':
       return `${brand(ctx)}: Hi ${ctx.customerName}! Your order is in, estimated ready by ${dayPrefix}${estimatedDate}. Track your order: ${ctx.trackingUrl}`;
+    case 'ORDER_PROCESSED': {
+      const note = ctx.customNote?.trim();
+      if (note && ctx.omitEstimatedDate) {
+        return `${brand(ctx)}: Hi ${ctx.customerName}, update on your order: ${note}. Please contact us to discuss next steps: ${ctx.trackingUrl}`;
+      }
+      if (note) {
+        return `${brand(ctx)}: Hi ${ctx.customerName}, your order is being processed! Note: ${note}. Est. ready: ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
+      }
+      return `${brand(ctx)}: Hi ${ctx.customerName}! Your order is being processed, est. ready by ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
+    }
     case 'ORDER_DELAYED':
       return `${brand(ctx)}: Hi, your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the wait! ${ctx.trackingUrl}`;
     case 'THANK_YOU_REVIEW':
