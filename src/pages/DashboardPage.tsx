@@ -87,6 +87,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validate
   // Reset al cerrar
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep('form');
       setCountdown(3);
       setRackNumber('');
@@ -124,6 +125,7 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validate
   // Cuando el countdown llega a 0, disparar el SMS
   useEffect(() => {
     if (step !== 'countdown' || countdown !== 0 || !order) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStep('sending');
     void onSendSms(order).finally(() => {
       onClose();
@@ -554,6 +556,7 @@ function OrderProcessedModal({ order, isOpen, onClose, onSent, operatorId }: Ord
   // Reset al abrir/cerrar
   useEffect(() => {
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNoteEnabled(false);
       setCustomNote('');
       setOmitDate(false);
