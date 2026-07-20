@@ -27,6 +27,7 @@
     background-color: var(--color-light);
     width: 90%;
     max-width: 800px;
+    max-height: 90vh;
     border-radius: 0.5rem;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
@@ -87,11 +88,13 @@
 /* Right Side: Form */
 .modal-form-section {
     flex: 1.2;
+    min-height: 0;
     padding: 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     position: relative;
+    overflow-y: auto;
 }
 
 .close-btn {

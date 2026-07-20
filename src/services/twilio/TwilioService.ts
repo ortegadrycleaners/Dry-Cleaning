@@ -79,7 +79,7 @@ function resolveEstimatedDateParts(order: Order): { estimatedDate: string; estim
   };
 }
 
-function buildTemplateContext(order: Order, daysReady?: number | null): TemplateContext {
+function buildTemplateContext(order: Order, daysReady?: number | null, customNote?: string, omitEstimatedDate?: boolean): TemplateContext {
   const { estimatedDate, estimatedDay } = resolveEstimatedDateParts(order);
   return {
     customerName: order.customerName,
@@ -92,13 +92,15 @@ function buildTemplateContext(order: Order, daysReady?: number | null): Template
     brandName: businessInfo.name,
     storePhone: businessInfo.phone,
     reviewUrl: businessInfo.googleReviewUrl,
+    customNote,
+    omitEstimatedDate,
   };
 }
 
 /* ---------- Preview de mensaje ---------- */
 
-export function previewMessage(order: Order, type: NotificationEventType): string {
-  const ctx: TemplateContext = buildTemplateContext(order);
+export function previewMessage(order: Order, type: NotificationEventType, customNote?: string, omitEstimatedDate?: boolean): string {
+  const ctx: TemplateContext = buildTemplateContext(order, undefined, customNote, omitEstimatedDate);
   return renderTemplate(type, ctx);
 }
 
@@ -183,6 +185,8 @@ async function callBackend(req: NotifySmsRequest): Promise<NotifySmsResponse> {
       templateType: req.templateType,
       idempotencyKey: req.idempotencyKey,
       operatorId: req.operatorId,
+      customNote: req.customNote,
+      omitEstimatedDate: req.omitEstimatedDate,
     },
   });
 
@@ -228,6 +232,8 @@ interface NotifySmsArgs {
   operatorId: string;
   type: NotificationEventType;
   daysReady?: number | null;
+  customNote?: string;
+  omitEstimatedDate?: boolean;
 }
 
 function eventNameForType(type: NotificationEventType): keyof typeof EVENT_NAMES {
@@ -235,6 +241,7 @@ function eventNameForType(type: NotificationEventType): keyof typeof EVENT_NAMES
     case 'ORDER_CREATED':
       return 'ORDER_CREATED';
     case 'ORDER_RECEIVED_TRACKING':
+    case 'ORDER_PROCESSED':
       return 'ORDER_RECEIVED_TRACKING';
     case 'ORDER_DELAYED':
       return 'ORDER_DELAYED';
@@ -281,8 +288,10 @@ export async function notifySmsTemplate({
   operatorId,
   type,
   daysReady,
+  customNote,
+  omitEstimatedDate,
 }: NotifySmsArgs): Promise<SendSmsResult> {
-  return notifySms({ order, operatorId, type, daysReady });
+  return notifySms({ order, operatorId, type, daysReady, customNote, omitEstimatedDate });
 }
 
 async function notifySms({
@@ -290,6 +299,8 @@ async function notifySms({
   operatorId,
   type,
   daysReady,
+  customNote,
+  omitEstimatedDate,
 }: NotifySmsArgs): Promise<SendSmsResult> {
   const guard: GuardResult = runAllGuards(order, type);
   if (!guard.ok) {
@@ -301,14 +312,11 @@ async function notifySms({
     };
   }
 
-  // Resolver datos canónicos del cliente (placeholder Supabase). Si Supabase
-  // no está configurado, cae a los datos de la orden — el backend igual hará
-  // la verificación contra su propia copia.
   const customer = await getCustomerForOrder(order.id);
   const customerName = customer?.name?.trim() || order.customerName;
 
   const ctx: TemplateContext = {
-    ...buildTemplateContext(order, daysReady),
+    ...buildTemplateContext(order, daysReady, customNote, omitEstimatedDate),
     customerName,
   };
   const renderedMessage = renderTemplate(type, ctx);
@@ -319,6 +327,8 @@ async function notifySms({
     templateType: type,
     idempotencyKey,
     operatorId,
+    customNote,
+    omitEstimatedDate,
   };
 
   const response = await callBackend(request);

@@ -45,6 +45,12 @@ const TYPE_CONFIG: Record<
     color: 'text-blue-600',
     bg: 'bg-blue-50',
   },
+  ORDER_PROCESSED: {
+    icon: Package,
+    label: 'notifications.type.processed',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+  },
   ORDER_DELAYED: {
     icon: AlertTriangle,
     label: 'notifications.type.delayed',

@@ -34,6 +34,7 @@ const STATUS_CALLBACK_URL =
 const TEMPLATE_TYPES: TemplateType[] = [
   'ORDER_CREATED',
   'ORDER_RECEIVED_TRACKING',
+  'ORDER_PROCESSED',
   'ORDER_DELAYED',
   'THANK_YOU_REVIEW',
   'ORDER_READY',
@@ -214,13 +215,15 @@ async function handleOrderNotifyFlow(
     templateType?: string;
     idempotencyKey?: string;
     operatorId?: string;
+    customNote?: string;
+    omitEstimatedDate?: boolean;
   },
   origin: string | undefined,
 ) {
   const auth = await requireAuthUser(req);
   if ('error' in auth && auth.error) return auth.error;
 
-  const { orderId, templateType, idempotencyKey, operatorId } = body;
+  const { orderId, templateType, idempotencyKey, operatorId, customNote, omitEstimatedDate } = body;
   if (!orderId || !templateType || !idempotencyKey) {
     return json(
       { ok: false, error: 'Missing required fields: orderId, templateType, idempotencyKey' },
@@ -281,6 +284,24 @@ async function handleOrderNotifyFlow(
     }
   }
 
+  if (type === 'ORDER_PROCESSED') {
+    if (row.status !== 'RECIBIDO' && row.status !== 'EN PROCESO') {
+      return json({
+        ok: false,
+        errorCode: 'INVALID_ORDER_STATE',
+        errorMessage: `ORDER_PROCESSED requires RECIBIDO or EN PROCESO (current: ${row.status})`,
+      }, 400);
+    }
+    // Sanitizar la nota: máx 100 chars, sin saltos de línea
+    if (customNote && customNote.length > 100) {
+      return json({
+        ok: false,
+        errorCode: 'FORBIDDEN',
+        errorMessage: 'customNote exceeds 100 characters',
+      }, 400);
+    }
+  }
+
   if (type === 'PICKUP_REMINDER' || type === 'URGENT_REMINDER' || type === 'DAY_30_REMINDER') {
     if (row.status !== 'LISTO') {
       return json({
@@ -315,6 +336,8 @@ async function handleOrderNotifyFlow(
     brandName: BRAND_NAME,
     storePhone: STORE_PHONE,
     reviewUrl: REVIEW_URL,
+    customNote: customNote?.trim().slice(0, 100),
+    omitEstimatedDate,
   });
 
   try {
