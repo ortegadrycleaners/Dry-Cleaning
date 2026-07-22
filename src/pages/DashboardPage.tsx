@@ -38,6 +38,7 @@ import {
   Zap,
   Funnel,
   Settings,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
@@ -64,20 +65,72 @@ function resolveDaysReady(order: Order): number | null {
   return typeof order.daysReady === 'number' ? order.daysReady : null;
 }
 
-/* ---------- Modal: Marcar Listo (sólo cambia estado, no envía SMS) ---------- */
+/* ---------- Modal: Marcar Listo + countdown SMS automático ---------- */
 
 interface MarkReadyModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (rackNumber: string) => void;
+  onSendSms: (order: Order) => Promise<void>;
   validateRackNumber?: (rackNumber: string) => string | null | Promise<string | null>;
 }
 
-function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber }: MarkReadyModalProps) {
+function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validateRackNumber }: MarkReadyModalProps) {
   const { t } = useI18n();
   const [rackNumber, setRackNumber] = useState('');
   const [error, setError] = useState('');
+  const [step, setStep] = useState<'form' | 'countdown' | 'sending'>('form');
+  const [countdown, setCountdown] = useState(3);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Reset al cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStep('form');
+      setCountdown(3);
+      setRackNumber('');
+      setError('');
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [isOpen]);
+
+  // Countdown interval
+  useEffect(() => {
+    if (step !== 'countdown') return;
+
+    intervalRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [step]);
+
+  // Cuando el countdown llega a 0, disparar el SMS
+  useEffect(() => {
+    if (step !== 'countdown' || countdown !== 0 || !order) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStep('sending');
+    void onSendSms(order).finally(() => {
+      onClose();
+    });
+  }, [countdown, step, order, onSendSms, onClose]);
 
   const handleConfirm = async () => {
     const trimmedRack = rackNumber.trim();
@@ -95,73 +148,127 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, validateRackNumber 
     }
 
     onConfirm(trimmedRack);
-    setRackNumber('');
     setError('');
+    setRackNumber('');
+    setStep('countdown');
+    setCountdown(3);
   };
 
-  const handleClose = () => {
-    setRackNumber('');
-    setError('');
+  const handleCancelSms = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     onClose();
   };
 
   if (!order) return null;
 
+  const plural = countdown === 1 ? '' : 's';
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && step !== 'sending' && handleCancelSms()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-[#1B2A4A]">
-            {t('dashboard.markReady.title')}
+            {step === 'form'
+              ? t('dashboard.markReady.title')
+              : step === 'sending'
+              ? t('dashboard.markReady.smsSending')
+              : t('dashboard.markReady.smsCountdownTitle')}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="bg-slate-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-600">
-              {t('dashboard.markReady.orderLabel')}{' '}
-              <span className="font-semibold text-[#1B2A4A]">
-                #{orderTicketLabel(order)}
-              </span>
+
+        {step === 'form' ? (
+          <div className="space-y-4 pt-2">
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600">
+                {t('dashboard.markReady.orderLabel')}{' '}
+                <span className="font-semibold text-[#1B2A4A]">
+                  #{orderTicketLabel(order)}
+                </span>
+              </p>
+              <p className="text-sm text-gray-600">
+                {t('dashboard.markReady.customerLabel')}{' '}
+                <span className="font-medium">{order.customerName}</span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label
+                htmlFor="rackNumber"
+                className="text-sm font-medium text-gray-700"
+              >
+                {t('dashboard.markReady.rackNumberLabel')}
+              </Label>
+              <Input
+                id="rackNumber"
+                type="text"
+                placeholder={t('dashboard.markReady.rackNumberPlaceholder')}
+                value={rackNumber}
+                onChange={(e) => setRackNumber(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void handleConfirm()}
+                className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
+            </div>
+            <p className="text-xs text-center text-gray-500">
+              {t('dashboard.markReady.smsHint')}
             </p>
-            <p className="text-sm text-gray-600">
-              {t('dashboard.markReady.customerLabel')}{' '}
-              <span className="font-medium">{order.customerName}</span>
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="rackNumber"
-              className="text-sm font-medium text-gray-700"
+            <Button
+              onClick={() => void handleConfirm()}
+              className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold"
             >
-              {t('dashboard.markReady.rackNumberLabel')}
-            </Label>
-            <Input
-              id="rackNumber"
-              type="text"
-              placeholder={t('dashboard.markReady.rackNumberPlaceholder')}
-              value={rackNumber}
-              onChange={(e) => setRackNumber(e.target.value)}
-              className="h-11 border-gray-200 focus:border-[#3B4BFF] focus:ring-[#3B4BFF]"
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+              {t('dashboard.markReady.confirmButton')}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleCancelSms}
+              className="w-full h-10 text-gray-500 hover:text-gray-700"
+            >
+              {t('common.cancel')}
+            </Button>
           </div>
-          <Button
-            onClick={handleConfirm}
-            className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold"
-          >
-            {t('dashboard.markReady.confirmButton')}
-          </Button>
-          <p className="text-xs text-center text-gray-500">
-            {t('dashboard.markReady.smsHint')}
-          </p>
-          <Button
-            variant="ghost"
-            onClick={handleClose}
-            className="w-full h-10 text-gray-500 hover:text-gray-700"
-          >
-            {t('common.cancel')}
-          </Button>
-        </div>
+        ) : step === 'countdown' ? (
+          <div className="space-y-6 pt-2">
+            {/* Countdown visual */}
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div
+                className="flex items-center justify-center w-20 h-20 rounded-full text-4xl font-bold text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #3B4BFF 0%, #6C7AFF 100%)',
+                  boxShadow: '0 0 0 6px rgba(59,75,255,0.15)',
+                }}
+              >
+                {countdown}
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium text-gray-800">
+                  {t('dashboard.markReady.smsCountdownSubtitle', {
+                    customerName: order.customerName,
+                    count: countdown,
+                    plural,
+                  })}
+                </p>
+                <p className="text-xs text-gray-500">{order.phone}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleCancelSms}
+              className="w-full h-11 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 font-semibold"
+            >
+              {t('dashboard.markReady.smsCancelButton')}
+            </Button>
+          </div>
+        ) : (
+          /* step === 'sending' */
+          <div className="flex flex-col items-center gap-4 py-8">
+            <Loader2 className="w-10 h-10 text-[#3B4BFF] animate-spin" />
+            <p className="text-sm text-gray-600">
+              {t('dashboard.markReady.smsSendingSubtitle', { customerName: order.customerName })}
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -197,11 +304,15 @@ function NotifyCustomerModal({
   const [usageTick, setUsageTick] = useState(0);
 
   useEffect(() => {
-    if (isOpen && selectedType !== templateType) {
+    if (isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedType(templateType);
     }
-  }, [isOpen, templateType, selectedType]);
+    // Solo resincroniza al abrir el modal (o si cambia el templateType de
+    // origen); `selectedType` se excluye a propósito para no pisar la
+    // selección manual del usuario en cada clic.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, templateType]);
 
   // Limpia error cuando se abre el modal. Usa el cambio de `isOpen` como key
   // efectivo via remount-style: se evita useEffect+setState anidado.
@@ -423,6 +534,255 @@ function NotifyCustomerModal({
   );
 }
 
+/* ---------- Modal: Notificar cliente (ORDER_PROCESSED) ---------- */
+
+interface OrderProcessedModalProps {
+  order: Order | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSent: () => void;
+  operatorId: string;
+}
+
+function OrderProcessedModal({ order, isOpen, onClose, onSent, operatorId }: OrderProcessedModalProps) {
+  const { t } = useI18n();
+  const [isSending, setIsSending] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [noteEnabled, setNoteEnabled] = useState(false);
+  const [customNote, setCustomNote] = useState('');
+  const [omitDate, setOmitDate] = useState(false);
+  const [usageTick, setUsageTick] = useState(0);
+
+  // Reset al abrir/cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNoteEnabled(false);
+      setCustomNote('');
+      setOmitDate(false);
+      setErrorMsg(null);
+      setIsSending(false);
+    }
+  }, [isOpen]);
+
+  const errorToShow = isOpen ? errorMsg : null;
+
+  const usage: SmsUsageStats = useMemo(() => {
+    void isOpen;
+    void usageTick;
+    return getUsageStats();
+  }, [isOpen, usageTick]);
+
+  if (!order) return null;
+
+  const activeNote = noteEnabled ? customNote.trim() : undefined;
+  const activeOmitDate = noteEnabled && omitDate;
+  const message = previewMessage(order, 'ORDER_PROCESSED', activeNote, activeOmitDate);
+  const segments = estimateSmsSegments(message);
+  const ready = isTwilioReady();
+
+  const handleSend = async () => {
+    if (isSending) return;
+    setIsSending(true);
+    setErrorMsg(null);
+
+    const result = await notifySmsTemplate({
+      order,
+      operatorId,
+      type: 'ORDER_PROCESSED',
+      daysReady: null,
+      customNote: activeNote,
+      omitEstimatedDate: activeOmitDate,
+    });
+
+    setIsSending(false);
+    setUsageTick((n) => n + 1);
+
+    if (result.ok) {
+      toast.success(t('dashboard.orderProcessed.sent'), {
+        description: `#${orderTicketLabel(order)} — ${order.customerName}`,
+      });
+      onSent();
+      onClose();
+      return;
+    }
+
+    setErrorMsg(result.errorMessage ?? t('dashboard.orderProcessed.failed'));
+    toast.error(t('dashboard.orderProcessed.failed'), {
+      description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+    });
+  };
+
+  // Hint contextual según el modo activo
+  const modeHint = activeOmitDate
+    ? t('dashboard.orderProcessed.hintNoDate')
+    : activeNote
+    ? t('dashboard.orderProcessed.hintNote')
+    : t('dashboard.orderProcessed.hintBase');
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSending && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2">
+            <MessageSquarePlus className="w-5 h-5 text-[#3B4BFF]" />
+            {t('dashboard.orderProcessed.title')}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          {/* Info orden */}
+          <div className="bg-slate-50 p-3 rounded-lg space-y-1">
+            <p className="text-sm text-gray-600">
+              {t('dashboard.orderProcessed.orderLabel')}{' '}
+              <span className="font-semibold text-[#1B2A4A]">#{orderTicketLabel(order)}</span>
+            </p>
+            <p className="text-sm text-gray-600">
+              {t('dashboard.orderProcessed.customerLabel')}{' '}
+              <span className="font-medium">{order.customerName}</span>
+            </p>
+            <p className="text-sm text-gray-600">
+              {t('dashboard.orderProcessed.phoneLabel')}{' '}
+              <span className="font-mono">{order.phone}</span>
+            </p>
+          </div>
+
+          {/* Toggle: agregar novedad */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                setNoteEnabled((prev) => {
+                  if (prev) { setOmitDate(false); setCustomNote(''); }
+                  return !prev;
+                });
+              }}
+              className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                noteEnabled
+                  ? 'border-[#3B4BFF] bg-[#EEF2FF] text-[#3B4BFF]'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>{t('dashboard.orderProcessed.toggleNote')}</span>
+              <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                noteEnabled ? 'border-[#3B4BFF] bg-[#3B4BFF]' : 'border-gray-300'
+              }`}>
+                {noteEnabled && <span className="w-2 h-2 rounded-full bg-white" />}
+              </span>
+            </button>
+
+            {noteEnabled && (
+              <div className="space-y-2 pl-1">
+                <Label className="text-sm font-medium text-gray-700">
+                  {t('dashboard.orderProcessed.noteLabel')}
+                </Label>
+                <textarea
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value.slice(0, 100))}
+                  placeholder={t('dashboard.orderProcessed.notePlaceholder')}
+                  rows={2}
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-[#3B4BFF] focus:ring-1 focus:ring-[#3B4BFF] resize-none"
+                />
+                <p className={`text-xs text-right ${
+                  customNote.length >= 100 ? 'text-red-500' : 'text-gray-400'
+                }`}>
+                  {t('dashboard.orderProcessed.noteChars', { count: customNote.length })}
+                </p>
+
+                {/* Toggle: sin fecha estimada (solo cuando hay nota) */}
+                <button
+                  type="button"
+                  onClick={() => setOmitDate((prev) => !prev)}
+                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    omitDate
+                      ? 'border-amber-400 bg-amber-50 text-amber-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{t('dashboard.orderProcessed.toggleNoDate')}</span>
+                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    omitDate ? 'border-amber-500 bg-amber-500' : 'border-gray-300'
+                  }`}>
+                    {omitDate && <span className="w-2 h-2 rounded-full bg-white" />}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Preview del mensaje */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">
+              {t('dashboard.orderProcessed.messageLabel')}
+            </Label>
+            <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-800 whitespace-pre-wrap">
+              {message}
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{t('dashboard.orderProcessed.messageLength', { count: message.length })}</span>
+              <span>{t('dashboard.orderProcessed.messageSegments', { count: segments, plural: segments !== 1 ? 's' : '' })}</span>
+            </div>
+            <p className="text-xs text-gray-500 italic">{modeHint}</p>
+          </div>
+
+          {/* Stats de uso */}
+          <div className="rounded-lg border border-gray-200 bg-slate-50 p-3 text-xs text-gray-600 space-y-1">
+            <div className="flex items-center justify-between">
+              <span>{t('dashboard.notify.modeLabel')}</span>
+              <span className="font-medium">
+                {usage.mockMode ? t('dashboard.notify.mockMode') : t('dashboard.notify.productionMode')}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>{t('dashboard.notify.smsLastMinute')}</span>
+              <span className="font-medium">{usage.sentLastMinute} / {usage.globalPerMinuteCap}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>{t('dashboard.notify.remainingBudget')}</span>
+              <span className="font-medium">{usage.remainingDailyBudget}</span>
+            </div>
+          </div>
+
+          {!ready && !usage.mockMode && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 flex gap-2">
+              <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <p>{t('dashboard.notify.twilioNotConfigured')} <code className="font-mono">VITE_SUPABASE_URL</code></p>
+            </div>
+          )}
+
+          {errorToShow && (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 flex gap-2">
+              <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <p>{errorToShow}</p>
+            </div>
+          )}
+
+          <Button
+            onClick={() => void handleSend()}
+            disabled={isSending || (!ready && !usage.mockMode) || usage.killSwitch}
+            className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold disabled:opacity-50"
+          >
+            {isSending ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('dashboard.orderProcessed.sending')}</>
+            ) : (
+              <><Send className="w-4 h-4 mr-2" />{t('dashboard.orderProcessed.sendButton')}</>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            disabled={isSending}
+            className="w-full h-10 text-gray-500 hover:text-gray-700"
+          >
+            {t('common.cancel')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function SettingsModal({
   isOpen,
   pendingAutoRefresh,
@@ -624,6 +984,9 @@ export function DashboardPage() {
   const [notifyTemplateType, setNotifyTemplateType] = useState<NotificationEventType>('ORDER_READY');
   const [notifyDaysReady, setNotifyDaysReady] = useState<number | null>(null);
 
+  const [processedOrder, setProcessedOrder] = useState<Order | null>(null);
+  const [isProcessedModalOpen, setIsProcessedModalOpen] = useState(false);
+
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
   const [historyTick, setHistoryTick] = useState(0);
@@ -652,6 +1015,7 @@ export function DashboardPage() {
 
   const notifiedReadyIds = useNotifiedOrderIdsByType('ORDER_READY', historyTick);
   const notifiedReminderIds = useNotifiedOrderIdsByType('PICKUP_REMINDER', historyTick);
+  const notifiedProcessedIds = useNotifiedOrderIdsByType('ORDER_PROCESSED', historyTick);
 
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return orders;
@@ -707,12 +1071,27 @@ export function DashboardPage() {
   const handleConfirmReady = (rackNumber: string) => {
     if (selectedOrder) {
       updateOrderStatus(selectedOrder.id, 'LISTO', rackNumber);
-      toast.success(t('dashboard.markReady.success'), {
-        description: t('dashboard.markReady.successDescription'),
+      // El modal maneja el countdown y el SMS — no cerramos aquí
+    }
+  };
+
+  const handleSendReadySms = async (order: Order) => {
+    const result = await notifySmsTemplate({
+      order,
+      operatorId: 'backoffice-operator',
+      type: 'ORDER_READY',
+      daysReady: null,
+    });
+    if (result.ok) {
+      toast.success(t('dashboard.notify.sentSms'), {
+        description: `#${orderTicketLabel(order)} — ${order.customerName}`,
+      });
+      handleNotified();
+    } else {
+      toast.error(t('dashboard.notify.failedSms'), {
+        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
       });
     }
-    setIsReadyModalOpen(false);
-    setSelectedOrder(null);
   };
 
   const handleMarkDelivered = (order: Order) => {
@@ -739,6 +1118,15 @@ export function DashboardPage() {
   };
 
   const handleNotified = () => {
+    setHistoryTick((t) => t + 1);
+  };
+
+  const handleOpenProcessed = (order: Order) => {
+    setProcessedOrder(order);
+    setIsProcessedModalOpen(true);
+  };
+
+  const handleProcessedNotified = () => {
     setHistoryTick((t) => t + 1);
   };
 
@@ -964,6 +1352,20 @@ export function DashboardPage() {
                                 </span>
                               </span>
                             )}
+                            {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && !notifiedProcessedIds.has(order.id) && (
+                              <span className="relative inline-flex group">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenProcessed(order)}
+                                  className="bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#3B4BFF] text-xs font-semibold"
+                                >
+                                  {t('dashboard.actions.notifyCustomer')}
+                                </Button>
+                                <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 whitespace-nowrap">
+                                  {t('dashboard.orderProcessed.title')}
+                                </span>
+                              </span>
+                            )}
                             {order.status === 'LISTO' && !alreadyNotified && (
                               <span className="relative inline-flex group">
                                 <Button
@@ -1069,6 +1471,15 @@ export function DashboardPage() {
                           {t('dashboard.actions.markReady')}
                         </Button>
                       )}
+                      {(order.status === 'RECIBIDO' || order.status === 'EN PROCESO') && !notifiedProcessedIds.has(order.id) && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenProcessed(order)}
+                          className="w-full bg-[#EEF2FF] text-[#3B4BFF] hover:bg-[#E0E7FF] text-xs font-semibold"
+                        >
+                          {t('dashboard.actions.notifyCustomer')}
+                        </Button>
+                      )}
                       {order.status === 'LISTO' && !alreadyNotified && (
                         <Button
                           size="sm"
@@ -1140,8 +1551,12 @@ export function DashboardPage() {
       <MarkReadyModal
         order={selectedOrder}
         isOpen={isReadyModalOpen}
-        onClose={() => setIsReadyModalOpen(false)}
+        onClose={() => {
+          setIsReadyModalOpen(false);
+          setSelectedOrder(null);
+        }}
         onConfirm={handleConfirmReady}
+        onSendSms={handleSendReadySms}
         validateRackNumber={validateRackAssignment}
       />
 
@@ -1153,6 +1568,17 @@ export function DashboardPage() {
         operatorId="backoffice-operator"
         templateType={notifyTemplateType}
         daysReady={notifyDaysReady}
+      />
+
+      <OrderProcessedModal
+        order={processedOrder}
+        isOpen={isProcessedModalOpen}
+        onClose={() => {
+          setIsProcessedModalOpen(false);
+          setProcessedOrder(null);
+        }}
+        onSent={handleProcessedNotified}
+        operatorId="backoffice-operator"
       />
     </div>
   );

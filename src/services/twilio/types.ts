@@ -32,6 +32,10 @@ export interface NotifySmsRequest {
    * y enforce de cuotas por usuario en el backend.
    */
   operatorId: string;
+  /** Nota libre del operador — solo para ORDER_PROCESSED. Máx. 100 chars. */
+  customNote?: string;
+  /** Si true, omite la fecha estimada del mensaje (modo problema/avería). */
+  omitEstimatedDate?: boolean;
 }
 
 export interface NotifySmsResponse {

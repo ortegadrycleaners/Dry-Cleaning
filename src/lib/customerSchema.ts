@@ -50,4 +50,5 @@ export const customerSchema = z.object({
 
 export const customerDraftSchema = customerSchema.omit({
   smsConsent: true,
+  termsConsent: true,
 });

@@ -17,6 +17,7 @@ import { isValidE164, normalizeToE164 } from '../_shared/phoneValidation.ts';
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN') ?? '';
 const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? Deno.env.get('TWILIO_FROM_NUMBER') ?? '';
+const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -25,11 +26,15 @@ const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Dry Cleaners';
 const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
 const REVIEW_URL =
   Deno.env.get('REVIEW_URL') ??
-  'https://www.google.com/search?q=Ortega+Dry+Cleaners+San+Juan+PR';
+  'https://www.google.com/search?q=Ortega+Dry+Cleaners+Jacksonville+FL';
+const STATUS_CALLBACK_URL =
+  Deno.env.get('TWILIO_STATUS_CALLBACK_URL') ||
+  (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/twilio-status-callback` : '');
 
 const TEMPLATE_TYPES: TemplateType[] = [
   'ORDER_CREATED',
   'ORDER_RECEIVED_TRACKING',
+  'ORDER_PROCESSED',
   'ORDER_DELAYED',
   'THANK_YOU_REVIEW',
   'ORDER_READY',
@@ -52,14 +57,25 @@ function guardResponse(fail: GuardFail): Response {
 }
 
 async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM) {
-    throw new Error('Twilio is not configured on the server');
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    throw new Error('Twilio is not configured on the server (missing SID/Token)');
+  }
+  if (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_FROM) {
+    throw new Error('Twilio is not configured on the server (need TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM)');
   }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
   const form = new URLSearchParams();
   form.append('To', to);
-  form.append('From', TWILIO_FROM);
+  // Prefer Messaging Service SID over direct From number
+  if (TWILIO_MESSAGING_SERVICE_SID) {
+    form.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
+  } else {
+    form.append('From', TWILIO_FROM);
+  }
   form.append('Body', body);
+  if (STATUS_CALLBACK_URL) {
+    form.append('StatusCallback', STATUS_CALLBACK_URL);
+  }
 
   const resp = await fetch(url, {
     method: 'POST',
@@ -199,13 +215,15 @@ async function handleOrderNotifyFlow(
     templateType?: string;
     idempotencyKey?: string;
     operatorId?: string;
+    customNote?: string;
+    omitEstimatedDate?: boolean;
   },
   origin: string | undefined,
 ) {
   const auth = await requireAuthUser(req);
   if ('error' in auth && auth.error) return auth.error;
 
-  const { orderId, templateType, idempotencyKey, operatorId } = body;
+  const { orderId, templateType, idempotencyKey, operatorId, customNote, omitEstimatedDate } = body;
   if (!orderId || !templateType || !idempotencyKey) {
     return json(
       { ok: false, error: 'Missing required fields: orderId, templateType, idempotencyKey' },
@@ -266,6 +284,24 @@ async function handleOrderNotifyFlow(
     }
   }
 
+  if (type === 'ORDER_PROCESSED') {
+    if (row.status !== 'RECIBIDO' && row.status !== 'EN PROCESO') {
+      return json({
+        ok: false,
+        errorCode: 'INVALID_ORDER_STATE',
+        errorMessage: `ORDER_PROCESSED requires RECIBIDO or EN PROCESO (current: ${row.status})`,
+      }, 400);
+    }
+    // Sanitizar la nota: máx 100 chars, sin saltos de línea
+    if (customNote && customNote.length > 100) {
+      return json({
+        ok: false,
+        errorCode: 'FORBIDDEN',
+        errorMessage: 'customNote exceeds 100 characters',
+      }, 400);
+    }
+  }
+
   if (type === 'PICKUP_REMINDER' || type === 'URGENT_REMINDER' || type === 'DAY_30_REMINDER') {
     if (row.status !== 'LISTO') {
       return json({
@@ -300,6 +336,8 @@ async function handleOrderNotifyFlow(
     brandName: BRAND_NAME,
     storePhone: STORE_PHONE,
     reviewUrl: REVIEW_URL,
+    customNote: customNote?.trim().slice(0, 100),
+    omitEstimatedDate,
   });
 
   try {
