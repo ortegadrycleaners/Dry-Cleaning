@@ -20,11 +20,9 @@ jobs:
       - name: Checkout source (main)
         uses: actions/checkout@v4
 
-      # 2. Instalar pnpm
+      # 2. Instalar pnpm (versión tomada de "packageManager" en package.json)
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 11.3.0
 
       # 3. Instalar Node.js con caché de pnpm
       - name: Setup Node.js
