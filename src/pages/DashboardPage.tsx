@@ -956,7 +956,8 @@ function StatusBadge({ order }: { order: Order }) {
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, session } = useAuth();
+  const currentOperatorId = session?.user?.id ?? '';
   const {
     orders,
     updateOrderStatus,
@@ -1078,7 +1079,7 @@ export function DashboardPage() {
   const handleSendReadySms = async (order: Order) => {
     const result = await notifySmsTemplate({
       order,
-      operatorId: 'backoffice-operator',
+      operatorId: currentOperatorId,
       type: 'ORDER_READY',
       daysReady: null,
     });
@@ -1565,7 +1566,7 @@ export function DashboardPage() {
         isOpen={isNotifyModalOpen}
         onClose={() => setIsNotifyModalOpen(false)}
         onSent={handleNotified}
-        operatorId="backoffice-operator"
+        operatorId={currentOperatorId}
         templateType={notifyTemplateType}
         daysReady={notifyDaysReady}
       />
@@ -1578,7 +1579,7 @@ export function DashboardPage() {
           setProcessedOrder(null);
         }}
         onSent={handleProcessedNotified}
-        operatorId="backoffice-operator"
+        operatorId={currentOperatorId}
       />
     </div>
   );

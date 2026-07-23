@@ -126,6 +126,11 @@ function adminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUuid(id?: string | null): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
 function formatPhoneFromDb(raw: string | number | null | undefined): string | null {
   if (raw == null) return null;
   return normalizeToE164(String(raw));
@@ -327,7 +332,7 @@ async function handleOrderNotifyFlow(
     idempotency_key: idempotencyKey,
     order_id: orderId,
     template_type: type,
-    operator_id: operatorId ?? auth.user!.id,
+    operator_id: isValidUuid(operatorId) ? operatorId! : auth.user!.id,
     phone: phoneE164,
   });
   if (!claim.ok) return guardResponse(claim);
@@ -382,16 +387,26 @@ Deno.serve(async (req) => {
     const flow = body.flow as string | undefined;
 
     if (flow === 'reminder' || (body.taskId && body.phone && body.message && !body.orderId)) {
-      return handleReminderFlow(req, body);
+      return await handleReminderFlow(req, body);
     }
 
     if (flow === 'order_notify' || body.orderId) {
-      return handleOrderNotifyFlow(req, body, origin);
+      return await handleOrderNotifyFlow(req, body, origin);
     }
 
     return json({ ok: false, error: 'Unknown flow; use flow=reminder or flow=order_notify' }, 400);
   } catch (err) {
-    console.error('send-reminder-sms error:', err);
-    return json({ ok: false, error: String(err) }, 500);
+    console.error('send-reminder-sms UNHANDLED error:', err);
+    // Always return CORS headers so the browser can read the error
+    return new Response(
+      JSON.stringify({ ok: false, error: String(err) }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 });
