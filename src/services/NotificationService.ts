@@ -183,7 +183,7 @@ class NotificationServiceImpl {
     this.unsubscribers = [];
     if (this.supabaseChannel) {
       try {
-        void this.supabaseChannel.unsubscribe();
+        void supabase.removeChannel(this.supabaseChannel);
       } catch {
         // Channel may already be closed
       }
@@ -217,7 +217,7 @@ class NotificationServiceImpl {
     // Subscribe to inserts on receipt_notification
     try {
       // Supabase v2 channel
-      const ch = supabase.channel('public:receipt_notification');
+      const ch = supabase.channel(`public:receipt_notification:${Date.now()}`);
       ch.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'receipt_notification' },
