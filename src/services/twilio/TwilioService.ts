@@ -191,6 +191,9 @@ async function callBackend(req: NotifySmsRequest): Promise<NotifySmsResponse> {
   });
 
   if (error) {
+    console.error('[callBackend] Edge Function invoke error:', error);
+    console.error('[callBackend] Error name:', error.name);
+    console.error('[callBackend] Error context:', (error as Record<string, unknown>).context);
     return {
       ok: false,
       errorCode: 'NETWORK',
