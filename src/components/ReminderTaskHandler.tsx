@@ -51,7 +51,7 @@ export const ReminderTaskHandler: React.FC = () => {
         }
 
         // Subscribe to new pending tasks
-        channel = supabase.channel('reminder-tasks-handler');
+        channel = supabase.channel(`reminder-tasks-handler:${Date.now()}`);
         channel.on(
           'postgres_changes',
           {
@@ -85,7 +85,7 @@ export const ReminderTaskHandler: React.FC = () => {
 
     return () => {
       if (channel) {
-        void channel.unsubscribe();
+        void supabase.removeChannel(channel);
       }
     };
   }, []);
