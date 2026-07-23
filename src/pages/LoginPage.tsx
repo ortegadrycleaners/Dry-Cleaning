@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/i18n';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -10,13 +10,18 @@ import { Sparkles, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { session, loading, login } = useAuth();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Si la sesión ya está verificada y existe, redirigir al dashboard
+  if (!loading && session) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const cleanInputValue = (value: string) =>
     value
