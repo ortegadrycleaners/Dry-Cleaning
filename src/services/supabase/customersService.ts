@@ -122,11 +122,11 @@ export async function searchCustomersByPhone(query: string): Promise<Customer[]>
   }
 
   // Buscar clientes cuyo phone_number contiene los dígitos dados.
-  // En PostgREST, usamos cast a text y wildcard con * para mantener el filtro en servidor.
+  // .filter() con ilike y wildcard % es la sintaxis correcta de PostgREST para LIKE en columnas cast a text.
   const { data, error } = await supabase
     .from('client')
     .select('phone_number, name')
-    .or(`phone_number::text.like.*${digits}*`)
+    .filter('phone_number::text', 'ilike', `%${digits}%`)
     .limit(10);
 
   if (error) {
