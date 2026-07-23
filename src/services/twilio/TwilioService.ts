@@ -193,7 +193,19 @@ async function callBackend(req: NotifySmsRequest): Promise<NotifySmsResponse> {
   if (error) {
     console.error('[callBackend] Edge Function invoke error:', error);
     console.error('[callBackend] Error name:', error.name);
-    console.error('[callBackend] Error context:', (error as Record<string, unknown>).context);
+    // Read the response body for the actual error details
+    const ctx = (error as Record<string, unknown>).context;
+    if (ctx && typeof ctx === 'object' && 'json' in ctx && typeof (ctx as Response).json === 'function') {
+      try {
+        const body = await (ctx as Response).json();
+        console.error('[callBackend] Server error body:', body);
+        return {
+          ok: false,
+          errorCode: (body?.errorCode as TwilioErrorCode) ?? 'TWILIO_API_ERROR',
+          errorMessage: (body?.errorMessage as string) ?? (body?.error as string) ?? error.message,
+        };
+      } catch { /* could not read body */ }
+    }
     return {
       ok: false,
       errorCode: 'NETWORK',
