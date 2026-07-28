@@ -31,7 +31,7 @@ export interface TemplateContext {
   omitEstimatedDate?: boolean;
 }
 
-const DEFAULT_BRAND = 'Ortega Dry Cleaners';
+const DEFAULT_BRAND = 'Ortega Cleaners';
 
 function brand(ctx: TemplateContext): string {
   return (ctx.brandName ?? DEFAULT_BRAND).trim() || DEFAULT_BRAND;

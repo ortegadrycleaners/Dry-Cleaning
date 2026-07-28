@@ -22,7 +22,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const PUBLIC_APP_URL = (Deno.env.get('PUBLIC_APP_URL') ?? '').replace(/\/$/, '');
-const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Dry Cleaners';
+const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Cleaners';
 const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
 const REVIEW_URL =
   Deno.env.get('REVIEW_URL') ??
