@@ -1174,7 +1174,7 @@ export function DashboardPage() {
                 className="h-6 sm:h-8 w-auto"
               />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
-                {t('dashboard.header.currentLocation')} <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
+                {t('dashboard.header.currentLocation')} <span className="ml-2 font-semibold text-white">Ortega Cleaners</span>
               </div>
             </div>
             <div className="flex items-center gap-3">

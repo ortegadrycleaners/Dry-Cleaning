@@ -1,4 +1,4 @@
-# 🧪 Plan de Pruebas Manuales — Ortega Dry Cleaners
+# 🧪 Plan de Pruebas Manuales — Ortega Cleaners
 
 > **Restricción importante**: Solo se dispone del número de Twilio (número de prueba) para recibir SMS reales. Toda prueba de SMS debe enviarse a ese número o verificarse en modo mock.
 
@@ -159,7 +159,7 @@
 | # | Acción | Resultado esperado |
 |---|--------|-------------------|
 | 5.5.1 | Orden en LISTO (< 3 días) → click **Notificar Cliente** | Abre modal con template ORDER_READY pre-seleccionado |
-| 5.5.2 | Preview del mensaje | "Hi [nombre], your order is ready at Ortega Dry Cleaners!..." |
+| 5.5.2 | Preview del mensaje | "Hi [nombre], your order is ready at Ortega Cleaners!..." |
 | 5.5.3 | Enviar al número Twilio | SMS llega correcto |
 | 5.5.4 | Después de enviar → botón desaparece | No vuelve a aparecer "Notificar Cliente" |
 
@@ -190,7 +190,7 @@
 
 | # | Acción | Resultado esperado |
 |---|--------|-------------------|
-| 5.9.1 | Seleccionar template **Thank You Review** | Preview: "Thanks for choosing Ortega Dry Cleaners, [nombre]! We'd love your feedback: [URL]" |
+| 5.9.1 | Seleccionar template **Thank You Review** | Preview: "Thanks for choosing Ortega Cleaners, [nombre]! We'd love your feedback: [URL]" |
 | 5.9.2 | Verificar que la URL de review es la de Google | URL de Google Maps/Reviews de la tienda |
 
 ---
@@ -313,11 +313,11 @@ Usar este resumen para el día de prueba con el número real:
 | ORDER_PROCESSED (con nota) | "being processed! Note: [tu nota]. Est. ready:" |
 | ORDER_PROCESSED (sin fecha) | "update on your order: [nota]. Please contact us" |
 | ORDER_DELAYED | "needs one more day. New ready date:" |
-| ORDER_READY | "your order is ready at Ortega Dry Cleaners! Stop by" |
+| ORDER_READY | "your order is ready at Ortega Cleaners! Stop by" |
 | PICKUP_REMINDER | "been ready for 3 days. Stop by whenever you can!" |
 | URGENT_REMINDER | "been ready for 5 days...need help? Call us at (904) 666-0809" |
 | DAY_30_REMINDER | "been ready for 30 days...Please contact us to arrange pickup" |
-| THANK_YOU_REVIEW | "Thanks for choosing Ortega Dry Cleaners...We'd love your feedback:" |
+| THANK_YOU_REVIEW | "Thanks for choosing Ortega Cleaners...We'd love your feedback:" |
 
 ---
 

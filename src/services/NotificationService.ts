@@ -37,7 +37,7 @@ export const EVENT_NAMES = {
 /* ---------- Plantillas de mensajes ---------- */
 
 function buildMessage(type: NotificationEventType, vars: MessageTemplateVars): string {
-  const brand = 'Ortega Dry Cleaners';
+  const brand = 'Ortega Cleaners';
   const estimatedDate = vars.estimatedDate?.trim() || 'TBD';
   const estimatedDay = vars.estimatedDay?.trim();
   const dayPrefix = estimatedDay ? `${estimatedDay}, ` : '';
