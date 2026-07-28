@@ -301,11 +301,11 @@ function BrandInfoSection() {
   const { t } = useI18n();
   return (
     <section className="w-full max-w-3xl mx-auto mt-10 sm:mt-16 space-y-6">
-      {/* Información de Ortega Dry Cleaners en un solo contenedor */}
+      {/* Información de Ortega Cleaners en un solo contenedor */}
       <Card className="bg-white rounded-[28px] border border-[#F0E8D8] shadow-sm">
         <CardContent className="p-4 sm:p-5">
           <h3 className="text-sm font-semibold tracking-[0.18em] text-[#1B2A4A] uppercase mb-4">
-            Ortega Dry Cleaners
+            Ortega Cleaners
           </h3>
           <div className="space-y-3">
             <div className="flex items-center gap-2 rounded-2xl border border-[#E8E8F0] bg-[#FAFAFC] p-3">
@@ -513,7 +513,7 @@ return (
                 className="h-6 sm:h-8 w-auto"
               />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
-                {t('tracking.header.branch', { branchName: 'Ortega Dry Cleaners' })}
+                {t('tracking.header.branch', { branchName: 'Ortega Cleaners' })}
               </div>
             </div>
             <div className="flex items-center gap-3">

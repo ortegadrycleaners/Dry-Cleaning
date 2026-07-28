@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-const BRAND = 'Ortega Dry Cleaners';
+const BRAND = 'Ortega Cleaners';
 const SUPPORT_EMAIL = 'info@ortegadrycleaners.com';
 const SUPPORT_PHONE = '+1 904 666 0809';
 const SUPPORT_ADDRESS = '5330 Ortega Blvd, Jacksonville, FL 32210, United States';

@@ -242,7 +242,7 @@ export function NewOrderPage() {
             <div className="flex items-center gap-3">
               <img src={`${baseUrl}svg/zivo-wordmark-white.svg`} alt="zivo" className="h-6 sm:h-8 w-auto" />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
-                Estás en <span className="ml-2 font-semibold text-white">Ortega Dry Cleaners</span>
+                Estás en <span className="ml-2 font-semibold text-white">Ortega Cleaners</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
