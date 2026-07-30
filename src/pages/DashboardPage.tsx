@@ -71,7 +71,7 @@ interface MarkReadyModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (rackNumber: string) => void;
+  onConfirm: (rackNumber: string) => Promise<boolean>;
   onSendSms: (order: Order) => Promise<void>;
   validateRackNumber?: (rackNumber: string) => string | null | Promise<string | null>;
 }
@@ -132,6 +132,8 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validate
     });
   }, [countdown, step, order, onSendSms, onClose]);
 
+  const [isConfirming, setIsConfirming] = useState(false);
+
   const handleConfirm = async () => {
     const trimmedRack = rackNumber.trim();
     if (!trimmedRack) {
@@ -147,7 +149,14 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validate
       }
     }
 
-    onConfirm(trimmedRack);
+    setIsConfirming(true);
+    const persisted = await onConfirm(trimmedRack);
+    setIsConfirming(false);
+    if (!persisted) {
+      setError(t('dashboard.markReady.statusUpdateFailed'));
+      return;
+    }
+
     setError('');
     setRackNumber('');
     setStep('countdown');
@@ -216,7 +225,8 @@ function MarkReadyModal({ order, isOpen, onClose, onConfirm, onSendSms, validate
             </p>
             <Button
               onClick={() => void handleConfirm()}
-              className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold"
+              disabled={isConfirming}
+              className="w-full h-11 bg-[#3B4BFF] hover:bg-[#2F3DE6] text-white font-semibold disabled:opacity-60"
             >
               {t('dashboard.markReady.confirmButton')}
             </Button>
@@ -1069,11 +1079,20 @@ export function DashboardPage() {
     setIsReadyModalOpen(true);
   };
 
-  const handleConfirmReady = (rackNumber: string) => {
-    if (selectedOrder) {
-      updateOrderStatus(selectedOrder.id, 'LISTO', rackNumber);
-      // El modal maneja el countdown y el SMS — no cerramos aquí
+  const handleConfirmReady = async (rackNumber: string): Promise<boolean> => {
+    if (!selectedOrder) return false;
+    // El modal espera esta promesa antes de iniciar el countdown del SMS,
+    // para no notificar con un estado que todavía no se guardó.
+    const persisted = await updateOrderStatus(selectedOrder.id, 'LISTO', rackNumber);
+    if (persisted) {
+      // selectedOrder es una referencia congelada tomada al abrir el modal;
+      // sin esto, el SMS se manda con status/rackNumber viejos y el guard
+      // de checkOrderState lo rechaza como "no está LISTA".
+      setSelectedOrder((prev) =>
+        prev ? { ...prev, status: 'LISTO', rackNumber, daysReady: 0 } : prev
+      );
     }
+    return persisted;
   };
 
   const handleSendReadySms = async (order: Order) => {
