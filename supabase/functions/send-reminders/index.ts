@@ -13,7 +13,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN') ?? '';
-const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? '';
+const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? Deno.env.get('TWILIO_FROM_NUMBER') ?? '';
+const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID') ?? '';
 const PUBLIC_APP_URL = (Deno.env.get('PUBLIC_APP_URL') ?? '').replace(/\/$/, '');
 const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Cleaners';
 const STORE_PHONE = Deno.env.get('STORE_PHONE') ?? '(904) 666-0809';
@@ -22,10 +23,21 @@ const STATUS_CALLBACK_URL =
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/twilio-status-callback` : '');
 
 async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }> {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    throw new Error('Twilio is not configured on the server (missing SID/Token)');
+  }
+  if (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_FROM) {
+    throw new Error('Twilio is not configured on the server (need TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM)');
+  }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
   const form = new URLSearchParams();
   form.append('To', to);
-  form.append('From', TWILIO_FROM);
+  // Prefer Messaging Service SID over direct From number
+  if (TWILIO_MESSAGING_SERVICE_SID) {
+    form.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
+  } else {
+    form.append('From', TWILIO_FROM);
+  }
   form.append('Body', body);
   if (STATUS_CALLBACK_URL) {
     form.append('StatusCallback', STATUS_CALLBACK_URL);
