@@ -33,7 +33,7 @@ interface OrdersContextType {
   setAutoRefreshAfterStatusChange: (value: boolean) => void;
   goToPage: (page: number) => void;
   refreshOrders: (page?: number) => Promise<void>;
-  updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => Promise<boolean>;
   addOrder: (order: Order) => Promise<InsertOrderResult>;
 }
 
@@ -174,20 +174,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         })
       );
 
-      // Persistir en Supabase (en background, sin bloquear UI)
-      updateOrderStatusInDb(orderId, status, rackNumber).then((ok) => {
+      // Persistir en Supabase; se retorna la promesa para que quien llame
+      // pueda esperar la confirmación real antes de acciones dependientes (ej. SMS).
+      return updateOrderStatusInDb(orderId, status, rackNumber).then((ok) => {
         if (!ok) {
           console.error('[OrdersContext] No se pudo actualizar el estado en Supabase');
-          return;
+          return false;
         }
 
-        if (status === 'ENTREGADO') {
-          return;
-        }
-
-        if (autoRefreshAfterStatusChange) {
+        if (status !== 'ENTREGADO' && autoRefreshAfterStatusChange) {
           void loadOrdersPage(page);
         }
+        return true;
       });
     },
     [loadOrdersPage, page]
