@@ -9,3 +9,4 @@
 /pnpm-debug.log*
 /coverage
 supabase/.temp/
+.DS_Store
