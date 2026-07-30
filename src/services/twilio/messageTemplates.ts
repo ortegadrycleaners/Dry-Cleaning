@@ -64,10 +64,10 @@ export function renderTemplate(type: NotificationEventType, ctx: TemplateContext
       }
       if (note) {
         // Hay novedad + fecha estimada
-        return `${brand(ctx)}: Hi ${ctx.customerName}, your order is being processed! Note: ${note}. Est. ready: ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
+        return `${brand(ctx)}: Hi ${ctx.customerName}, your order is being processed! Note: ${note}. Estimated ready: ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
       }
       // Base: sin novedad
-      return `${brand(ctx)}: Hi ${ctx.customerName}! Your order is being processed, est. ready by ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
+      return `${brand(ctx)}: Hi ${ctx.customerName}! Your order is being processed, estimated ready by ${dayPrefix}${estimatedDate}. Track: ${ctx.trackingUrl}`;
     }
     case 'ORDER_DELAYED':
       return `${brand(ctx)}: Hi, your order needs one more day. New ready date: ${dayPrefix}${estimatedDate}. Sorry for the wait! ${ctx.trackingUrl}`;
