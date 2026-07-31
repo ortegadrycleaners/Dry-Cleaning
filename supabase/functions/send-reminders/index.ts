@@ -6,14 +6,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { renderTemplate } from '../_shared/messageTemplates.ts';
-import { runServerGuards, claimIdempotency, updateSmsSendSid } from '../_shared/guards.ts';
+import {
+  runServerGuards,
+  claimIdempotency,
+  updateSmsSendSid,
+  markSmsSendFailed,
+  markReminderNotificationResult,
+} from '../_shared/guards.ts';
 import { normalizeToE164, isValidE164 } from '../_shared/phoneValidation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN') ?? '';
-const TWILIO_FROM = Deno.env.get('TWILIO_FROM') ?? Deno.env.get('TWILIO_FROM_NUMBER') ?? '';
 const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get('TWILIO_MESSAGING_SERVICE_SID') ?? '';
 const PUBLIC_APP_URL = (Deno.env.get('PUBLIC_APP_URL') ?? '').replace(/\/$/, '');
 const BRAND_NAME = Deno.env.get('BRAND_NAME') ?? 'Ortega Cleaners';
@@ -26,18 +31,18 @@ async function sendTwilioSms(to: string, body: string): Promise<{ sid: string }>
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     throw new Error('Twilio is not configured on the server (missing SID/Token)');
   }
-  if (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_FROM) {
-    throw new Error('Twilio is not configured on the server (need TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM)');
+  if (!TWILIO_MESSAGING_SERVICE_SID) {
+    // Sending via a raw From number instead of the Messaging Service triggers
+    // Twilio error 30034 (US A2P 10DLC - message from an unregistered number).
+    throw new Error(
+      'Twilio is not configured on the server (missing TWILIO_MESSAGING_SERVICE_SID). ' +
+        'Sending via a direct From number is disabled to avoid Twilio error 30034.',
+    );
   }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
   const form = new URLSearchParams();
   form.append('To', to);
-  // Prefer Messaging Service SID over direct From number
-  if (TWILIO_MESSAGING_SERVICE_SID) {
-    form.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
-  } else {
-    form.append('From', TWILIO_FROM);
-  }
+  form.append('MessagingServiceSid', TWILIO_MESSAGING_SERVICE_SID);
   form.append('Body', body);
   if (STATUS_CALLBACK_URL) {
     form.append('StatusCallback', STATUS_CALLBACK_URL);
@@ -74,6 +79,7 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       const receiptId = row.receipt_id as string;
       const milestone = row.milestone as number;
+      const idempotencyKey = `${receiptId}:${milestone}`;
       const templateType =
         milestone === 3 ? 'PICKUP_REMINDER' : milestone === 5 ? 'URGENT_REMINDER' : 'DAY_30_REMINDER';
 
@@ -86,6 +92,12 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (recError || !receipt) {
+        console.error(`send-reminders: receipt not found for ${receiptId}`, recError);
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: 'RECEIPT_NOT_FOUND',
+          errorMessage: recError?.message ?? 'receipt not found',
+        });
         results.push({ receiptId, milestone, status: 'failed', error: 'receipt not found' });
         continue;
       }
@@ -93,17 +105,27 @@ Deno.serve(async (req) => {
       const client = Array.isArray(receipt.client) ? receipt.client[0] : receipt.client;
       const phoneE164 = normalizeToE164(String(client?.phone_number ?? ''));
       if (!phoneE164 || !isValidE164(phoneE164)) {
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: 'INVALID_PHONE',
+          errorMessage: 'invalid phone',
+        });
         results.push({ receiptId, milestone, status: 'skipped', error: 'invalid phone' });
         continue;
       }
 
       const { result: guardResult } = await runServerGuards(admin, phoneE164);
       if (!guardResult.ok) {
+        console.error(`send-reminders: blocked for ${receiptId} milestone ${milestone}: ${guardResult.errorCode}`);
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: guardResult.errorCode,
+          errorMessage: guardResult.errorMessage,
+        });
         results.push({ receiptId, milestone, status: 'blocked', error: guardResult.errorCode });
         continue;
       }
 
-      const idempotencyKey = `${receiptId}:${milestone}`;
       const claim = await claimIdempotency(admin, {
         idempotency_key: idempotencyKey,
         order_id: receiptId,
@@ -131,8 +153,12 @@ Deno.serve(async (req) => {
       try {
         const twilio = await sendTwilioSms(phoneE164, message);
         await updateSmsSendSid(admin, idempotencyKey, twilio.sid);
+        await markReminderNotificationResult(admin, idempotencyKey, { status: 'sent', messageSid: twilio.sid });
         results.push({ receiptId, milestone, status: 'sent', messageSid: twilio.sid });
       } catch (err) {
+        console.error(`send-reminders: Twilio send failed for ${receiptId} milestone ${milestone}:`, err);
+        await markSmsSendFailed(admin, idempotencyKey, { errorMessage: String(err) });
+        await markReminderNotificationResult(admin, idempotencyKey, { status: 'failed', errorMessage: String(err) });
         results.push({ receiptId, milestone, status: 'failed', error: String(err) });
       }
     }

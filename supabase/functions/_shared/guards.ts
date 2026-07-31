@@ -11,7 +11,8 @@ export type TwilioErrorCode =
   | 'RATE_LIMIT_GLOBAL'
   | 'ALLOWLIST_BLOCKED'
   | 'INVALID_PHONE'
-  | 'DUPLICATE';
+  | 'DUPLICATE'
+  | 'OPTED_OUT';
 
 export interface GuardFail {
   ok: false;
@@ -79,6 +80,24 @@ export function checkPhone(raw: string): GuardResult {
   return { ok: true };
 }
 
+/** Blocks sends to numbers that replied STOP (see twilio-inbound-sms). */
+export async function checkOptOut(admin: SupabaseClient, phoneE164: string): Promise<GuardResult> {
+  const { data, error } = await admin
+    .from('sms_opt_out')
+    .select('phone_e164')
+    .eq('phone_e164', phoneE164)
+    .maybeSingle();
+
+  if (error) {
+    console.error('checkOptOut error:', error);
+    return { ok: true };
+  }
+  if (data) {
+    return fail('OPTED_OUT', `Phone ${phoneE164} opted out of SMS (replied STOP).`);
+  }
+  return { ok: true };
+}
+
 export async function checkDailyBudget(admin: SupabaseClient): Promise<GuardResult> {
   const { dailyBudget } = getServerSmsConfig();
   const since = new Date();
@@ -120,7 +139,11 @@ export async function checkGlobalPerMinute(admin: SupabaseClient): Promise<Guard
   return { ok: true };
 }
 
-/** Inserta idempotency; conflicto => DUPLICATE. */
+/**
+ * Inserta idempotency; conflicto => DUPLICATE, salvo que el intento previo
+ * haya fallado (status='failed'), en cuyo caso se reclama de nuevo para
+ * permitir un reintento en vez de perder el envío para siempre.
+ */
 export async function claimIdempotency(
   admin: SupabaseClient,
   row: {
@@ -131,16 +154,34 @@ export async function claimIdempotency(
     phone: string | null;
   },
 ): Promise<GuardResult> {
-  const { error } = await admin.from('sms_sends').insert(row);
+  const { error } = await admin.from('sms_sends').insert({ ...row, status: 'claimed' });
 
-  if (error?.code === '23505') {
-    return fail('DUPLICATE', 'This notification was already sent (idempotency).');
-  }
-  if (error) {
+  if (!error) return { ok: true };
+
+  if (error.code !== '23505') {
     console.error('claimIdempotency error:', error);
     throw new Error(error.message);
   }
-  return { ok: true };
+
+  const { data, error: reclaimError } = await admin
+    .from('sms_sends')
+    .update({
+      status: 'claimed',
+      error_code: null,
+      error_message: null,
+      created_at: new Date().toISOString(),
+    })
+    .eq('idempotency_key', row.idempotency_key)
+    .eq('status', 'failed')
+    .select('idempotency_key');
+
+  if (reclaimError) {
+    console.error('claimIdempotency reclaim error:', reclaimError);
+    throw new Error(reclaimError.message);
+  }
+
+  if ((data?.length ?? 0) > 0) return { ok: true };
+  return fail('DUPLICATE', 'This notification was already sent (idempotency).');
 }
 
 export async function updateSmsSendSid(
@@ -148,7 +189,56 @@ export async function updateSmsSendSid(
   idempotencyKey: string,
   messageSid: string,
 ): Promise<void> {
-  await admin.from('sms_sends').update({ message_sid: messageSid }).eq('idempotency_key', idempotencyKey);
+  await admin
+    .from('sms_sends')
+    .update({ message_sid: messageSid, status: 'sent', status_updated_at: new Date().toISOString() })
+    .eq('idempotency_key', idempotencyKey);
+}
+
+/** Persiste un rechazo inmediato de Twilio (antes de obtener sid) en sms_sends. */
+export async function markSmsSendFailed(
+  admin: SupabaseClient,
+  idempotencyKey: string,
+  info: { errorCode?: string | null; errorMessage: string },
+): Promise<void> {
+  const { error } = await admin
+    .from('sms_sends')
+    .update({
+      status: 'failed',
+      error_code: info.errorCode ?? null,
+      error_message: info.errorMessage,
+      status_updated_at: new Date().toISOString(),
+    })
+    .eq('idempotency_key', idempotencyKey);
+
+  if (error) console.error('markSmsSendFailed error:', error);
+}
+
+/** Persiste el resultado de un intento de recordatorio automático en receipt_notification. */
+export async function markReminderNotificationResult(
+  admin: SupabaseClient,
+  idempotencyKey: string,
+  result:
+    | { status: 'sent'; messageSid: string }
+    | { status: 'failed'; errorCode?: string | null; errorMessage: string },
+): Promise<void> {
+  const patch =
+    result.status === 'sent'
+      ? {
+          status: 'sent',
+          message_sid: result.messageSid,
+          sent_at: new Date().toISOString(),
+          error_code: null,
+          error_message: null,
+        }
+      : {
+          status: 'failed',
+          error_code: result.errorCode ?? null,
+          error_message: result.errorMessage,
+        };
+
+  const { error } = await admin.from('receipt_notification').update(patch).eq('idempotency_key', idempotencyKey);
+  if (error) console.error('markReminderNotificationResult error:', error);
 }
 
 export interface StatusCallbackUpdate {
@@ -191,6 +281,10 @@ export async function runServerGuards(
     async () => {
       const normalized = normalizeToE164(phoneRaw);
       return normalized ? checkAllowlist(normalized) : fail('INVALID_PHONE', 'Invalid phone');
+    },
+    async () => {
+      const normalized = normalizeToE164(phoneRaw);
+      return normalized ? checkOptOut(admin, normalized) : fail('INVALID_PHONE', 'Invalid phone');
     },
     () => checkDailyBudget(admin),
     () => checkGlobalPerMinute(admin),

@@ -104,6 +104,40 @@ El endpoint valida `X-Twilio-Signature` con el mismo `TWILIO_AUTH_TOKEN` que usa
 envío — si no coincide devuelve `403` sin tocar la base de datos. Responde `204`
 en éxito (Twilio no necesita cuerpo de respuesta en un status callback).
 
+## 3ter. Opt-out (STOP/START): `twilio-inbound-sms`
+
+Twilio notifica cada SMS entrante (respuestas del cliente) vía webhook. La función
+`supabase/functions/twilio-inbound-sms` recibe ese POST y:
+
+- Si el `Body` es `STOP`/`STOPALL`/`UNSUBSCRIBE`/`CANCEL`/`END`/`QUIT`, agrega el
+  teléfono a `sms_opt_out` y responde con TwiML confirmando la baja.
+- Si el `Body` es `START`/`YES`/`UNSTOP`, elimina el teléfono de `sms_opt_out`
+  (vuelve a habilitar envíos) y responde confirmando el alta.
+- Cualquier otro texto se reconoce con un TwiML vacío (sin reenviar a la
+  respuesta de demo de Twilio, que es la causa de los errores `30039`
+  documentados en `docs/TWILIO_DIAGNOSTICS.md`).
+
+El guard `checkOptOut` (`_shared/guards.ts`, incluido en `runServerGuards`)
+bloquea con `OPTED_OUT` cualquier intento de envío a un número presente en
+`sms_opt_out`, en todos los flujos (`send-reminder-sms`, `send-reminders`).
+
+Despliegue:
+
+```bash
+supabase functions deploy twilio-inbound-sms --no-verify-jwt
+supabase secrets set TWILIO_AUTH_TOKEN=...   # ya debería estar seteado
+```
+
+Luego, en Twilio Console → Phone Numbers → tu número → **Messaging** →
+"A message comes in", apunta el webhook a
+`${SUPABASE_URL}/functions/v1/twilio-inbound-sms` (método `HTTP POST`). Si el
+número está dentro de un Messaging Service con múltiples senders, este webhook
+debe configurarse en cada número del Sender Pool (o a nivel de Messaging
+Service, según tu plan de Twilio).
+
+Aplica también la migración `supabase/migrations/20260731000000_reminder_retry_and_optout.sql`
+(crea `sms_opt_out` y hace retry-safe el claim de `receipt_notification`).
+
 ### Referencia histórica: `notify-order-ready`
 
 Antes se documentaba una función separada `notify-order-ready` que:
@@ -398,6 +432,7 @@ llamar a Twilio.
 | `ALLOWLIST_BLOCKED` | Modo QA y el destino no está en la lista. |
 | `NETWORK` | Timeout o fallo de red al llamar al backend. |
 | `TWILIO_API_ERROR` | Twilio devolvió un error (revisa el log del backend). |
+| `OPTED_OUT` | El teléfono respondió STOP (ver `sms_opt_out` / `twilio-inbound-sms`). |
 
 ---
 
