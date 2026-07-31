@@ -6,7 +6,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { renderTemplate } from '../_shared/messageTemplates.ts';
-import { runServerGuards, claimIdempotency, updateSmsSendSid } from '../_shared/guards.ts';
+import {
+  runServerGuards,
+  claimIdempotency,
+  updateSmsSendSid,
+  markSmsSendFailed,
+  markReminderNotificationResult,
+} from '../_shared/guards.ts';
 import { normalizeToE164, isValidE164 } from '../_shared/phoneValidation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -73,6 +79,7 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       const receiptId = row.receipt_id as string;
       const milestone = row.milestone as number;
+      const idempotencyKey = `${receiptId}:${milestone}`;
       const templateType =
         milestone === 3 ? 'PICKUP_REMINDER' : milestone === 5 ? 'URGENT_REMINDER' : 'DAY_30_REMINDER';
 
@@ -85,6 +92,12 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (recError || !receipt) {
+        console.error(`send-reminders: receipt not found for ${receiptId}`, recError);
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: 'RECEIPT_NOT_FOUND',
+          errorMessage: recError?.message ?? 'receipt not found',
+        });
         results.push({ receiptId, milestone, status: 'failed', error: 'receipt not found' });
         continue;
       }
@@ -92,17 +105,27 @@ Deno.serve(async (req) => {
       const client = Array.isArray(receipt.client) ? receipt.client[0] : receipt.client;
       const phoneE164 = normalizeToE164(String(client?.phone_number ?? ''));
       if (!phoneE164 || !isValidE164(phoneE164)) {
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: 'INVALID_PHONE',
+          errorMessage: 'invalid phone',
+        });
         results.push({ receiptId, milestone, status: 'skipped', error: 'invalid phone' });
         continue;
       }
 
       const { result: guardResult } = await runServerGuards(admin, phoneE164);
       if (!guardResult.ok) {
+        console.error(`send-reminders: blocked for ${receiptId} milestone ${milestone}: ${guardResult.errorCode}`);
+        await markReminderNotificationResult(admin, idempotencyKey, {
+          status: 'failed',
+          errorCode: guardResult.errorCode,
+          errorMessage: guardResult.errorMessage,
+        });
         results.push({ receiptId, milestone, status: 'blocked', error: guardResult.errorCode });
         continue;
       }
 
-      const idempotencyKey = `${receiptId}:${milestone}`;
       const claim = await claimIdempotency(admin, {
         idempotency_key: idempotencyKey,
         order_id: receiptId,
@@ -130,8 +153,12 @@ Deno.serve(async (req) => {
       try {
         const twilio = await sendTwilioSms(phoneE164, message);
         await updateSmsSendSid(admin, idempotencyKey, twilio.sid);
+        await markReminderNotificationResult(admin, idempotencyKey, { status: 'sent', messageSid: twilio.sid });
         results.push({ receiptId, milestone, status: 'sent', messageSid: twilio.sid });
       } catch (err) {
+        console.error(`send-reminders: Twilio send failed for ${receiptId} milestone ${milestone}:`, err);
+        await markSmsSendFailed(admin, idempotencyKey, { errorMessage: String(err) });
+        await markReminderNotificationResult(admin, idempotencyKey, { status: 'failed', errorMessage: String(err) });
         results.push({ receiptId, milestone, status: 'failed', error: String(err) });
       }
     }

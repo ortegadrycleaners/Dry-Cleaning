@@ -10,6 +10,7 @@ import {
   claimIdempotency,
   runServerGuards,
   updateSmsSendSid,
+  markSmsSendFailed,
   type GuardFail,
 } from '../_shared/guards.ts';
 import { isValidE164, normalizeToE164 } from '../_shared/phoneValidation.ts';
@@ -215,6 +216,7 @@ async function handleReminderFlow(
       .from('receipt_reminder_task')
       .update({ status: 'failed', attempted_at: new Date().toISOString() })
       .eq('id', taskId);
+    await markSmsSendFailed(admin, idempotencyKey, { errorMessage: String(err) });
     console.error('reminder SMS error:', err);
     return json({ ok: false, error: String(err) }, 500);
   }
@@ -362,6 +364,7 @@ async function handleOrderNotifyFlow(
       status: 'queued',
     });
   } catch (err) {
+    await markSmsSendFailed(admin, idempotencyKey, { errorMessage: String(err) });
     console.error('order_notify SMS error:', err);
     return json({
       ok: false,

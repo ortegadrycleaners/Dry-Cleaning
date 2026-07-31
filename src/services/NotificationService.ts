@@ -15,6 +15,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
   Notification,
   NotificationEventType,
+  NotificationStatus,
   OrderEvent,
   MessageTemplateVars,
 } from '@/types/notifications';
@@ -125,8 +126,15 @@ type NotificationRow = {
   message?: string;
   created_at?: string;
   read?: boolean;
+  status?: string;
   metadata?: { trackingToken?: string; trackingUrl?: string };
 };
+
+/** DB usa 'claimed' mientras el envío está en curso; el resto del código usa 'pending'. */
+function mapDbStatus(status: string | undefined): NotificationStatus {
+  if (status === 'sent' || status === 'failed') return status;
+  return 'pending';
+}
 
 /* ---------- Servicio ---------- */
 
@@ -214,7 +222,10 @@ class NotificationServiceImpl {
       console.warn('[NotificationService] could not load initial notifications', err);
     }
 
-    // Subscribe to inserts on receipt_notification
+    // Subscribe to inserts + updates on receipt_notification. Rows are
+    // inserted with status='claimed' before the SMS send is attempted and
+    // later updated to 'sent'/'failed' once the real Twilio outcome is known
+    // (see markReminderNotificationResult in supabase/functions/_shared/guards.ts).
     try {
       // Supabase v2 channel
       const ch = supabase.channel(`public:receipt_notification:${Date.now()}`);
@@ -228,6 +239,17 @@ class NotificationServiceImpl {
           const notifications = [notification, ...loadNotifications()];
           saveNotifications(notifications);
           this.onNotification?.(notification);
+        }
+      );
+      ch.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'receipt_notification' },
+        (payload: { record?: NotificationRow; new?: NotificationRow }) => {
+          const row = payload.record ?? payload.new;
+          if (!row?.id) return;
+          const updated = this.mapRowToNotification(row);
+          const notifications = loadNotifications().map((n) => (n.id === updated.id ? { ...n, ...updated, read: n.read } : n));
+          saveNotifications(notifications);
         }
       );
       await ch.subscribe();
@@ -253,7 +275,7 @@ class NotificationServiceImpl {
       phone: (row.phone as string) ?? '',
       message: (row.message as string) ?? '',
       channel: 'sms',
-      status: 'sent',
+      status: mapDbStatus(row.status),
       createdAt: (row.created_at as string) ?? new Date().toISOString(),
       trackingToken,
       trackingUrl,
