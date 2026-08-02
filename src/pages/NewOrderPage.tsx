@@ -450,15 +450,29 @@ export function NewOrderPage() {
                 {/* Quick Select Buttons */}
                 <div className="flex gap-2">
                   {(() => {
+                    const d0 = getDateValue(0);
                     const d1 = getDateValue(1);
                     const d3 = getDateValue(3);
                     const d5 = getDateValue(5);
+                    const sel0 = orderForm.estimatedDate === d0;
                     const sel1 = orderForm.estimatedDate === d1;
                     const sel3 = orderForm.estimatedDate === d3;
                     const sel5 = orderForm.estimatedDate === d5;
 
                     return (
                       <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => orderForm.handleQuickDate(0)}
+                          className={
+                            sel0
+                              ? 'flex-1 h-10 bg-[#3B4BFF] text-white'
+                              : 'flex-1 h-10 border-gray-200 hover:bg-[#EEF2FF] hover:border-[#3B4BFF]'
+                          }
+                        >
+                          {t('newOrder.quickDate0')}
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
