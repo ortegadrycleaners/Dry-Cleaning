@@ -105,7 +105,7 @@ export function NewOrderPage() {
       customerName: data.name,
       phone: data.phone,
       ...(combinedNotes ? { notes: combinedNotes } : {}),
-      estimatedDate: orderForm.formatDateDisplay(orderForm.estimatedDate),
+      estimatedDate: orderForm.estimatedDate,
       status: 'RECIBIDO',
       createdAt,
     };

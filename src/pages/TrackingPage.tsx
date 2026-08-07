@@ -134,7 +134,7 @@ function RackLocation({ rackNumber }: { rackNumber: string }) {
 /* ---------- Status Views ---------- */
 
 function RecibidoView({ order }: { order: Order }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className="text-center space-y-5">
@@ -149,7 +149,7 @@ function RecibidoView({ order }: { order: Order }) {
           {t('tracking.orderLabel', { orderNumber: orderTicketLabel(order) })}
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          {t('tracking.processingMessage', { estimatedDate: formatDate(order.estimatedDate) })}
+          {t('tracking.processingMessage', { estimatedDate: order.estimatedDate })}
         </p>
       </div>
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -163,7 +163,7 @@ function RecibidoView({ order }: { order: Order }) {
 }
 
 function EnProcesoView({ order }: { order: Order }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className="text-center space-y-5">
@@ -181,7 +181,7 @@ function EnProcesoView({ order }: { order: Order }) {
           })}
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          {t('tracking.processingMessage', { estimatedDate: formatDate(order.estimatedDate) })}
+          {t('tracking.processingMessage', { estimatedDate: order.estimatedDate })}
         </p>
       </div>
       <ProgressBar currentStatus="EN PROCESO" />
