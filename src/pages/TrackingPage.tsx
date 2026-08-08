@@ -419,7 +419,7 @@ export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { t } = useI18n();
   const { session } = useAuth();
-  const isAdmin = session !== null;
+  const isStaff = session !== null;
   const baseUrl = import.meta.env.BASE_URL;
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -583,8 +583,8 @@ return (
           } />
         </div>
 
-        {/* Admin-only: notas de la orden */}
-        {isAdmin && <AdminNotesSection order={orderForView} />}
+        {/* Staff-only: notas de la orden */}
+        {isStaff && <AdminNotesSection order={orderForView} />}
 
         {/* Mensaje de marca */}
         <div className="text-center mt-10 sm:mt-16 max-w-3xl mx-auto px-2">
