@@ -397,7 +397,7 @@ function AdminNotesSection({ order }: { order: Order }) {
         </div>
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <StickyNote className="w-4.5 h-4.5 text-indigo-600" />
+            <StickyNote className="w-[18px] h-[18px] text-indigo-600" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-indigo-500 uppercase tracking-wide font-medium mb-1">
