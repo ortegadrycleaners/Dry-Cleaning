@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -872,7 +873,8 @@ function useNotifiedOrderIdsByType(
 /* ---------- Order notes indicator ---------- */
 
 /** Shared notes-tooltip for both desktop table rows and mobile cards.
- *  `variant` controls tooltip positioning and interaction hint text. */
+ *  Uses a portal to avoid clipping from overflow-hidden table containers.
+ *  Click toggles showing the full note text. */
 function OrderNotesIndicator({
   order,
   variant,
@@ -882,42 +884,92 @@ function OrderNotesIndicator({
 }) {
   const { t } = useI18n();
   const label = `#${orderTicketLabel(order)}`;
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   if (!order.notes) return <>{label}</>;
 
-  const tooltipPosition =
-    variant === 'desktop'
-      ? 'left-1/2 -translate-x-1/2 max-w-[280px]'
-      : 'left-0 max-w-[240px]';
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const tooltipWidth = variant === 'desktop' ? 280 : 240;
+    let left: number;
+    if (variant === 'desktop') {
+      // Center above the button
+      left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    } else {
+      // Align to the left edge
+      left = rect.left;
+    }
+    // Clamp so it doesn't go off-screen
+    left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
+    setPos({ top: rect.top - 8, left });
+  }, [variant]);
 
-  const hintKey =
-    variant === 'desktop'
-      ? 'dashboard.table.notesClickHint'
-      : 'dashboard.table.notesTapHint';
+  // Close on outside click or scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+
+    const handleClose = (e: MouseEvent) => {
+      if (
+        tooltipRef.current && !tooltipRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    const handleScroll = () => setIsOpen(false);
+
+    document.addEventListener('mousedown', handleClose);
+    document.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClose);
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [isOpen, updatePosition]);
+
+  const maxW = variant === 'desktop' ? 280 : 240;
 
   return (
-    <span className="relative inline-flex group">
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 cursor-default focus:outline-none"
-      >
-        {label}
-        <StickyNote className="w-3 h-3 text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-      </button>
-      <span
-        className={`pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto absolute bottom-full mb-2 rounded-md bg-slate-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 whitespace-normal text-left z-50 ${tooltipPosition}`}
-      >
-        <span className="block group-focus-within:hidden">
-          {order.notes.length > 60 ? `${order.notes.slice(0, 60)}…` : order.notes}
-        </span>
-        <span className="hidden group-focus-within:block">
-          {order.notes}
-        </span>
-        {order.notes.length > 60 && (
-          <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t(hintKey)}</span>
-        )}
+    <>
+      <span className="relative inline-flex group">
+        <button
+          ref={buttonRef}
+          type="button"
+          className="inline-flex items-center gap-1 cursor-default focus:outline-none"
+          onClick={() => setIsOpen((v) => !v)}
+        >
+          {label}
+          <StickyNote className="w-3 h-3 text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+        </button>
       </span>
-    </span>
+      {isOpen && pos && createPortal(
+        <div
+          ref={tooltipRef}
+          className="fixed rounded-md bg-slate-900 px-3 py-2 text-xs text-white whitespace-normal text-left shadow-lg animate-in fade-in duration-150"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            maxWidth: maxW,
+            transform: 'translateY(-100%)',
+            zIndex: 9999,
+          }}
+        >
+          {order.notes}
+          <button
+            type="button"
+            className="block mt-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={() => setIsOpen(false)}
+          >
+            {t('common.close')}
+          </button>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
