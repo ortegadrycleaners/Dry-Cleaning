@@ -1355,7 +1355,7 @@ export function DashboardPage() {
                                   {order.notes}
                                 </span>
                                 {order.notes.length > 60 && (
-                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">click para ver todo</span>
+                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t('dashboard.table.notesClickHint')}</span>
                                 )}
                               </span>
                             </span>
@@ -1511,7 +1511,7 @@ export function DashboardPage() {
                                   {order.notes}
                                 </span>
                                 {order.notes.length > 60 && (
-                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">toca para ver todo</span>
+                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t('dashboard.table.notesTapHint')}</span>
                                 )}
                               </span>
                             </span>
