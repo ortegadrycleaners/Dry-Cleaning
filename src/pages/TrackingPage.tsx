@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Order } from '@/types';
 import { useI18n } from '@/i18n';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchOrderByPublicId } from '@/services/supabase/ordersService';
 import { daysSince, formatElapsedTime, orderTicketLabel } from '@/lib/utils';
@@ -16,6 +17,7 @@ import {
   Phone,
   Tag,
   RefreshCw,
+  StickyNote,
 } from 'lucide-react';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 
@@ -380,11 +382,44 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
   );
 }
 
+/* ---------- Admin Notes Section ---------- */
+
+function AdminNotesSection({ order }: { order: Order }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="w-full max-w-3xl mx-auto mt-4">
+      <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 backdrop-blur-sm p-4 sm:p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-100 border border-indigo-200 rounded-full px-3 py-1">
+            {t('tracking.admin.badge')}
+          </span>
+        </div>
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+            <StickyNote className="w-[18px] h-[18px] text-indigo-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-indigo-500 uppercase tracking-wide font-medium mb-1">
+              {t('tracking.admin.notesTitle')}
+            </p>
+            <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
+              {order.notes || <span className="text-slate-400 italic">{t('tracking.admin.noNotes')}</span>}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Main TrackingPage ---------- */
 
 export function TrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { t } = useI18n();
+  const { session } = useAuth();
+  const isStaff = session !== null;
   const baseUrl = import.meta.env.BASE_URL;
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -547,6 +582,9 @@ return (
               : lastRefresh
           } />
         </div>
+
+        {/* Staff-only: notas de la orden */}
+        {isStaff && <AdminNotesSection order={orderForView} />}
 
         {/* Mensaje de marca */}
         <div className="text-center mt-10 sm:mt-16 max-w-3xl mx-auto px-2">
