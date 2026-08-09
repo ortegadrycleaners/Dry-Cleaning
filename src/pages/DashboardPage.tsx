@@ -869,6 +869,58 @@ function useNotifiedOrderIdsByType(
   }, [refreshTick, type]);
 }
 
+/* ---------- Order notes indicator ---------- */
+
+/** Shared notes-tooltip for both desktop table rows and mobile cards.
+ *  `variant` controls tooltip positioning and interaction hint text. */
+function OrderNotesIndicator({
+  order,
+  variant,
+}: {
+  order: Order;
+  variant: 'desktop' | 'mobile';
+}) {
+  const { t } = useI18n();
+  const label = `#${orderTicketLabel(order)}`;
+
+  if (!order.notes) return <>{label}</>;
+
+  const tooltipPosition =
+    variant === 'desktop'
+      ? 'left-1/2 -translate-x-1/2 max-w-[280px]'
+      : 'left-0 max-w-[240px]';
+
+  const hintKey =
+    variant === 'desktop'
+      ? 'dashboard.table.notesClickHint'
+      : 'dashboard.table.notesTapHint';
+
+  return (
+    <span className="relative inline-flex group">
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 cursor-default focus:outline-none"
+      >
+        {label}
+        <StickyNote className="w-3 h-3 text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+      </button>
+      <span
+        className={`pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto absolute bottom-full mb-2 rounded-md bg-slate-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 whitespace-normal text-left z-50 ${tooltipPosition}`}
+      >
+        <span className="block group-focus-within:hidden">
+          {order.notes.length > 60 ? `${order.notes.slice(0, 60)}…` : order.notes}
+        </span>
+        <span className="hidden group-focus-within:block">
+          {order.notes}
+        </span>
+        {order.notes.length > 60 && (
+          <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t(hintKey)}</span>
+        )}
+      </span>
+    </span>
+  );
+}
+
 /* ---------- Status badge ---------- */
 
 function StatusBadge({ order }: { order: Order }) {
@@ -1338,30 +1390,7 @@ export function DashboardPage() {
                     return (
                       <TableRow key={order.id} className="hover:bg-[#FFF4E6]">
                         <TableCell className="font-medium text-[#1B2A4A]">
-                          {order.notes ? (
-                            <span className="relative inline-flex group">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 cursor-default focus:outline-none"
-                              >
-                                #{orderTicketLabel(order)}
-                                <StickyNote className="w-3 h-3 text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                              <span className="pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 max-w-[280px] whitespace-normal text-left z-50">
-                                <span className="block group-focus-within:hidden">
-                                  {order.notes.length > 60 ? `${order.notes.slice(0, 60)}…` : order.notes}
-                                </span>
-                                <span className="hidden group-focus-within:block">
-                                  {order.notes}
-                                </span>
-                                {order.notes.length > 60 && (
-                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t('dashboard.table.notesClickHint')}</span>
-                                )}
-                              </span>
-                            </span>
-                          ) : (
-                            <>#{orderTicketLabel(order)}</>
-                          )}
+                          <OrderNotesIndicator order={order} variant="desktop" />
                         </TableCell>
                         <TableCell>{order.customerName}</TableCell>
                         <TableCell className="text-gray-600">{order.phone}</TableCell>
@@ -1494,30 +1523,7 @@ export function DashboardPage() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900">
-                          {order.notes ? (
-                            <span className="relative inline-flex group">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 cursor-default focus:outline-none"
-                              >
-                                #{orderTicketLabel(order)}
-                                <StickyNote className="w-3 h-3 text-amber-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                              <span className="pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto absolute left-0 bottom-full mb-2 rounded-md bg-slate-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 max-w-[240px] whitespace-normal text-left z-50">
-                                <span className="block group-focus-within:hidden">
-                                  {order.notes.length > 60 ? `${order.notes.slice(0, 60)}…` : order.notes}
-                                </span>
-                                <span className="hidden group-focus-within:block">
-                                  {order.notes}
-                                </span>
-                                {order.notes.length > 60 && (
-                                  <span className="block mt-1 text-[10px] text-slate-400 group-focus-within:hidden">{t('dashboard.table.notesTapHint')}</span>
-                                )}
-                              </span>
-                            </span>
-                          ) : (
-                            <>#{orderTicketLabel(order)}</>
-                          )}
+                          <OrderNotesIndicator order={order} variant="mobile" />
                         </p>
                         <p className="text-sm text-gray-600 truncate">{order.customerName} · {order.phone}</p>
                         <p className="text-xs text-gray-500 mt-1">{order.estimatedDate}</p>
