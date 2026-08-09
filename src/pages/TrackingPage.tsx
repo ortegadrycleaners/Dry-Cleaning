@@ -387,6 +387,8 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 function AdminNotesSection({ order }: { order: Order }) {
   const { t } = useI18n();
 
+  if (!order.notes) return null;
+
   return (
     <div className="w-full max-w-3xl mx-auto mt-4">
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 backdrop-blur-sm p-4 sm:p-5 space-y-3">
@@ -404,7 +406,7 @@ function AdminNotesSection({ order }: { order: Order }) {
               {t('tracking.admin.notesTitle')}
             </p>
             <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
-              {order.notes || <span className="text-slate-400 italic">{t('tracking.admin.noNotes')}</span>}
+              {order.notes}
             </p>
           </div>
         </div>
