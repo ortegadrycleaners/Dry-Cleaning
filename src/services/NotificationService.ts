@@ -136,16 +136,34 @@ function mapDbStatus(status: string | undefined): NotificationStatus {
   return 'pending';
 }
 
+type SmsSendRow = {
+  message_sid?: string | null;
+  status?: string;
+  error_message?: string | null;
+};
+
+/** Solo nos interesan los estados terminales que reporta el webhook de Twilio. */
+function mapSmsSendTerminalStatus(status: string | undefined): NotificationStatus | null {
+  if (status === 'delivered' || status === 'undelivered' || status === 'failed') return status;
+  return null;
+}
+
 /* ---------- Servicio ---------- */
 
 class NotificationServiceImpl {
   private unsubscribers: (() => void)[] = [];
   private onNotification: OnNotificationCallback | null = null;
+  private onNotificationUpdate: OnNotificationCallback | null = null;
   private supabaseChannel: RealtimeChannel | null = null;
 
   /** Conecta un callback de React para recibir notificaciones nuevas en tiempo real. */
   setOnNotification(cb: OnNotificationCallback | null): void {
     this.onNotification = cb;
+  }
+
+  /** Conecta un callback de React para cuando una notificación existente cambia de status (ej. delivered/undelivered). */
+  setOnNotificationUpdate(cb: OnNotificationCallback | null): void {
+    this.onNotificationUpdate = cb;
   }
 
   /** Inicializa las suscripciones al EventBus. */
@@ -252,6 +270,35 @@ class NotificationServiceImpl {
           saveNotifications(notifications);
         }
       );
+      // sms_sends se actualiza de forma asíncrona por el webhook
+      // twilio-status-callback con el resultado REAL de entrega (delivered/
+      // undelivered/failed), distinto del 'sent' optimista que se guarda al
+      // disparar el envío. Reconciliamos acá por message_sid.
+      ch.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sms_sends' },
+        (payload: { record?: SmsSendRow; new?: SmsSendRow }) => {
+          const row = payload.record ?? payload.new;
+          const messageSid = row?.message_sid;
+          if (!messageSid) return;
+          const mappedStatus = mapSmsSendTerminalStatus(row?.status);
+          if (!mappedStatus) return;
+
+          const notifications = loadNotifications();
+          const idx = notifications.findIndex((n) => n.messageSid === messageSid);
+          if (idx === -1) return;
+
+          const updated: Notification = {
+            ...notifications[idx],
+            status: mappedStatus,
+            deliveryError: row?.error_message?.trim() || undefined,
+          };
+          const next = [...notifications];
+          next[idx] = updated;
+          saveNotifications(next);
+          this.onNotificationUpdate?.(updated);
+        }
+      );
       await ch.subscribe();
       this.supabaseChannel = ch;
     } catch (err) {
@@ -345,6 +392,7 @@ class NotificationServiceImpl {
       trackingToken: token,
       trackingUrl,
       read: false,
+      messageSid: event.payload.messageSid as string | undefined,
     };
 
     const notifications = [notification, ...loadNotifications()];

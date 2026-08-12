@@ -18,7 +18,15 @@ import {
   CheckCheck,
   MessageSquare,
 } from 'lucide-react';
-import type { NotificationEventType } from '@/types/notifications';
+import type { NotificationEventType, NotificationStatus } from '@/types/notifications';
+
+const STATUS_CONFIG: Record<NotificationStatus, { label: string; className: string }> = {
+  pending: { label: 'notifications.status.pending', className: 'bg-yellow-100 text-yellow-700' },
+  sent: { label: 'notifications.status.sent', className: 'bg-green-100 text-green-700' },
+  delivered: { label: 'notifications.status.delivered', className: 'bg-green-100 text-green-700' },
+  undelivered: { label: 'notifications.status.undelivered', className: 'bg-red-100 text-red-700' },
+  failed: { label: 'notifications.status.failed', className: 'bg-red-100 text-red-700' },
+};
 
 type TypeConfig = { icon: typeof Bell; label: string; color: string; bg: string };
 
@@ -207,19 +215,10 @@ export function NotificationsPanel() {
                               {t('notifications.channelLabel', { channel: notification.channel })}
                             </span>
                             <span
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                notification.status === 'sent'
-                                  ? 'bg-green-100 text-green-700'
-                                  : notification.status === 'failed'
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-yellow-100 text-yellow-700'
-                              }`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_CONFIG[notification.status].className}`}
+                              title={notification.deliveryError}
                             >
-                              {notification.status === 'sent'
-                                ? t('notifications.status.sent')
-                                : notification.status === 'failed'
-                                  ? t('notifications.status.failed')
-                                  : t('notifications.status.pending')}
+                              {t(STATUS_CONFIG[notification.status].label)}
                             </span>
                             {!notification.read && (
                               <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
