@@ -153,10 +153,13 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
    */
   const updateOrderStatus = useCallback(
     (orderId: string, status: OrderStatus, rackNumber?: string) => {
+      let previousOrder: Order | undefined;
+
       // Optimistic update
       setOrders((prev) =>
         prev.map((order) => {
           if (order.id !== orderId) return order;
+          previousOrder = order;
           const updated = { ...order, status, statusUpdatedAt: new Date().toISOString() };
           if (rackNumber !== undefined) {
             updated.rackNumber = rackNumber;
@@ -179,6 +182,14 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       return updateOrderStatusInDb(orderId, status, rackNumber).then((ok) => {
         if (!ok) {
           console.error('[OrdersContext] No se pudo actualizar el estado en Supabase');
+          // Revertir el optimistic update: si no se hace, la UI queda mostrando
+          // un estado que nunca se guardó hasta que el usuario refresca la página.
+          if (previousOrder) {
+            const restored = previousOrder;
+            setOrders((prev) =>
+              prev.map((order) => (order.id === orderId ? restored : order))
+            );
+          }
           return false;
         }
 

@@ -31,7 +31,12 @@ export interface OrderEvent {
 /* ---------- Notificaciones ---------- */
 
 export type NotificationChannel = 'sms' | 'in-app';
-export type NotificationStatus = 'pending' | 'sent' | 'failed';
+/**
+ * 'sent' = Twilio aceptó el envío (aún sin confirmación de entrega real).
+ * 'delivered'/'undelivered' llegan después, vía el webhook de status callback
+ * de Twilio, y reemplazan el 'sent' inicial una vez se conoce el resultado real.
+ */
+export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'undelivered' | 'failed';
 
 export interface Notification {
   id: string;
@@ -47,6 +52,10 @@ export interface Notification {
   trackingToken: string;
   trackingUrl: string;
   read: boolean;
+  /** SID de Twilio; permite reconciliar el status real reportado por el webhook. */
+  messageSid?: string;
+  /** Detalle del error de Twilio cuando status es 'undelivered' o 'failed'. */
+  deliveryError?: string;
 }
 
 /* ---------- Configuración de recordatorios ---------- */
