@@ -383,6 +383,7 @@ async function notifySms({
       estimatedDate: ctx.estimatedDate,
       estimatedDay: ctx.estimatedDay,
       reviewUrl: ctx.reviewUrl,
+      messageSid: response.messageSid,
     },
   };
   queueMicrotask(() => eventBus.emit(EVENT_NAMES[eventNameForType(type)], event));

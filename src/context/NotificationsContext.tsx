@@ -84,11 +84,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       showToast(notification);
     });
 
+    notificationService.setOnNotificationUpdate((notification) => {
+      syncNotifications();
+      if (notification.status === 'undelivered' || notification.status === 'failed') {
+        toast.error('SMS no entregado', {
+          description: `#${notification.orderNumber} — ${notification.customerName}${
+            notification.deliveryError ? `: ${notification.deliveryError}` : ''
+          }`,
+        });
+      }
+    });
+
     notificationService.start();
 
     return () => {
       notificationService.stop();
       notificationService.setOnNotification(null);
+      notificationService.setOnNotificationUpdate(null);
     };
   }, [syncNotifications]);
 
