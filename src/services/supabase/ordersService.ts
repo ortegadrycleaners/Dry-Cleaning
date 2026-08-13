@@ -51,6 +51,8 @@ type OrderQueryRow = {
 };
 
 export type OrdersViewMode = 'ACTIVE' | 'PENDING' | 'READY' | 'DELIVERED';
+export type SortField = 'date' | 'orderNumber';
+export type SortDirection = 'asc' | 'desc';
 
 export interface OrdersPageResult {
   orders: Order[];
@@ -63,6 +65,8 @@ export interface FetchOrdersPageOptions {
   page?: number;
   pageSize?: number;
   viewMode?: OrdersViewMode;
+  sortBy?: SortField;
+  sortOrder?: SortDirection;
 }
 
 export interface InsertOrderResult {
@@ -246,6 +250,8 @@ export async function fetchOrdersPage({
   page = 1,
   pageSize = 15,
   viewMode = 'ACTIVE',
+  sortBy = 'date',
+  sortOrder = 'desc',
 }: FetchOrdersPageOptions = {}): Promise<OrdersPageResult> {
   const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
   const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 15;
@@ -269,7 +275,10 @@ export async function fetchOrdersPage({
       break;
   }
 
-  const { data, error, count } = await query.order('order_date', { ascending: false }).range(from, to);
+  const orderColumn = sortBy === 'orderNumber' ? 'order_number' : 'order_date';
+  const isAscending = sortOrder === 'asc';
+
+  const { data, error, count } = await query.order(orderColumn, { ascending: isAscending }).range(from, to);
 
   if (error) {
     console.error('[ordersService] fetchOrdersPage error:', error.message);

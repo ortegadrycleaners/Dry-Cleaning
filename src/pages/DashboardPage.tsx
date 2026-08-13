@@ -38,6 +38,7 @@ import {
   Undo,
   Zap,
   Funnel,
+  ArrowUpDown,
   Settings,
   MessageSquarePlus,
   StickyNote,
@@ -1082,6 +1083,9 @@ export function DashboardPage() {
     isLoading,
     viewMode,
     setViewMode,
+    sortBy,
+    sortOrder,
+    setSort,
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
   } = useOrders();
@@ -1090,6 +1094,8 @@ export function DashboardPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const [pendingAutoRefresh, setPendingAutoRefresh] = useState<boolean>(autoRefreshAfterStatusChange);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -1257,18 +1263,22 @@ export function DashboardPage() {
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (!filterMenuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!filterMenuRef.current?.contains(target)) {
         setIsFilterOpen(false);
+      }
+      if (!sortMenuRef.current?.contains(target)) {
+        setIsSortOpen(false);
       }
     };
 
-    if (isFilterOpen) {
+    if (isFilterOpen || isSortOpen) {
       window.addEventListener('mousedown', handleOutsideClick);
       return () => window.removeEventListener('mousedown', handleOutsideClick);
     }
 
     return undefined;
-  }, [isFilterOpen]);
+  }, [isFilterOpen, isSortOpen]);
 
   const handleRevertToReceived = (orderId: string) => {
     updateOrderStatus(orderId, 'RECIBIDO');
@@ -1329,6 +1339,7 @@ export function DashboardPage() {
             />
           </div>
           <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+            {/* Menú de Filtro */}
             <div ref={filterMenuRef} className="relative">
               <Button
                 size="icon-sm"
@@ -1366,6 +1377,89 @@ export function DashboardPage() {
                         </div>
                       </label>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Menú de Ordenamiento */}
+            <div ref={sortMenuRef} className="relative">
+              <Button
+                size="icon-sm"
+                variant="outline"
+                onClick={() => setIsSortOpen((current) => !current)}
+                title={t('dashboard.sort.open')}
+                aria-label={t('dashboard.sort.open')}
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
+
+              {isSortOpen ? (
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
+                  <p className="text-sm font-semibold text-slate-900 mb-2">{t('dashboard.sort.title')}</p>
+
+                  <div className="space-y-3">
+                    {/* Campo de ordenamiento */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        {t('dashboard.sort.criteria')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setSort('date', sortOrder)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            sortBy === 'date'
+                              ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                              : 'text-gray-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {t('dashboard.sort.field.date')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSort('orderNumber', sortOrder)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            sortBy === 'orderNumber'
+                              ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                              : 'text-gray-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {t('dashboard.sort.field.orderNumber')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dirección */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        {t('dashboard.sort.direction')}
+                      </label>
+                      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setSort(sortBy, 'asc')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            sortOrder === 'asc'
+                              ? 'bg-white text-[#3B4BFF] shadow-sm font-semibold'
+                              : 'text-gray-600 hover:text-slate-900'
+                          }`}
+                        >
+                          ⬆️ {t('dashboard.sort.direction.asc')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSort(sortBy, 'desc')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            sortOrder === 'desc'
+                              ? 'bg-white text-[#3B4BFF] shadow-sm font-semibold'
+                              : 'text-gray-600 hover:text-slate-900'
+                          }`}
+                        >
+                          ⬇️ {t('dashboard.sort.direction.desc')}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : null}

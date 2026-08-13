@@ -15,6 +15,8 @@ import { EVENT_NAMES } from '@/services/NotificationService';
 import {
   fetchOrdersPage,
   type OrdersViewMode,
+  type SortField,
+  type SortDirection,
   insertOrder,
   updateOrderStatusInDb,
   type InsertOrderResult,
@@ -29,6 +31,9 @@ interface OrdersContextType {
   totalPages: number;
   viewMode: OrdersViewMode;
   setViewMode: (viewMode: OrdersViewMode) => void;
+  sortBy: SortField;
+  sortOrder: SortDirection;
+  setSort: (sortBy: SortField, sortOrder: SortDirection) => void;
   autoRefreshAfterStatusChange: boolean;
   setAutoRefreshAfterStatusChange: (value: boolean) => void;
   goToPage: (page: number) => void;
@@ -58,6 +63,24 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
     return 'ACTIVE';
   });
+  const [sortBy, setSortByState] = useState<SortField>(() => {
+    try {
+      const stored = localStorage.getItem('dashboard.sortBy');
+      if (stored === 'orderNumber' || stored === 'date') return stored;
+    } catch {
+      // ignore
+    }
+    return 'date';
+  });
+  const [sortOrder, setSortOrderState] = useState<SortDirection>(() => {
+    try {
+      const stored = localStorage.getItem('dashboard.sortOrder');
+      if (stored === 'asc' || stored === 'desc') return stored;
+    } catch {
+      // ignore
+    }
+    return 'desc';
+  });
   const [autoRefreshAfterStatusChange, setAutoRefreshAfterStatusChangeState] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem('dashboard.autoRefreshAfterStatusChange');
@@ -67,33 +90,53 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const loadOrdersPage = useCallback(async (targetPage: number, targetViewMode: OrdersViewMode = viewMode) => {
-    setIsLoading(true);
-    const result = await fetchOrdersPage({ page: targetPage, pageSize, viewMode: targetViewMode });
+  const loadOrdersPage = useCallback(
+    async (
+      targetPage: number,
+      targetViewMode: OrdersViewMode = viewMode,
+      targetSortBy: SortField = sortBy,
+      targetSortOrder: SortDirection = sortOrder
+    ) => {
+      setIsLoading(true);
+      const result = await fetchOrdersPage({
+        page: targetPage,
+        pageSize,
+        viewMode: targetViewMode,
+        sortBy: targetSortBy,
+        sortOrder: targetSortOrder,
+      });
 
-    if (result.orders.length === 0 && result.totalCount > 0 && targetPage > 1) {
-      const maxPage = Math.max(1, Math.ceil(result.totalCount / result.pageSize));
-      if (targetPage > maxPage) {
-        const fallback = await fetchOrdersPage({ page: maxPage, pageSize: result.pageSize, viewMode: targetViewMode });
-        setOrders(fallback.orders);
-        setTotalCount(fallback.totalCount);
-        setPage(fallback.page);
-        setIsLoading(false);
-        return;
+      if (result.orders.length === 0 && result.totalCount > 0 && targetPage > 1) {
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / result.pageSize));
+        if (targetPage > maxPage) {
+          const fallback = await fetchOrdersPage({
+            page: maxPage,
+            pageSize: result.pageSize,
+            viewMode: targetViewMode,
+            sortBy: targetSortBy,
+            sortOrder: targetSortOrder,
+          });
+          setOrders(fallback.orders);
+          setTotalCount(fallback.totalCount);
+          setPage(fallback.page);
+          setIsLoading(false);
+          return;
+        }
       }
-    }
 
-    setOrders(result.orders);
-    setTotalCount(result.totalCount);
-    setPage(result.page);
-    setIsLoading(false);
-  }, [pageSize, viewMode]);
+      setOrders(result.orders);
+      setTotalCount(result.totalCount);
+      setPage(result.page);
+      setIsLoading(false);
+    },
+    [pageSize, viewMode, sortBy, sortOrder]
+  );
 
   const refreshOrders = useCallback(
     async (targetPage: number = page) => {
-      await loadOrdersPage(targetPage, viewMode);
+      await loadOrdersPage(targetPage, viewMode, sortBy, sortOrder);
     },
-    [loadOrdersPage, page, viewMode]
+    [loadOrdersPage, page, viewMode, sortBy, sortOrder]
   );
 
   // Carga inicial desde Supabase (async para evitar setState síncrono en el effect)
@@ -101,7 +144,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void (async () => {
       try {
-        await loadOrdersPage(1, viewMode);
+        await loadOrdersPage(1, viewMode, sortBy, sortOrder);
       } catch (error) {
         if (!cancelled) {
           console.error('[OrdersContext] Error loading orders:', error);
@@ -113,16 +156,16 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loadOrdersPage, viewMode]);
+  }, [loadOrdersPage, viewMode, sortBy, sortOrder]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const goToPage = useCallback(
     (nextPage: number) => {
       const safePage = Math.max(1, nextPage);
-      void loadOrdersPage(safePage, viewMode);
+      void loadOrdersPage(safePage, viewMode, sortBy, sortOrder);
     },
-    [loadOrdersPage, viewMode]
+    [loadOrdersPage, viewMode, sortBy, sortOrder]
   );
 
   const setViewMode = useCallback(
@@ -133,9 +176,24 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
-      void loadOrdersPage(1, nextViewMode);
+      void loadOrdersPage(1, nextViewMode, sortBy, sortOrder);
     },
-    [loadOrdersPage]
+    [loadOrdersPage, sortBy, sortOrder]
+  );
+
+  const setSort = useCallback(
+    (nextSortBy: SortField, nextSortOrder: SortDirection) => {
+      setSortByState(nextSortBy);
+      setSortOrderState(nextSortOrder);
+      try {
+        localStorage.setItem('dashboard.sortBy', nextSortBy);
+        localStorage.setItem('dashboard.sortOrder', nextSortOrder);
+      } catch {
+        // ignore
+      }
+      void loadOrdersPage(1, viewMode, nextSortBy, nextSortOrder);
+    },
+    [loadOrdersPage, viewMode]
   );
 
   const setAutoRefreshAfterStatusChange = useCallback((value: boolean) => {
@@ -235,6 +293,9 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       totalPages,
       viewMode,
       setViewMode,
+      sortBy,
+      sortOrder,
+      setSort,
       autoRefreshAfterStatusChange,
       setAutoRefreshAfterStatusChange,
       goToPage,
@@ -251,6 +312,9 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       totalPages,
       viewMode,
       setViewMode,
+      sortBy,
+      sortOrder,
+      setSort,
       autoRefreshAfterStatusChange,
       setAutoRefreshAfterStatusChange,
       goToPage,
