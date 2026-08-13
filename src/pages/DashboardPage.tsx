@@ -1402,7 +1402,7 @@ export function DashboardPage() {
                     {/* Campo de ordenamiento */}
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Criterio
+                        {t('dashboard.sort.criteria')}
                       </label>
                       <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
                         <button
@@ -1433,7 +1433,7 @@ export function DashboardPage() {
                     {/* Dirección */}
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">
-                        Dirección
+                        {t('dashboard.sort.direction')}
                       </label>
                       <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
                         <button
