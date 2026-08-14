@@ -67,9 +67,30 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
 
   return (
     <>
-      {/* Estilos CSS específicos para la impresión limpia */}
+      {/* Estilos CSS específicos para la impresión limpia a prueba de navegadores y modales Radix */}
       <style>{`
         @media print {
+          /* Ocultar elementos de Radix / Dialog overlay y botones de cierre */
+          [data-slot="dialog-overlay"],
+          [data-slot="dialog-close"],
+          .no-print {
+            display: none !important;
+          }
+
+          /* Desarmar la caja flotante del diálogo para no recortar la hoja de impresión */
+          [data-slot="dialog-content"] {
+            position: static !important;
+            transform: none !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+          }
+
           /* Ocultar toda la interfaz general del sitio */
           body * {
             visibility: hidden !important;
@@ -93,11 +114,6 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
             color: #000000 !important;
             box-shadow: none !important;
             border: none !important;
-          }
-
-          /* Ocultar elementos marcados con .no-print durante la impresión */
-          .no-print {
-            display: none !important;
           }
 
           @page {
