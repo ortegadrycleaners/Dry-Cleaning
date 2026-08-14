@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Printer, Loader2, AlertTriangle, FileText } from 'lucide-react';
 import { fetchTodayDailyReport, type DailyReportOrder } from '@/services/supabase/ordersService';
+import { useI18n } from '@/i18n';
 
 interface DailyReportModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface DailyReportModalProps {
 }
 
 export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
+  const { t, locale } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<DailyReportOrder[]>([]);
@@ -41,7 +43,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
       .catch((err) => {
         if (!isMounted) return;
         console.error('[DailyReportModal] Unexpected fetch error:', err);
-        setError('Ocurrió un error inesperado al generar el reporte.');
+        setError(t('dashboard.dailyReport.error'));
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -50,13 +52,13 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
     return () => {
       isMounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, t]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const todayFormatted = new Date().toLocaleDateString('es-ES', {
+  const todayFormatted = new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'es-ES', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -130,10 +132,10 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-slate-900">
-                  Reporte Diario de Control Interno
+                  {t('dashboard.dailyReport.title')}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-slate-500 mt-0.5">
-                  Vista previa del listado de órdenes registradas el día de hoy
+                  {t('dashboard.dailyReport.description')}
                 </DialogDescription>
               </div>
             </div>
@@ -144,7 +146,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
             {loading ? (
               <div className="py-12 flex flex-col items-center justify-center text-slate-500 gap-3 no-print">
                 <Loader2 className="w-8 h-8 animate-spin text-[#3B4BFF]" />
-                <p className="text-sm font-medium">Obteniendo órdenes del día...</p>
+                <p className="text-sm font-medium">{t('dashboard.dailyReport.loading')}</p>
               </div>
             ) : error ? (
               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-center gap-3 no-print">
@@ -161,14 +163,16 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                   <div className="flex justify-between items-start">
                     <div>
                       <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                        Ortega Dry Cleaners
+                        {t('dashboard.dailyReport.businessName')}
                       </h1>
                       <h2 className="text-base font-semibold text-slate-700 mt-0.5">
-                        Control Diario de Órdenes
+                        {t('dashboard.dailyReport.docTitle')}
                       </h2>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs uppercase font-semibold text-slate-400">Fecha del Reporte</p>
+                      <p className="text-xs uppercase font-semibold text-slate-400">
+                        {t('dashboard.dailyReport.reportDate')}
+                      </p>
                       <p className="text-sm font-bold text-slate-800 capitalize">{todayFormatted}</p>
                     </div>
                   </div>
@@ -177,9 +181,11 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                 {/* Tabla de Órdenes */}
                 {orders.length === 0 ? (
                   <div className="py-8 text-center text-slate-500 space-y-2">
-                    <p className="font-semibold text-slate-700 text-base">No hay órdenes registradas hoy</p>
+                    <p className="font-semibold text-slate-700 text-base">
+                      {t('dashboard.dailyReport.emptyTitle')}
+                    </p>
                     <p className="text-xs text-slate-400">
-                      No se han creado nuevas órdenes en la fecha actual ({todayFormatted}).
+                      {t('dashboard.dailyReport.emptySubtitle', { date: todayFormatted })}
                     </p>
                   </div>
                 ) : (
@@ -187,9 +193,9 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                     <table className="w-full text-left text-sm border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-200 text-slate-700 font-semibold">
-                          <th className="py-3 px-4 w-1/4">Hora</th>
-                          <th className="py-3 px-4 w-1/3">Nro. Orden</th>
-                          <th className="py-3 px-4 w-5/12">Teléfono del Cliente</th>
+                          <th className="py-3 px-4 w-1/4">{t('dashboard.dailyReport.colTime')}</th>
+                          <th className="py-3 px-4 w-1/3">{t('dashboard.dailyReport.colOrder')}</th>
+                          <th className="py-3 px-4 w-5/12">{t('dashboard.dailyReport.colPhone')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -210,7 +216,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                       <tfoot>
                         <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900">
                           <td colSpan={2} className="py-3 px-4 text-right">
-                            Total de Órdenes Registradas Hoy:
+                            {t('dashboard.dailyReport.totalLabel')}
                           </td>
                           <td className="py-3 px-4 text-slate-900 text-base">
                             {orders.length}
@@ -227,7 +233,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
           {/* Acciones del Dialog (Ocultas en la impresión real) */}
           <DialogFooter className="p-4 border-t border-gray-100 bg-slate-50 flex items-center justify-between no-print gap-2">
             <Button variant="ghost" onClick={onClose} disabled={loading}>
-              Cerrar
+              {t('common.close')}
             </Button>
             <Button
               onClick={handlePrint}
@@ -235,7 +241,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
               className="bg-[#3B4BFF] hover:bg-blue-700 text-white gap-2 font-medium shadow-sm"
             >
               <Printer className="w-4 h-4" />
-              Imprimir Reporte
+              {t('dashboard.dailyReport.printButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

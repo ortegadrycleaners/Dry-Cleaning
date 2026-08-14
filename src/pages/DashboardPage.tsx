@@ -1485,8 +1485,8 @@ export function DashboardPage() {
               size="icon-sm"
               variant="outline"
               onClick={() => setIsDailyReportOpen(true)}
-              title="Imprimir Reporte del Día"
-              aria-label="Imprimir Reporte del Día"
+              title={t('dashboard.dailyReport.buttonTitle')}
+              aria-label={t('dashboard.dailyReport.buttonTitle')}
             >
               <Printer className="w-4 h-4" />
             </Button>
