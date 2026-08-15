@@ -638,3 +638,25 @@ export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
   return { orders, error: null };
 }
 
+/**
+ * Elimina físicamente una orden de Supabase por su id_order (UUID).
+ * Las notificaciones y tareas asociadas se eliminan en cascada automáticamente (ON DELETE CASCADE).
+ * La información del cliente asociado permanece intacta.
+ */
+export async function deleteOrderFromDb(orderId: string): Promise<{ success: boolean; error?: string }> {
+  console.log(`[ordersService] Audit Log: Intentando eliminar físicamente la orden con ID: ${orderId}`);
+  
+  const { error } = await supabase
+    .from('receipt')
+    .delete()
+    .eq('id_order', orderId);
+
+  if (error) {
+    console.error('[ordersService] Error al eliminar orden de Supabase:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  console.log(`[ordersService] Audit Log: Orden ${orderId} eliminada exitosamente de Supabase.`);
+  return { success: true };
+}
+
