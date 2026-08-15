@@ -40,11 +40,13 @@ import {
   Funnel,
   ArrowUpDown,
   Settings,
+  Printer,
   MessageSquarePlus,
   StickyNote,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
+import { DailyReportModal } from '@/components/DailyReportModal';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifySmsTemplate,
@@ -1097,6 +1099,7 @@ export function DashboardPage() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const [pendingAutoRefresh, setPendingAutoRefresh] = useState<boolean>(autoRefreshAfterStatusChange);
+  const [isDailyReportOpen, setIsDailyReportOpen] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
@@ -1478,6 +1481,16 @@ export function DashboardPage() {
               <Settings className="w-4 h-4" />
             </Button>
 
+            <Button
+              size="icon-sm"
+              variant="outline"
+              onClick={() => setIsDailyReportOpen(true)}
+              title={t('dashboard.dailyReport.buttonTitle')}
+              aria-label={t('dashboard.dailyReport.buttonTitle')}
+            >
+              <Printer className="w-4 h-4" />
+            </Button>
+
             <Button onClick={() => navigate('/dashboard/nueva')} className="rounded-full px-4 py-2">
               <Plus className="w-4 h-4 mr-2" />
               {t('dashboard.newOrder')}
@@ -1802,6 +1815,11 @@ export function DashboardPage() {
         }}
         onSent={handleProcessedNotified}
         operatorId={currentOperatorId}
+      />
+
+      <DailyReportModal
+        isOpen={isDailyReportOpen}
+        onClose={() => setIsDailyReportOpen(false)}
       />
     </div>
   );

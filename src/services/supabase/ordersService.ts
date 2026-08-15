@@ -576,3 +576,65 @@ export async function fetchOrderByPublicId(publicId: string): Promise<Order | nu
 
   return rowToOrder(data as OrderQueryRow);
 }
+
+export interface DailyReportOrder {
+  orderNumber: string;
+  phone: string;
+  orderDate: string;
+  formattedTime: string;
+}
+
+export interface FetchDailyReportResult {
+  orders: DailyReportOrder[];
+  error: string | null;
+}
+
+function formatTimeOnly(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+/**
+ * Consulta optimizada para obtener las órdenes creadas en la fecha actual (día local)
+ * trayendo únicamente el payload mínimo (order_number, order_date, cliente phone).
+ */
+export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(`
+      order_number,
+      order_date,
+      client:fk_cliente (
+        phone_number
+      )
+    `)
+    .gte('order_date', startOfDay.toISOString())
+    .lte('order_date', endOfDay.toISOString())
+    .order('order_date', { ascending: true });
+
+  if (error) {
+    console.error('[ordersService] fetchTodayDailyReport error:', error.message);
+    return { orders: [], error: 'No se pudieron consultar las órdenes del día.' };
+  }
+
+  const orders: DailyReportOrder[] = (data || []).map((row: any) => {
+    const clientData = extractClientData(row.client);
+    const rawPhone = clientData?.phone_number ?? '';
+    return {
+      orderNumber: String(row.order_number ?? ''),
+      phone: rawPhone ? formatPhone(rawPhone) : 'N/A',
+      orderDate: row.order_date ?? '',
+      formattedTime: row.order_date ? formatTimeOnly(row.order_date) : '',
+    };
+  });
+
+  return { orders, error: null };
+}
+
