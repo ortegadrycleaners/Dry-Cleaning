@@ -19,6 +19,7 @@ import {
   type SortDirection,
   insertOrder,
   updateOrderStatusInDb,
+  deleteOrderFromDb,
   type InsertOrderResult,
 } from '@/services/supabase/ordersService';
 
@@ -40,6 +41,7 @@ interface OrdersContextType {
   refreshOrders: (page?: number) => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderStatus, rackNumber?: string) => Promise<boolean>;
   addOrder: (order: Order) => Promise<InsertOrderResult>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
 }
 
 const DEFAULT_PAGE_SIZE = 15;
@@ -283,6 +285,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return result;
   }, [loadOrdersPage]);
 
+  const deleteOrder = useCallback(async (orderId: string): Promise<boolean> => {
+    const { success, error } = await deleteOrderFromDb(orderId);
+    if (!success) {
+      console.error('[OrdersContext] Error al eliminar orden:', error);
+      return false;
+    }
+
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    setTotalCount((prev) => Math.max(0, prev - 1));
+    return true;
+  }, []);
+
   const value = useMemo<OrdersContextType>(
     () => ({
       orders,
@@ -302,6 +316,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       refreshOrders,
       updateOrderStatus,
       addOrder,
+      deleteOrder,
     }),
     [
       orders,
@@ -321,6 +336,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       refreshOrders,
       updateOrderStatus,
       addOrder,
+      deleteOrder,
     ]
   );
 

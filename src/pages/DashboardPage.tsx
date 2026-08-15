@@ -43,10 +43,12 @@ import {
   Printer,
   MessageSquarePlus,
   StickyNote,
+  Trash2,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
 import { DailyReportModal } from '@/components/DailyReportModal';
+import { DeleteOrderModal } from '@/components/DeleteOrderModal';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifySmsTemplate,
@@ -1090,6 +1092,7 @@ export function DashboardPage() {
     setSort,
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
+    deleteOrder,
   } = useOrders();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1101,6 +1104,9 @@ export function DashboardPage() {
   const [pendingAutoRefresh, setPendingAutoRefresh] = useState<boolean>(autoRefreshAfterStatusChange);
   const [isDailyReportOpen, setIsDailyReportOpen] = useState(false);
 
+  const [deleteOrderTarget, setDeleteOrderTarget] = useState<Order | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
 
@@ -1111,6 +1117,22 @@ export function DashboardPage() {
 
   const [processedOrder, setProcessedOrder] = useState<Order | null>(null);
   const [isProcessedModalOpen, setIsProcessedModalOpen] = useState(false);
+
+  const handleDeleteClick = (order: Order) => {
+    setDeleteOrderTarget(order);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDeleteOrder = async (orderId: string): Promise<boolean> => {
+    const success = await deleteOrder(orderId);
+    if (success) {
+      toast.success(t('dashboard.deleteModal.successToast'));
+      return true;
+    } else {
+      toast.error(t('dashboard.deleteModal.errorToast'));
+      return false;
+    }
+  };
 
   // Tick que se incrementa cuando se completa un envío para refrescar el set
   // de órdenes ya notificadas (lectura desde localStorage).
@@ -1660,6 +1682,21 @@ export function DashboardPage() {
                                 </span>
                               </span>
                             )}
+                            <span className="relative inline-flex group">
+                              <Button
+                                size="icon-sm"
+                                variant="outline"
+                                onClick={() => handleDeleteClick(order)}
+                                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                aria-label={t('dashboard.actions.deleteOrder')}
+                                title={t('dashboard.actions.deleteOrder')}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 whitespace-nowrap">
+                                {t('dashboard.actions.deleteOrder')}
+                              </span>
+                            </span>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1734,6 +1771,15 @@ export function DashboardPage() {
                           {t('dashboard.actions.markDelivered')}
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteClick(order)}
+                        className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1.5" />
+                        {t('dashboard.actions.deleteOrder')}
+                      </Button>
                     </div>
                   </div>
                 );
@@ -1820,6 +1866,16 @@ export function DashboardPage() {
       <DailyReportModal
         isOpen={isDailyReportOpen}
         onClose={() => setIsDailyReportOpen(false)}
+      />
+
+      <DeleteOrderModal
+        order={deleteOrderTarget}
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteOrderTarget(null);
+        }}
+        onConfirmDelete={handleConfirmDeleteOrder}
       />
     </div>
   );
