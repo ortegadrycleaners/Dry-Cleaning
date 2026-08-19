@@ -556,6 +556,10 @@ ALTER TABLE "public"."receipt_reminder_task" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "receipt_update_authenticated_only" ON "public"."receipt" FOR UPDATE USING (("auth"."role"() = 'authenticated'::"text")) WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
 
 
+CREATE POLICY "receipt_delete_policy" ON "public"."receipt" FOR DELETE USING (true);
+
+
+
 
 
 
