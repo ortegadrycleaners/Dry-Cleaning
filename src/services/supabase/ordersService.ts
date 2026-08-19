@@ -646,17 +646,25 @@ export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
 export async function deleteOrderFromDb(orderId: string): Promise<{ success: boolean; error?: string }> {
   console.log(`[ordersService] Audit Log: Intentando eliminar físicamente la orden con ID: ${orderId}`);
   
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('receipt')
     .delete()
-    .eq('id_order', orderId);
+    .eq('id_order', orderId)
+    .select('id_order');
 
   if (error) {
     console.error('[ordersService] Error al eliminar orden de Supabase:', error.message);
     return { success: false, error: error.message };
   }
 
-  console.log(`[ordersService] Audit Log: Orden ${orderId} eliminada exitosamente de Supabase.`);
+  if (!data || data.length === 0) {
+    const errorMsg = 'No se pudo eliminar la orden en Supabase. Posible falta de permisos RLS o la orden no existe.';
+    console.error(`[ordersService] ${errorMsg} (ID: ${orderId})`);
+    return { success: false, error: errorMsg };
+  }
+
+  console.log(`[ordersService] Audit Log: Orden ${orderId} eliminada exitosamente de Supabase (${data.length} fila/s eliminada/s).`);
   return { success: true };
 }
+
 
