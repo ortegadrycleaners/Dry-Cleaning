@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { PRESET_NOTE_IDS } from './lib/presetNotes';
 
 /* eslint-disable react-refresh/only-export-components */
 export type Locale = 'es' | 'en';
@@ -81,11 +82,27 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.noOrders': 'No encontramos la orden solicitada.',
     'newOrder.title': 'Nueva Orden',
     'newOrder.subtitle': 'Ingresa los datos del cliente y la orden',
+    'newOrder.backToDashboard': 'Volver al dashboard',
+    'newOrder.presetNotes.stain': 'Mancha',
+    'newOrder.presetNotes.tear': 'Rotura/Rasgadura',
+    'newOrder.presetNotes.missingButton': 'Botón faltante',
+    'newOrder.presetNotes.brokenZipper': 'Cremallera dañada',
+    'newOrder.presetNotes.express24h': 'Express (24h)',
+    'newOrder.presetNotes.noStarch': 'Sin almidón',
+    'newOrder.presetNotes.starch': 'Con almidón',
+    'newOrder.presetNotes.ironOnly': 'Solo planchar',
+    'newOrder.presetNotes.dryClean': 'Limpieza en seco',
+    'newOrder.presetNotes.fragile': 'Frágil/Cuidado especial',
+    'newOrder.presetNotes.alteration': 'Alteración',
     'newOrder.orderIdRequired': 'El ID de orden es requerido',
     'newOrder.orderNumberRequired': 'El número de orden es requerido.',
     'newOrder.orderNumberDigits': 'El número de orden debe contener solo dígitos.',
     'newOrder.orderAlreadyExists': 'El número de orden {orderNumber} ya existe.',
     'newOrder.phoneInvalid': 'El teléfono no es válido.',
+    'newOrder.customerCheckError': 'Error al verificar el cliente existente.',
+    'newOrder.phoneRegisteredOtherName': 'El número {phone} ya está registrado con otro nombre.',
+    'newOrder.customerCreateError': 'No se pudo registrar el cliente.',
+    'newOrder.orderNumberInvalid': 'El número de orden debe ser un número válido.',
     'newOrder.orderPhoneMismatch': 'No se pudo insertar la orden porque el número {phone} ya está registrado con {customerName}.',
     'newOrder.orderCreateError': 'No se pudo crear la orden.',
     'newOrder.orderAndDateRequired': 'El número de orden y la fecha estimada son requeridos.',
@@ -207,6 +224,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.deleteModal.inputLabel': 'Para confirmar la eliminación, escribe el siguiente texto a continuación:',
     'dashboard.deleteModal.deleting': 'Eliminando...',
     'dashboard.deleteModal.confirmBtn': 'Eliminar Orden',
+    'dashboard.editCustomer.editLabel': 'Editar nombre del cliente',
+    'dashboard.editCustomer.title': 'Editar Cliente',
+    'dashboard.editCustomer.nameLabel': 'Nombre del cliente',
+    'dashboard.editCustomer.nameRequired': 'El nombre es requerido (mínimo 2 caracteres).',
+    'dashboard.editCustomer.nameInvalidChars': 'Solo se permiten letras y espacios.',
+    'dashboard.editCustomer.save': 'Guardar',
+    'dashboard.editCustomer.saving': 'Guardando...',
+    'dashboard.editCustomer.successToast': 'Nombre del cliente actualizado',
+    'dashboard.editCustomer.customerNotFound': 'No se encontró el cliente para este teléfono.',
+    'dashboard.editCustomer.updateFailed': 'No se pudo actualizar el nombre. Intenta de nuevo.',
     'dashboard.deleteModal.successToast': 'Orden eliminada exitosamente',
     'dashboard.deleteModal.errorToast': 'No se pudo eliminar la orden en Supabase',
     'dashboard.clipboard.success': 'Enlace de tracking copiado',
@@ -291,6 +318,24 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.status.readyDays': 'LISTO ⚠️ {days} días{rack}',
     'dashboard.status.readySince': 'Listo desde el {date}',
     'dashboard.status.ready': 'Listo',
+    'dashboard.pagination.loading': 'Cargando órdenes...',
+    'dashboard.pagination.pageOf': 'Página {page} de {totalPages}',
+    'dashboard.pagination.activeCount': '{count} órdenes activas',
+    'dashboard.pagination.previous': 'Anterior',
+    'dashboard.pagination.next': 'Siguiente',
+    'dashboard.guards.killSwitchOn': 'Envío de SMS deshabilitado por el administrador (kill switch activo).',
+    'dashboard.guards.notConfigured': 'Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY, o VITE_NOTIFY_ENDPOINT_URL. Ver TWILIO_SETUP.md.',
+    'dashboard.guards.orderNotReady': 'La orden #{orderNumber} no está LISTA (estado actual: {status}).',
+    'dashboard.guards.missingRackNumber': 'Falta el número de rack para una orden LISTA. Marca primero la ubicación.',
+    'dashboard.guards.missingCustomerName': 'La orden no tiene nombre de cliente asociado.',
+    'dashboard.guards.invalidPhoneFormat': 'El teléfono "{phone}" no es un número válido en formato E.164.',
+    'dashboard.guards.invalidPhoneGeneric': 'Teléfono inválido.',
+    'dashboard.guards.allowlistBlocked': 'Modo allowlist activo: {phone} no está en la lista permitida (VITE_SMS_ALLOWLIST).',
+    'dashboard.guards.cooldownActive': 'Espera {wait}s antes de enviar otro SMS (protección anti doble-click).',
+    'dashboard.guards.duplicate': 'Ya se envió esta notificación para esta orden. No se reenvía para evitar duplicados.',
+    'dashboard.guards.rateLimitPerOrder': 'Ya se envió un SMS para esta orden en las últimas {hours} horas.',
+    'dashboard.guards.rateLimitGlobal': 'Se alcanzó el máximo de {cap} SMS por minuto. Espera unos segundos.',
+    'dashboard.guards.dailyBudgetExceeded': 'Presupuesto diario agotado ({budget} SMS/24h). Solicita aumentar la cuota o intenta mañana.',
     'dashboard.dailyReport.buttonTitle': 'Imprimir Reporte del Día',
     'dashboard.dailyReport.title': 'Reporte Diario de Control Interno',
     'dashboard.dailyReport.description': 'Vista previa del listado de órdenes registradas el día de hoy',
@@ -313,20 +358,56 @@ export const translations: Record<Locale, Record<string, string>> = {
     'error.console': 'Por favor, verifica la consola del navegador (F12) para más detalles.',
     'error.reload': 'Recargar Página',
     'requireAuth.loading': 'Cargando…',
-    'customerModal.title': 'Customer Data Registration',
-    'customerModal.description': 'Please provide your information. Explicit consent is required to proceed.',
-    'customerModal.fullName': 'Full Name',
-    'customerModal.fullNamePlaceholder': 'John Garcia',
-    'customerModal.phoneNumber': 'Phone Number',
+    'customerModal.title': 'Registro de Datos del Cliente',
+    'customerModal.description': 'Por favor proporciona tu información. Se requiere consentimiento explícito para continuar.',
+    'customerModal.fullName': 'Nombre Completo',
+    'customerModal.fullNamePlaceholder': 'Juan Garcia',
+    'customerModal.phoneNumber': 'Número de Teléfono',
     'customerModal.phoneNumberPlaceholder': '(787) 555-1234',
-    'customerModal.consentTitle': 'Explicit Consent (Required)',
-    'customerModal.consentDescription': 'By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.',
-    'customerModal.consentCheckbox': 'I accept and authorize the registration of my data and SMS notifications',
-    'customerModal.processing': 'Processing...',
-    'customerModal.submit': 'Confirm and Register',
-    'customerModal.successTitle': 'Data Registered!',
-    'customerModal.successText': 'Thank you for your consent. Your data has been registered and you will receive SMS notifications about your order status.',
-    'customerModal.close': 'Close',
+    'customerModal.consentTitle': 'Consentimiento Explícito (Requerido)',
+    'customerModal.consentDescription': 'Al marcar esta casilla, confirmo que doy mi consentimiento explícito para que mis datos personales sean registrados y utilizados exclusivamente para gestionar esta orden y para recibir notificaciones por SMS sobre el estado de mi orden.',
+    'customerModal.consentCheckbox': 'Acepto y autorizo el registro de mis datos y las notificaciones por SMS',
+    'customerModal.processing': 'Procesando...',
+    'customerModal.submit': 'Confirmar y Registrar',
+    'customerModal.successTitle': '¡Datos Registrados!',
+    'customerModal.successText': 'Gracias por tu consentimiento. Tus datos han sido registrados y recibirás notificaciones por SMS sobre el estado de tu orden.',
+    'customerModal.close': 'Cerrar',
+    'customerModal.heroTitle': 'Mucho más que limpieza.',
+    'customerModal.heroSubtitle': 'Cuidamos lo que más valoras.',
+    'customerModal.contactUsLabel': 'Contáctanos',
+    'customerModal.registrationError': 'No se pudo registrar el cliente. Por favor revisa los datos e intenta de nuevo.',
+    'customerModal.termsTitle': 'Términos y Política de Privacidad (Requerido)',
+    'customerModal.termsDescriptionPrefix': 'Al marcar esta casilla, confirmas que has leído y aceptas nuestros',
+    'customerModal.termsOfService': 'Términos de Servicio',
+    'customerModal.and': 'y',
+    'customerModal.privacyPolicy': 'Política de Privacidad',
+    'customerModal.termsCheckboxPrefix': 'He leído y acepto los',
+    'customerModal.terms': 'Términos',
+    'reminder.smsSentTo': 'SMS enviado a {customerName}',
+    'reminder.sendError': 'Error al enviar SMS',
+    'reminder.skipped': 'Recordatorio omitido',
+    'reminder.milestone.3': '3 días en rack',
+    'reminder.milestone.5': '5 días en rack (URGENTE)',
+    'reminder.milestone.30': '30 días en rack (CRÍTICO)',
+    'reminder.milestone.generic': '{milestone} días',
+    'reminder.title': 'Recordatorio de Orden Pendiente',
+    'reminder.highPriority': '⚠️ ALTA PRIORIDAD',
+    'reminder.highPriorityNote': 'Esta orden requiere atención inmediata',
+    'reminder.timeInRack': 'Tiempo en rack',
+    'reminder.messagePreviewLabel': 'Mensaje a enviar',
+    'reminder.skipUnavailable': 'Acción de omitir no disponible',
+    'reminder.skipForNow': 'Omitir por ahora',
+    'reminder.sending': 'Enviando...',
+    'reminder.sendSms': 'Enviar SMS',
+    'reminder.cannotClose': 'Este modal no se puede cerrar. Debe enviar o omitir el recordatorio.',
+    'notifications.toast.orderCreated': 'Orden Confirmada',
+    'notifications.toast.orderReady': 'Orden Lista',
+    'notifications.toast.reminder': 'Recordatorio',
+    'notifications.toast.urgentReminder': 'Recordatorio Urgente',
+    'notifications.toast.day30Reminder': 'Recordatorio 30 días',
+    'notifications.toast.default': 'Notificación',
+    'notifications.toast.undelivered': 'SMS no entregado',
+    'common.changeLanguage': 'Cambiar idioma',
   },
   en: {
     'app.loading': 'Loading…',
@@ -403,11 +484,27 @@ export const translations: Record<Locale, Record<string, string>> = {
     'tracking.noOrders': 'We could not find the requested order.',
     'newOrder.title': 'New Order',
     'newOrder.subtitle': 'Enter the customer and order details',
+    'newOrder.backToDashboard': 'Back to dashboard',
+    'newOrder.presetNotes.stain': 'Stain',
+    'newOrder.presetNotes.tear': 'Tear/Rip',
+    'newOrder.presetNotes.missingButton': 'Missing button',
+    'newOrder.presetNotes.brokenZipper': 'Broken zipper',
+    'newOrder.presetNotes.express24h': 'Express (24h)',
+    'newOrder.presetNotes.noStarch': 'No starch',
+    'newOrder.presetNotes.starch': 'Starch',
+    'newOrder.presetNotes.ironOnly': 'Iron only',
+    'newOrder.presetNotes.dryClean': 'Dry cleaning',
+    'newOrder.presetNotes.fragile': 'Fragile/Special care',
+    'newOrder.presetNotes.alteration': 'Alteration',
     'newOrder.orderIdRequired': 'Order ID is required',
     'newOrder.orderNumberRequired': 'Order number is required.',
     'newOrder.orderNumberDigits': 'Order number must contain only digits.',
     'newOrder.orderAlreadyExists': 'Order number {orderNumber} already exists.',
     'newOrder.phoneInvalid': 'The phone number is not valid.',
+    'newOrder.customerCheckError': 'Error checking the existing customer.',
+    'newOrder.phoneRegisteredOtherName': 'Number {phone} is already registered under a different name.',
+    'newOrder.customerCreateError': 'Could not register the customer.',
+    'newOrder.orderNumberInvalid': 'Order number must be a valid number.',
     'newOrder.orderPhoneMismatch': 'Could not insert order because number {phone} is already registered with {customerName}.',
     'newOrder.orderCreateError': 'Unable to create the order.',
     'newOrder.orderAndDateRequired': 'Order number and estimated date are required.',
@@ -500,6 +597,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.deleteModal.inputLabel': 'To confirm deletion, type the following text below:',
     'dashboard.deleteModal.deleting': 'Deleting...',
     'dashboard.deleteModal.confirmBtn': 'Delete Order',
+    'dashboard.editCustomer.editLabel': 'Edit customer name',
+    'dashboard.editCustomer.title': 'Edit Customer',
+    'dashboard.editCustomer.nameLabel': 'Customer name',
+    'dashboard.editCustomer.nameRequired': 'Name is required (minimum 2 characters).',
+    'dashboard.editCustomer.nameInvalidChars': 'Only letters and spaces are allowed.',
+    'dashboard.editCustomer.save': 'Save',
+    'dashboard.editCustomer.saving': 'Saving...',
+    'dashboard.editCustomer.successToast': 'Customer name updated',
+    'dashboard.editCustomer.customerNotFound': 'Customer not found for this phone number.',
+    'dashboard.editCustomer.updateFailed': 'Could not update the name. Please try again.',
     'dashboard.deleteModal.successToast': 'Order deleted successfully',
     'dashboard.deleteModal.errorToast': 'Could not delete order in Supabase',
     'dashboard.clipboard.success': 'Tracking link copied',
@@ -628,6 +735,24 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.status.readyDays': 'READY ⚠️ {days} days{rack}',
     'dashboard.status.readySince': 'Ready since {date}',
     'dashboard.status.ready': 'Ready',
+    'dashboard.pagination.loading': 'Loading orders...',
+    'dashboard.pagination.pageOf': 'Page {page} of {totalPages}',
+    'dashboard.pagination.activeCount': '{count} active orders',
+    'dashboard.pagination.previous': 'Previous',
+    'dashboard.pagination.next': 'Next',
+    'dashboard.guards.killSwitchOn': 'SMS sending disabled by the administrator (kill switch active).',
+    'dashboard.guards.notConfigured': 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or VITE_NOTIFY_ENDPOINT_URL. See TWILIO_SETUP.md.',
+    'dashboard.guards.orderNotReady': 'Order #{orderNumber} is not READY (current status: {status}).',
+    'dashboard.guards.missingRackNumber': 'Missing rack number for a READY order. Mark the location first.',
+    'dashboard.guards.missingCustomerName': 'The order has no customer name associated.',
+    'dashboard.guards.invalidPhoneFormat': 'Phone "{phone}" is not a valid E.164 number.',
+    'dashboard.guards.invalidPhoneGeneric': 'Invalid phone.',
+    'dashboard.guards.allowlistBlocked': 'Allowlist mode active: {phone} is not on the allowed list (VITE_SMS_ALLOWLIST).',
+    'dashboard.guards.cooldownActive': 'Wait {wait}s before sending another SMS (anti double-click protection).',
+    'dashboard.guards.duplicate': 'This notification was already sent for this order. Not resending to avoid duplicates.',
+    'dashboard.guards.rateLimitPerOrder': 'An SMS was already sent for this order in the last {hours} hours.',
+    'dashboard.guards.rateLimitGlobal': 'Reached the maximum of {cap} SMS per minute. Wait a few seconds.',
+    'dashboard.guards.dailyBudgetExceeded': 'Daily budget exhausted ({budget} SMS/24h). Request a quota increase or try tomorrow.',
     'promotions.0.title': 'U.S. Navy Uniform Dry Cleaning — Military Special',
     'promotions.0.description': 'Special pricing by quantity:\n• 2–3 uniforms — $21 each\n• 4–6 uniforms — $18 each\n• 7 or more uniforms — $15 each\n\nServices:\n• Same-day service accepted until 10:00 AM\n• 24-hour turnaround available\n• Serving the NAS Jacksonville community',
     'error.title': '⚠️ Error',
@@ -649,6 +774,42 @@ export const translations: Record<Locale, Record<string, string>> = {
     'customerModal.successTitle': 'Data Registered!',
     'customerModal.successText': 'Thank you for your consent. Your data has been registered and you will receive SMS notifications about your order status.',
     'customerModal.close': 'Close',
+    'customerModal.heroTitle': 'Much more than cleaning.',
+    'customerModal.heroSubtitle': 'We take care of what you value most.',
+    'customerModal.contactUsLabel': 'Contact Us',
+    'customerModal.registrationError': 'Could not register the customer. Please check the details and try again.',
+    'customerModal.termsTitle': 'Terms & Privacy Policy (Required)',
+    'customerModal.termsDescriptionPrefix': 'By checking this box, you confirm that you have read and agree to our',
+    'customerModal.termsOfService': 'Terms of Service',
+    'customerModal.and': 'and',
+    'customerModal.privacyPolicy': 'Privacy Policy',
+    'customerModal.termsCheckboxPrefix': 'I have read and accept the',
+    'customerModal.terms': 'Terms',
+    'reminder.smsSentTo': 'SMS sent to {customerName}',
+    'reminder.sendError': 'Error sending SMS',
+    'reminder.skipped': 'Reminder skipped',
+    'reminder.milestone.3': '3 days on rack',
+    'reminder.milestone.5': '5 days on rack (URGENT)',
+    'reminder.milestone.30': '30 days on rack (CRITICAL)',
+    'reminder.milestone.generic': '{milestone} days',
+    'reminder.title': 'Pending Order Reminder',
+    'reminder.highPriority': '⚠️ HIGH PRIORITY',
+    'reminder.highPriorityNote': 'This order requires immediate attention',
+    'reminder.timeInRack': 'Time on rack',
+    'reminder.messagePreviewLabel': 'Message to send',
+    'reminder.skipUnavailable': 'Skip action not available',
+    'reminder.skipForNow': 'Skip for now',
+    'reminder.sending': 'Sending...',
+    'reminder.sendSms': 'Send SMS',
+    'reminder.cannotClose': 'This modal cannot be closed. You must send or skip the reminder.',
+    'notifications.toast.orderCreated': 'Order Confirmed',
+    'notifications.toast.orderReady': 'Order Ready',
+    'notifications.toast.reminder': 'Reminder',
+    'notifications.toast.urgentReminder': 'Urgent Reminder',
+    'notifications.toast.day30Reminder': '30-day Reminder',
+    'notifications.toast.default': 'Notification',
+    'notifications.toast.undelivered': 'SMS undelivered',
+    'common.changeLanguage': 'Change language',
   },
 };
 
@@ -703,6 +864,43 @@ export function orderStatusLabel(status: string, locale: Locale = detectBrowserL
   return mapping[status]?.[locale] ?? status;
 }
 
+let presetNoteLabelToId: Map<string, string> | null = null;
+
+function getPresetNoteLabelToId(): Map<string, string> {
+  if (presetNoteLabelToId) return presetNoteLabelToId;
+  const map = new Map<string, string>();
+  for (const id of PRESET_NOTE_IDS) {
+    const key = `newOrder.presetNotes.${id}`;
+    for (const locale of SUPPORTED_LOCALES) {
+      const label = translations[locale][key];
+      if (label) map.set(label.trim().toLowerCase(), id);
+    }
+  }
+  presetNoteLabelToId = map;
+  return map;
+}
+
+/**
+ * Los "notes" de una orden se guardan como texto plano (etiquetas predefinidas
+ * + texto libre) en el idioma activo al momento de crear la orden. Esta
+ * función retraduce los segmentos que coinciden con una etiqueta predefinida
+ * conocida (en cualquier idioma) al idioma activo de visualización, dejando
+ * el texto libre intacto.
+ */
+export function translateOrderNotes(notes: string | undefined | null, locale: Locale = detectBrowserLocale()): string {
+  if (!notes) return '';
+  const labelToId = getPresetNoteLabelToId();
+  return notes
+    .split(',')
+    .map((segment) => {
+      const trimmed = segment.trim();
+      const id = labelToId.get(trimmed.toLowerCase());
+      if (!id) return trimmed;
+      return translations[locale][`newOrder.presetNotes.${id}`] ?? trimmed;
+    })
+    .join(', ');
+}
+
 export function timeAgo(value: string, locale: Locale = detectBrowserLocale()): string {
   const diffMs = Date.now() - new Date(value).getTime();
   const minutes = Math.floor(diffMs / 60_000);
@@ -728,6 +926,7 @@ export interface I18nContextType {
   t: (key: string, vars?: Record<string, string | number>) => string;
   formatDate: (value: string | Date, options?: Intl.DateTimeFormatOptions) => string;
   translateOrderStatus: (status: string) => string;
+  translateOrderNotes: (notes: string | undefined | null) => string;
   timeAgo: (value: string) => string;
 }
 
@@ -762,6 +961,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     },
     formatDate: (value: string | Date, options?: Intl.DateTimeFormatOptions) => formatDate(value, locale, options),
     translateOrderStatus: (status: string) => orderStatusLabel(status, locale),
+    translateOrderNotes: (notes: string | undefined | null) => translateOrderNotes(notes, locale),
     timeAgo: (value: string) => timeAgo(value, locale),
   }), [locale]);
 

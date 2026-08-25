@@ -47,10 +47,10 @@ function LoadingFallback() {
 
 function App() {
   return (
-    <AuthProvider>
-      <OrdersProvider>
-        <NotificationsProvider>
-          <I18nProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <OrdersProvider>
+          <NotificationsProvider>
             {/* Global header removed — individual pages render their own headers */}
             <BrowserRouter>
               <Suspense fallback={<LoadingFallback />}>
@@ -88,11 +88,11 @@ function App() {
               </Routes>
               </Suspense>
             </BrowserRouter>
-          </I18nProvider>
-          <Toaster />
-        </NotificationsProvider>
-      </OrdersProvider>
-    </AuthProvider>
+            <Toaster />
+          </NotificationsProvider>
+        </OrdersProvider>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 

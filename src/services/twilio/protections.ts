@@ -101,21 +101,34 @@ export interface GuardFail {
   ok: false;
   errorCode: TwilioErrorCode;
   errorMessage: string;
+  messageKey: string;
+  messageParams?: Record<string, string>;
 }
 export type GuardResult = GuardOk | GuardFail;
 
 const ok: GuardOk = { ok: true };
-const fail = (errorCode: TwilioErrorCode, errorMessage: string): GuardFail => ({
+const fail = (
+  errorCode: TwilioErrorCode,
+  errorMessage: string,
+  messageKey: string,
+  messageParams?: Record<string, string>,
+): GuardFail => ({
   ok: false,
   errorCode,
   errorMessage,
+  messageKey,
+  messageParams,
 });
 
 /* ---------- Capas individuales ---------- */
 
 export function checkKillSwitch(): GuardResult {
   return getTwilioConfig().killSwitch
-    ? fail('KILL_SWITCH_ON', 'Envío de SMS deshabilitado por el administrador (kill switch activo).')
+    ? fail(
+        'KILL_SWITCH_ON',
+        'Envío de SMS deshabilitado por el administrador (kill switch activo).',
+        'dashboard.guards.killSwitchOn',
+      )
     : ok;
 }
 
@@ -128,6 +141,7 @@ export function checkConfig(): GuardResult {
     return fail(
       'NOT_CONFIGURED',
       'Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY, o VITE_NOTIFY_ENDPOINT_URL. Ver TWILIO_SETUP.md.',
+      'dashboard.guards.notConfigured',
     );
   }
   return ok;
@@ -139,12 +153,15 @@ export function checkOrderState(order: Order, type: NotificationEventType): Guar
       return fail(
         'INVALID_ORDER_STATE',
         `La orden #${order.orderNumber} no está LISTA (estado actual: ${order.status}).`,
+        'dashboard.guards.orderNotReady',
+        { orderNumber: order.orderNumber, status: order.status },
       );
     }
     if (!order.rackNumber) {
       return fail(
         'INVALID_ORDER_STATE',
         'Falta el número de rack para una orden LISTA. Marca primero la ubicación.',
+        'dashboard.guards.missingRackNumber',
       );
     }
   }
@@ -153,11 +170,17 @@ export function checkOrderState(order: Order, type: NotificationEventType): Guar
       return fail(
         'INVALID_ORDER_STATE',
         `La orden #${order.orderNumber} no está LISTA (estado actual: ${order.status}).`,
+        'dashboard.guards.orderNotReady',
+        { orderNumber: order.orderNumber, status: order.status },
       );
     }
   }
   if (!order.customerName?.trim()) {
-    return fail('INVALID_ORDER_STATE', 'La orden no tiene nombre de cliente asociado.');
+    return fail(
+      'INVALID_ORDER_STATE',
+      'La orden no tiene nombre de cliente asociado.',
+      'dashboard.guards.missingCustomerName',
+    );
   }
   return ok;
 }
@@ -168,6 +191,8 @@ export function checkPhone(rawPhone: string): GuardResult {
     return fail(
       'INVALID_PHONE',
       `El teléfono "${rawPhone}" no es un número válido en formato E.164.`,
+      'dashboard.guards.invalidPhoneFormat',
+      { phone: rawPhone },
     );
   }
   return ok;
@@ -177,11 +202,13 @@ export function checkAllowlist(rawPhone: string): GuardResult {
   const cfg = getTwilioConfig();
   if (cfg.allowlist.length === 0) return ok;
   const normalized = normalizeToE164(rawPhone);
-  if (!normalized) return fail('INVALID_PHONE', 'Teléfono inválido.');
+  if (!normalized) return fail('INVALID_PHONE', 'Teléfono inválido.', 'dashboard.guards.invalidPhoneGeneric');
   if (!cfg.allowlist.includes(normalized)) {
     return fail(
       'ALLOWLIST_BLOCKED',
       `Modo allowlist activo: ${normalized} no está en la lista permitida (VITE_SMS_ALLOWLIST).`,
+      'dashboard.guards.allowlistBlocked',
+      { phone: normalized },
     );
   }
   return ok;
@@ -195,6 +222,8 @@ export function checkCooldown(): GuardResult {
     return fail(
       'COOLDOWN_ACTIVE',
       `Espera ${wait}s antes de enviar otro SMS (protección anti doble-click).`,
+      'dashboard.guards.cooldownActive',
+      { wait: String(wait) },
     );
   }
   return ok;
@@ -206,6 +235,7 @@ export function checkDuplicate(orderId: string, type: NotificationEventType): Gu
     return fail(
       'DUPLICATE',
       'Ya se envió esta notificación para esta orden. No se reenvía para evitar duplicados.',
+      'dashboard.guards.duplicate',
     );
   }
   return ok;
@@ -219,6 +249,8 @@ export function checkPerOrderRateLimit(orderId: string): GuardResult {
     return fail(
       'RATE_LIMIT_PER_ORDER',
       `Ya se envió un SMS para esta orden en las últimas ${cfg.perOrderCooldownHours} horas.`,
+      'dashboard.guards.rateLimitPerOrder',
+      { hours: String(cfg.perOrderCooldownHours) },
     );
   }
   return ok;
@@ -232,6 +264,8 @@ export function checkGlobalPerMinute(): GuardResult {
     return fail(
       'RATE_LIMIT_GLOBAL',
       `Se alcanzó el máximo de ${cfg.globalPerMinute} SMS por minuto. Espera unos segundos.`,
+      'dashboard.guards.rateLimitGlobal',
+      { cap: String(cfg.globalPerMinute) },
     );
   }
   return ok;
@@ -245,6 +279,8 @@ export function checkDailyBudget(): GuardResult {
     return fail(
       'DAILY_BUDGET_EXCEEDED',
       `Presupuesto diario agotado (${cfg.dailyBudget} SMS/24h). Solicita aumentar la cuota o intenta mañana.`,
+      'dashboard.guards.dailyBudgetExceeded',
+      { budget: String(cfg.dailyBudget) },
     );
   }
   return ok;

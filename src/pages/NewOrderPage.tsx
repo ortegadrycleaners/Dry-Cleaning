@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '@/i18n';
 import { useOrders } from '@/context/OrdersContext';
 import { findCustomerByPhone, createCustomer } from '@/services/supabase/customersService';
-import { fetchOrderNumberExists } from '@/services/supabase/ordersService';
+import { fetchOrderNumberExists, type InsertOrderResult } from '@/services/supabase/ordersService';
+import type { I18nContextType } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,26 @@ import { useCustomerWizard } from '@/hooks/useCustomerWizard';
 
 type CustomerFormOutput = z.infer<typeof customerDraftSchema>;
 type CustomerModalData = z.infer<typeof customerSchema>;
+
+function insertOrderErrorMessage(result: InsertOrderResult, t: I18nContextType['t']): string {
+  switch (result.code) {
+    case 'PHONE_INVALID':
+      return t('newOrder.phoneInvalid');
+    case 'ORDER_NUMBER_INVALID':
+      return t('newOrder.orderNumberInvalid');
+    case 'ORDER_NUMBER_EXISTS':
+      return t('newOrder.orderAlreadyExists', result.errorParams);
+    case 'PHONE_NAME_MISMATCH':
+      return t('newOrder.orderPhoneMismatch', result.errorParams);
+    case 'CLIENT_INSERT_FAILED':
+      return t('newOrder.customerCreateError');
+    case 'DATABASE_ERROR':
+      return t('newOrder.customerCheckError');
+    case 'RECEIPT_INSERT_FAILED':
+    default:
+      return t('newOrder.orderCreateError');
+  }
+}
 
 export function NewOrderPage() {
   const navigate = useNavigate();
@@ -93,7 +114,7 @@ export function NewOrderPage() {
 
     const createdAt = new Date().toISOString().split('T')[0];
     const localPublicId = generatePublicId(12);
-    const selectedNotesString = orderForm.selectedNotes.join(', ');
+    const selectedNotesString = orderForm.selectedNotesText.join(', ');
     const combinedNotes = [selectedNotesString, data.notes?.trim()]
       .filter(Boolean)
       .join(selectedNotesString && data.notes ? ', ' : '');
@@ -112,7 +133,7 @@ export function NewOrderPage() {
 
     const result = await addOrder(newOrder);
     if (!result.orderId) {
-      const errorMessage = result.error ?? t('newOrder.orderCreateError');
+      const errorMessage = insertOrderErrorMessage(result, t);
       setSubmitError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -210,7 +231,10 @@ export function NewOrderPage() {
   const handleModalSubmit = async (modalData: CustomerModalData) => {
     const result = await createCustomer({ name: modalData.name, phone: modalData.phone });
     if (!result.success) {
-      return { success: false, error: result.error };
+      const error = result.errorCode
+        ? t(`newOrder.${result.errorCode}`, result.errorParams)
+        : t('newOrder.customerCreateError');
+      return { success: false, error };
     }
 
     setCustomerName(modalData.name);
@@ -242,7 +266,7 @@ export function NewOrderPage() {
             <div className="flex items-center gap-3">
               <img src={`${baseUrl}svg/zivo-wordmark-white.svg`} alt="zivo" className="h-6 sm:h-8 w-auto" />
               <div className="hidden sm:flex items-center ml-3 text-sm text-[#FAFAFC]/90">
-                Estás en <span className="ml-2 font-semibold text-white">Ortega Cleaners</span>
+                {t('dashboard.header.currentLocation')} <span className="ml-2 font-semibold text-white">Ortega Cleaners</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -251,7 +275,7 @@ export function NewOrderPage() {
                 className="text-sm text-[#FAFAFC]/90 hover:text-white flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/5"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline"> Volver al dashboard</span>
+                <span className="hidden sm:inline"> {t('newOrder.backToDashboard')}</span>
               </button>
             </div>
           </div>
@@ -408,12 +432,12 @@ export function NewOrderPage() {
                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
                   {orderForm.presetNotes.map((note) => {
                     const Icon = note.icon;
-                    const selected = orderForm.selectedNotes.includes(note.label);
+                    const selected = orderForm.selectedNotes.includes(note.id);
                     return (
                       <button
-                        key={note.label}
+                        key={note.id}
                         type="button"
-                        onClick={() => orderForm.togglePresetNote(note.label)}
+                        onClick={() => orderForm.togglePresetNote(note.id)}
                         className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-all ${
                           selected ? note.selectedClasses : note.unselectedClasses
                         }`}

@@ -385,7 +385,7 @@ function RefreshIndicator({ lastRefresh }: { lastRefresh: Date }) {
 /* ---------- Admin Notes Section ---------- */
 
 function AdminNotesSection({ order }: { order: Order }) {
-  const { t } = useI18n();
+  const { t, translateOrderNotes } = useI18n();
 
   if (!order.notes) return null;
 
@@ -406,7 +406,7 @@ function AdminNotesSection({ order }: { order: Order }) {
               {t('tracking.admin.notesTitle')}
             </p>
             <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
-              {order.notes}
+              {translateOrderNotes(order.notes)}
             </p>
           </div>
         </div>

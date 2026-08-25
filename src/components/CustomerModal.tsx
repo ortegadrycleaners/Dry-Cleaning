@@ -3,6 +3,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { customerSchema } from '../lib/customerSchema';
+import { useI18n } from '../i18n';
 import './CustomerModal.css';
 
 type CustomerData = z.infer<typeof customerSchema>;
@@ -20,6 +21,7 @@ interface CustomerModalProps {
 }
 
 export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialData, onSubmit, onClose }) => {
+  const { t } = useI18n();
   const [showSuccess, setShowSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -54,7 +56,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
       reset();
     } else {
       setShowSuccess(false);
-      setSubmitError(result.error ?? 'No se pudo registrar el cliente. Por favor revisa los datos e intenta de nuevo.');
+      setSubmitError(result.error ?? t('customerModal.registrationError'));
     }
   };
 
@@ -75,19 +77,19 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
         {/* Lado Izquierdo: Visual */}
         <div className="modal-image-section">
           <div className="modal-image-overlay">
-            <h2>Much more than cleaning.</h2>
-            <p>We take care of what you value most.</p>
+            <h2>{t('customerModal.heroTitle')}</h2>
+            <p>{t('customerModal.heroSubtitle')}</p>
           </div>
         </div>
 
         {/* Lado Derecho: Formulario */}
         <div className="modal-form-section">
-          <button className="close-btn" onClick={handleClose} aria-label="Close">&times;</button>
+          <button className="close-btn" onClick={handleClose} aria-label={t('customerModal.close')}>&times;</button>
 
           <div id="formContent" style={{ display: showSuccess ? 'none' : 'block' }}>
             <div className="form-header">
-              <h3>Customer Data Registration</h3>
-              <p>Please provide your information. Explicit consent is required to proceed.</p>
+              <h3>{t('customerModal.title')}</h3>
+              <p>{t('customerModal.description')}</p>
             </div>
 
             <form id="customerForm" onSubmit={handleSubmit(onSubmitForm)} autoComplete="off">
@@ -98,12 +100,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
             )}
               {/* Full Name */}
               <div className="form-group">
-                <label htmlFor="name" className="form-label">Full Name</label>
+                <label htmlFor="name" className="form-label">{t('customerModal.fullName')}</label>
                 <input
                   type="text"
                   id="name"
                   className={`form-input ${errors.name ? 'error' : ''}`}
-                  placeholder="John Garcia"
+                  placeholder={t('customerModal.fullNamePlaceholder')}
                   {...register('name')}
                 />
                 {errors.name && <span className="error-message">{errors.name.message}</span>}
@@ -111,12 +113,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
 
               {/* Phone Number */}
               <div className="form-group">
-                <label htmlFor="phoneNumber" className="form-label">Phone Number</label>
+                <label htmlFor="phoneNumber" className="form-label">{t('customerModal.phoneNumber')}</label>
                 <input
                   type="tel"
                   id="phoneNumber"
                   className={`form-input ${errors.phone ? 'error' : ''}`}
-                  placeholder="(787) 555-1234"
+                  placeholder={t('customerModal.phoneNumberPlaceholder')}
                   {...register('phone')}
                 />
                 {errors.phone && <span className="error-message">{errors.phone.message}</span>}
@@ -124,7 +126,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
 
               {/* Contact Info */}
               <div style={{ marginTop: '1rem', marginBottom: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#f0f4ff', borderRadius: '0.375rem', borderLeft: '3px solid #3B4BFF' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1B2A4A', marginBottom: '0.35rem' }}>Contact Us</p>
+                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1B2A4A', marginBottom: '0.35rem' }}>{t('customerModal.contactUsLabel')}</p>
                 <p style={{ fontSize: '0.8rem', color: '#444', margin: 0 }}>
                   📞 <a href="tel:+19046660809" style={{ color: '#3B4BFF', textDecoration: 'none' }}>+1 904 666 0809</a>
                   &nbsp;&nbsp;✉️ <a href="mailto:info@ortegadrycleaners.com" style={{ color: '#3B4BFF', textDecoration: 'none' }}>info@ortegadrycleaners.com</a>
@@ -135,10 +137,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
               <div className="checkbox-group" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 <div className="checkbox-description">
                   <p className="checkbox-title">
-                    Explicit Consent (Required)
+                    {t('customerModal.consentTitle')}
                   </p>
                   <p className="checkbox-subtitle">
-                    By checking this box, I confirm that I give explicit consent for my personal data to be registered and used exclusively to manage this order and send me SMS notifications about the status of my order.
+                    {t('customerModal.consentDescription')}
                   </p>
                 </div>
                 <div className="checkbox-row">
@@ -152,7 +154,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                     <span className="checkmark"></span>
                   </label>
                   <span className="checkbox-text" style={{ color: errors.smsConsent ? '#dc2626' : '#333' }}>
-                    I accept and authorize the registration of my data and SMS notifications
+                    {t('customerModal.consentCheckbox')}
                   </span>
                 </div>
                 {errors.smsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.smsConsent.message}</span>}
@@ -162,13 +164,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
               <div className="checkbox-group" style={{ marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
                 <div className="checkbox-description">
                   <p className="checkbox-title">
-                    Terms &amp; Privacy Policy (Required)
+                    {t('customerModal.termsTitle')}
                   </p>
                   <p className="checkbox-subtitle">
-                    By checking this box, you confirm that you have read and agree to our{' '}
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>Terms of Service</a>
-                    {' '}and{' '}
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>Privacy Policy</a>.
+                    {t('customerModal.termsDescriptionPrefix')}{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>{t('customerModal.termsOfService')}</a>
+                    {' '}{t('customerModal.and')}{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF', textDecoration: 'underline' }}>{t('customerModal.privacyPolicy')}</a>.
                   </p>
                 </div>
                 <div className="checkbox-row">
@@ -182,17 +184,17 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
                     <span className="checkmark"></span>
                   </label>
                   <span className="checkbox-text" style={{ color: errors.termsConsent ? '#dc2626' : '#333' }}>
-                    I have read and accept the{' '}
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>Terms</a>
-                    {' '}and{' '}
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>Privacy Policy</a>
+                    {t('customerModal.termsCheckboxPrefix')}{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>{t('customerModal.terms')}</a>
+                    {' '}{t('customerModal.and')}{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#3B4BFF' }}>{t('customerModal.privacyPolicy')}</a>
                   </span>
                 </div>
                 {errors.termsConsent && <span className="error-message" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.termsConsent.message}</span>}
               </div>
 
               <button type="submit" className="submit-btn" disabled={isSubmitting || !isValid} style={{ marginTop: '1.5rem', opacity: !isValid ? 0.5 : 1, cursor: !isValid ? 'not-allowed' : 'pointer' }}>
-                {isSubmitting ? 'Processing...' : 'Confirm and Register'}
+                {isSubmitting ? t('customerModal.processing') : t('customerModal.submit')}
               </button>
             </form>
           </div>
@@ -200,9 +202,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, initialDat
           {/* Success State */}
           <div className="success-message" style={{ display: showSuccess ? 'block' : 'none' }}>
             <div className="success-icon">✓</div>
-            <h4 className="success-title">Data Registered!</h4>
-            <p className="success-text">Thank you for your consent. Your data has been registered and you will receive SMS notifications about your order status.</p>
-            <button className="submit-btn" style={{ marginTop: '1.5rem' }} onClick={handleClose}>Close</button>
+            <h4 className="success-title">{t('customerModal.successTitle')}</h4>
+            <p className="success-text">{t('customerModal.successText')}</p>
+            <button className="submit-btn" style={{ marginTop: '1.5rem' }} onClick={handleClose}>{t('customerModal.close')}</button>
           </div>
         </div>
       </div>
