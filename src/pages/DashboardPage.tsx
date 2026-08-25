@@ -44,11 +44,13 @@ import {
   MessageSquarePlus,
   StickyNote,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
 import { DailyReportModal } from '@/components/DailyReportModal';
 import { DeleteOrderModal } from '@/components/DeleteOrderModal';
+import { EditCustomerNameModal } from '@/components/EditCustomerNameModal';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifySmsTemplate,
@@ -1101,6 +1103,7 @@ export function DashboardPage() {
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
     deleteOrder,
+    refreshOrders,
   } = useOrders();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1114,6 +1117,9 @@ export function DashboardPage() {
 
   const [deleteOrderTarget, setDeleteOrderTarget] = useState<Order | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [editCustomerTarget, setEditCustomerTarget] = useState<Order | null>(null);
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
@@ -1140,6 +1146,16 @@ export function DashboardPage() {
       toast.error(t('dashboard.deleteModal.errorToast'));
       return false;
     }
+  };
+
+  const handleEditCustomerClick = (order: Order) => {
+    setEditCustomerTarget(order);
+    setIsEditCustomerOpen(true);
+  };
+
+  const handleCustomerNameSaved = () => {
+    toast.success(t('dashboard.editCustomer.successToast'));
+    void refreshOrders();
   };
 
   // Tick que se incrementa cuando se completa un envío para refrescar el set
@@ -1581,7 +1597,20 @@ export function DashboardPage() {
                         <TableCell className="font-medium text-[#1B2A4A]">
                           <OrderNotesIndicator order={order} variant="desktop" />
                         </TableCell>
-                        <TableCell>{order.customerName}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5">
+                            {order.customerName}
+                            <button
+                              type="button"
+                              onClick={() => handleEditCustomerClick(order)}
+                              className="text-gray-400 hover:text-[#3B4BFF] transition-colors"
+                              aria-label={t('dashboard.editCustomer.editLabel')}
+                              title={t('dashboard.editCustomer.editLabel')}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        </TableCell>
                         <TableCell className="text-gray-600">{order.phone}</TableCell>
                         <TableCell className="text-gray-600">{order.estimatedDate}</TableCell>
                         <TableCell><StatusBadge order={order} /></TableCell>
@@ -1729,7 +1758,18 @@ export function DashboardPage() {
                         <p className="text-sm font-semibold text-slate-900">
                           <OrderNotesIndicator order={order} variant="mobile" />
                         </p>
-                        <p className="text-sm text-gray-600 truncate">{order.customerName} · {order.phone}</p>
+                        <p className="text-sm text-gray-600 truncate inline-flex items-center gap-1.5">
+                          {order.customerName} · {order.phone}
+                          <button
+                            type="button"
+                            onClick={() => handleEditCustomerClick(order)}
+                            className="text-gray-400 hover:text-[#3B4BFF] transition-colors shrink-0"
+                            aria-label={t('dashboard.editCustomer.editLabel')}
+                            title={t('dashboard.editCustomer.editLabel')}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </p>
                         <p className="text-xs text-gray-500 mt-1">{order.estimatedDate}</p>
                       </div>
                       <StatusBadge order={order} />
@@ -1884,6 +1924,16 @@ export function DashboardPage() {
           setDeleteOrderTarget(null);
         }}
         onConfirmDelete={handleConfirmDeleteOrder}
+      />
+
+      <EditCustomerNameModal
+        order={editCustomerTarget}
+        isOpen={isEditCustomerOpen}
+        onClose={() => {
+          setIsEditCustomerOpen(false);
+          setEditCustomerTarget(null);
+        }}
+        onSaved={handleCustomerNameSaved}
       />
     </div>
   );

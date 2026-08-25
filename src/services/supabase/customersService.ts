@@ -109,6 +109,43 @@ export async function createCustomer(customer: { name: string; phone: string }):
   return { success: true };
 }
 
+export interface UpdateCustomerNameResult {
+  success: boolean;
+  errorCode?: 'nameInvalid' | 'customerNotFound' | 'updateFailed';
+}
+
+/** Actualiza el nombre del cliente (clave natural: phone_number) para todas sus órdenes. */
+export async function updateCustomerName(phone: string, newName: string): Promise<UpdateCustomerNameResult> {
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    return { success: false, errorCode: 'nameInvalid' };
+  }
+
+  const digits = normalizePhoneDigits(phone);
+  if (!digits) {
+    return { success: false, errorCode: 'customerNotFound' };
+  }
+  const rawPhone = parseInt(digits, 10);
+
+  const { data, error } = await supabase
+    .from('client')
+    .update({ name: trimmedName })
+    .eq('phone_number', rawPhone)
+    .select('id_client')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[customersService] updateCustomerName error:', error.message);
+    return { success: false, errorCode: 'updateFailed' };
+  }
+
+  if (!data) {
+    return { success: false, errorCode: 'customerNotFound' };
+  }
+
+  return { success: true };
+}
+
 export async function searchCustomersByPhone(query: string): Promise<Customer[]> {
   // Limpiar query a solo dígitos para buscar en el campo numeric
   const digits = query.replace(/\D/g, '');
