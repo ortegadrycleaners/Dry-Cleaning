@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { PRESET_NOTE_IDS } from './lib/presetNotes';
 
 /* eslint-disable react-refresh/only-export-components */
 export type Locale = 'es' | 'en';
@@ -843,6 +844,43 @@ export function orderStatusLabel(status: string, locale: Locale = detectBrowserL
   return mapping[status]?.[locale] ?? status;
 }
 
+let presetNoteLabelToId: Map<string, string> | null = null;
+
+function getPresetNoteLabelToId(): Map<string, string> {
+  if (presetNoteLabelToId) return presetNoteLabelToId;
+  const map = new Map<string, string>();
+  for (const id of PRESET_NOTE_IDS) {
+    const key = `newOrder.presetNotes.${id}`;
+    for (const locale of SUPPORTED_LOCALES) {
+      const label = translations[locale][key];
+      if (label) map.set(label.trim().toLowerCase(), id);
+    }
+  }
+  presetNoteLabelToId = map;
+  return map;
+}
+
+/**
+ * Los "notes" de una orden se guardan como texto plano (etiquetas predefinidas
+ * + texto libre) en el idioma activo al momento de crear la orden. Esta
+ * función retraduce los segmentos que coinciden con una etiqueta predefinida
+ * conocida (en cualquier idioma) al idioma activo de visualización, dejando
+ * el texto libre intacto.
+ */
+export function translateOrderNotes(notes: string | undefined | null, locale: Locale = detectBrowserLocale()): string {
+  if (!notes) return '';
+  const labelToId = getPresetNoteLabelToId();
+  return notes
+    .split(',')
+    .map((segment) => {
+      const trimmed = segment.trim();
+      const id = labelToId.get(trimmed.toLowerCase());
+      if (!id) return trimmed;
+      return translations[locale][`newOrder.presetNotes.${id}`] ?? trimmed;
+    })
+    .join(', ');
+}
+
 export function timeAgo(value: string, locale: Locale = detectBrowserLocale()): string {
   const diffMs = Date.now() - new Date(value).getTime();
   const minutes = Math.floor(diffMs / 60_000);
@@ -868,6 +906,7 @@ export interface I18nContextType {
   t: (key: string, vars?: Record<string, string | number>) => string;
   formatDate: (value: string | Date, options?: Intl.DateTimeFormatOptions) => string;
   translateOrderStatus: (status: string) => string;
+  translateOrderNotes: (notes: string | undefined | null) => string;
   timeAgo: (value: string) => string;
 }
 
@@ -902,6 +941,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     },
     formatDate: (value: string | Date, options?: Intl.DateTimeFormatOptions) => formatDate(value, locale, options),
     translateOrderStatus: (status: string) => orderStatusLabel(status, locale),
+    translateOrderNotes: (notes: string | undefined | null) => translateOrderNotes(notes, locale),
     timeAgo: (value: string) => timeAgo(value, locale),
   }), [locale]);
 

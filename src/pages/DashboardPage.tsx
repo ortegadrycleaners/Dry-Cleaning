@@ -895,7 +895,7 @@ function OrderNotesIndicator({
   order: Order;
   variant: 'desktop' | 'mobile';
 }) {
-  const { t } = useI18n();
+  const { t, translateOrderNotes } = useI18n();
   const label = `#${orderTicketLabel(order)}`;
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -971,7 +971,7 @@ function OrderNotesIndicator({
             zIndex: 9999,
           }}
         >
-          {order.notes}
+          {translateOrderNotes(order.notes)}
           <button
             type="button"
             className="block mt-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
