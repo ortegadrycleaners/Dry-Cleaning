@@ -209,32 +209,36 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                     <table className="w-full text-left text-sm border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-gray-200 text-slate-700 font-semibold">
-                          <th className="py-3 px-4 w-1/4">{t('dashboard.dailyReport.colTime')}</th>
-                          <th className="py-3 px-4 w-1/3">{t('dashboard.dailyReport.colOrder')}</th>
-                          <th className="py-3 px-4 w-5/12">{t('dashboard.dailyReport.colPhone')}</th>
+                          <th className="py-3 px-4 w-[22%]">{t('dashboard.dailyReport.colOrder')}</th>
+                          <th className="py-3 px-4 w-[38%]">{t('dashboard.dailyReport.colPhone')}</th>
+                          <th className="py-3 px-4 w-[20%] text-center">{t('dashboard.dailyReport.colRack')}</th>
+                          <th className="py-3 px-4 w-[20%] text-center">{t('dashboard.dailyReport.colPieces')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {orders.map((item, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-2.5 px-4 font-mono text-slate-600">
-                              {item.formattedTime || '—'}
-                            </td>
                             <td className="py-2.5 px-4 font-semibold text-slate-900">
                               #{item.orderNumber}
                             </td>
                             <td className="py-2.5 px-4 font-mono text-slate-700">
                               {item.phone}
                             </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-slate-800 min-w-[70px]">
+                              {item.rackNumber || ''}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-slate-800 min-w-[70px]">
+                              {item.pieces !== undefined && item.pieces !== null ? item.pieces : ''}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900">
-                          <td colSpan={2} className="py-3 px-4 text-right">
+                          <td colSpan={3} className="py-3 px-4 text-right">
                             {t('dashboard.dailyReport.totalLabel')}
                           </td>
-                          <td className="py-3 px-4 text-slate-900 text-base">
+                          <td className="py-3 px-4 text-slate-900 text-base text-center">
                             {orders.length}
                           </td>
                         </tr>

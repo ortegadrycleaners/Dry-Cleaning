@@ -588,6 +588,8 @@ export interface DailyReportOrder {
   phone: string;
   orderDate: string;
   formattedTime: string;
+  rackNumber?: string;
+  pieces?: string | number;
 }
 
 export interface FetchDailyReportResult {
@@ -603,7 +605,7 @@ function formatTimeOnly(isoString: string): string {
 
 /**
  * Consulta optimizada para obtener las órdenes creadas en la fecha actual (día local)
- * trayendo únicamente el payload mínimo (order_number, order_date, cliente phone).
+ * trayendo únicamente el payload mínimo (order_number, order_date, rack_number, cliente phone).
  */
 export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
   const startOfDay = new Date();
@@ -617,6 +619,7 @@ export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
     .select(`
       order_number,
       order_date,
+      rack_number,
       client:fk_cliente (
         phone_number
       )
@@ -638,6 +641,7 @@ export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
       phone: rawPhone ? formatPhone(rawPhone) : 'N/A',
       orderDate: row.order_date ?? '',
       formattedTime: row.order_date ? formatTimeOnly(row.order_date) : '',
+      rackNumber: row.rack_number ? String(row.rack_number).trim() : '',
     };
   });
 
