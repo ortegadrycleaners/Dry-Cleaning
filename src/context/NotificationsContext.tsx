@@ -21,6 +21,7 @@ import { eventBus } from '@/services/EventBus';
 import type { Notification, ReminderConfig, OrderEvent } from '@/types/notifications';
 import { DEFAULT_REMINDER_CONFIG } from '@/types/notifications';
 import { fetchReadyOrdersForReminders } from '@/services/supabase/ordersService';
+import { useI18n, type I18nContextType } from '@/i18n';
 
 /* eslint-disable react-refresh/only-export-components */
 
@@ -35,16 +36,16 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 /** Muestra un toast visual según el tipo de notificación. */
-function showToast(notification: Notification): void {
+function showToast(notification: Notification, t: I18nContextType['t']): void {
   const titles: Record<string, string> = {
-    ORDER_CREATED: 'Orden Confirmada',
-    ORDER_READY: 'Orden Lista',
-    PICKUP_REMINDER: 'Recordatorio',
-    URGENT_REMINDER: 'Recordatorio Urgente',
-    DAY_30_REMINDER: 'Recordatorio 30 días',
+    ORDER_CREATED: t('notifications.toast.orderCreated'),
+    ORDER_READY: t('notifications.toast.orderReady'),
+    PICKUP_REMINDER: t('notifications.toast.reminder'),
+    URGENT_REMINDER: t('notifications.toast.urgentReminder'),
+    DAY_30_REMINDER: t('notifications.toast.day30Reminder'),
   };
 
-  const title = titles[notification.type] ?? 'Notificación';
+  const title = titles[notification.type] ?? t('notifications.toast.default');
   const description = `#${notification.orderNumber} — ${notification.customerName}`;
 
   switch (notification.type) {
@@ -67,6 +68,7 @@ function showToast(notification: Notification): void {
 }
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<Notification[]>(() =>
     notificationService.getNotifications()
   );
@@ -81,13 +83,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     notificationService.setOnNotification((notification) => {
       syncNotifications();
-      showToast(notification);
+      showToast(notification, t);
     });
 
     notificationService.setOnNotificationUpdate((notification) => {
       syncNotifications();
       if (notification.status === 'undelivered' || notification.status === 'failed') {
-        toast.error('SMS no entregado', {
+        toast.error(t('notifications.toast.undelivered'), {
           description: `#${notification.orderNumber} — ${notification.customerName}${
             notification.deliveryError ? `: ${notification.deliveryError}` : ''
           }`,
@@ -102,7 +104,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       notificationService.setOnNotification(null);
       notificationService.setOnNotificationUpdate(null);
     };
-  }, [syncNotifications]);
+  }, [syncNotifications, t]);
 
   /* ---------- Scheduler de recordatorios ----------
    * Pausa el polling cuando la pestaña está oculta para no consumir recursos

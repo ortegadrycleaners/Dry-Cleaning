@@ -98,7 +98,7 @@ const TYPE_CONFIG: Record<
 };
 
 export function NotificationsPanel() {
-  const { t, timeAgo } = useI18n();
+  const { t, timeAgo, locale } = useI18n();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -238,7 +238,7 @@ export function NotificationsPanel() {
                 <p className="text-[10px] text-gray-400 text-center">
                   {t('notifications.footer', {
                     count: notifications.length,
-                    plural: notifications.length !== 1 ? 'es' : '',
+                    plural: notifications.length !== 1 ? (locale === 'es' ? 'es' : 's') : '',
                   })}
                 </p>
               </div>

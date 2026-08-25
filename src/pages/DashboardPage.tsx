@@ -54,9 +54,15 @@ import {
   getSmsHistory,
   isTwilioReady,
   type SmsUsageStats,
+  type SendSmsResult,
 } from '@/services/twilio';
 import { NOTIFICATION_TEMPLATE_OPTIONS, type NotificationEventType } from '@/types/notifications';
-import { useI18n } from '@/i18n';
+import { useI18n, type I18nContextType } from '@/i18n';
+
+function resolveSendErrorMessage(result: SendSmsResult, t: I18nContextType['t']): string | undefined {
+  if (result.messageKey) return t(result.messageKey, result.messageParams);
+  return result.errorMessage;
+}
 import { fetchRackConflict, type OrdersViewMode } from '@/services/supabase/ordersService';
 
 const REMINDER_DAYS = 3;
@@ -375,11 +381,12 @@ function NotifyCustomerModal({
       return;
     }
 
-    setErrorMsg(result.errorMessage ?? t('dashboard.notify.sendError'));
+    const resolvedError = resolveSendErrorMessage(result, t);
+    setErrorMsg(resolvedError ?? t('dashboard.notify.sendError'));
     toast.error(
       isReminder ? t('dashboard.notify.failedReminder') : t('dashboard.notify.failedSms'),
       {
-        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+        description: resolvedError ?? t('dashboard.notify.failedDescription'),
       }
     );
   };
@@ -620,9 +627,10 @@ function OrderProcessedModal({ order, isOpen, onClose, onSent, operatorId }: Ord
       return;
     }
 
-    setErrorMsg(result.errorMessage ?? t('dashboard.orderProcessed.failed'));
+    const resolvedError = resolveSendErrorMessage(result, t);
+    setErrorMsg(resolvedError ?? t('dashboard.orderProcessed.failed'));
     toast.error(t('dashboard.orderProcessed.failed'), {
-      description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+      description: resolvedError ?? t('dashboard.notify.failedDescription'),
     });
   };
 
@@ -1220,7 +1228,7 @@ export function DashboardPage() {
       handleNotified();
     } else {
       toast.error(t('dashboard.notify.failedSms'), {
-        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+        description: resolveSendErrorMessage(result, t) ?? t('dashboard.notify.failedDescription'),
       });
     }
   };
@@ -1491,8 +1499,8 @@ export function DashboardPage() {
         </div>
 
         <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
-          <span>{isLoading ? 'Cargando órdenes...' : `Página ${page} de ${totalPages}`}</span>
-          <span>{orders.length} órdenes activas</span>
+          <span>{isLoading ? t('dashboard.pagination.loading') : t('dashboard.pagination.pageOf', { page, totalPages })}</span>
+          <span>{t('dashboard.pagination.activeCount', { count: orders.length })}</span>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1732,17 +1740,17 @@ export function DashboardPage() {
                 onClick={() => goToPage(Math.max(1, page - 1))}
                 disabled={page <= 1 || isLoading}
               >
-                Anterior
+                {t('dashboard.pagination.previous')}
               </Button>
               <span className="text-gray-600">
-                Página {page} de {totalPages}
+                {t('dashboard.pagination.pageOf', { page, totalPages })}
               </span>
               <Button
                 variant="outline"
                 onClick={() => goToPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages || isLoading}
               >
-                Siguiente
+                {t('dashboard.pagination.next')}
               </Button>
             </div>
             </>

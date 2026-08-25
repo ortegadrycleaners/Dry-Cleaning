@@ -73,12 +73,15 @@ export interface InsertOrderResult {
   orderId: string | null;
   publicId: string | null;
   error?: string;
+  errorParams?: Record<string, string>;
   code?:
     | 'ORDER_NUMBER_EXISTS'
     | 'PHONE_NAME_MISMATCH'
     | 'CLIENT_INSERT_FAILED'
     | 'RECEIPT_INSERT_FAILED'
-    | 'DATABASE_ERROR';
+    | 'DATABASE_ERROR'
+    | 'PHONE_INVALID'
+    | 'ORDER_NUMBER_INVALID';
 }
 
 function normalizePhoneDigits(raw: string): string {
@@ -153,6 +156,7 @@ async function resolveClientId(
           orderId: null,
           publicId: null,
           error: `El número ${formatPhone(phoneNumber)} ya está registrado con otro nombre.`,
+          errorParams: { phone: formatPhone(phoneNumber), customerName: existingCustomer.name ?? '' },
           code: 'PHONE_NAME_MISMATCH',
         },
       };
@@ -197,6 +201,7 @@ async function resolveClientId(
               orderId: null,
               publicId: null,
               error: `El número ${formatPhone(phoneNumber)} ya está registrado con otro nombre.`,
+              errorParams: { phone: formatPhone(phoneNumber), customerName: conflictedCustomer.name ?? '' },
               code: 'PHONE_NAME_MISMATCH',
             },
           };
@@ -394,7 +399,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       orderId: null,
       publicId: null,
       error: 'El teléfono no es válido.',
-      code: 'DATABASE_ERROR',
+      code: 'PHONE_INVALID',
     };
   }
 
@@ -404,7 +409,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
       orderId: null,
       publicId: null,
       error: 'El número de orden debe ser un número válido.',
-      code: 'DATABASE_ERROR',
+      code: 'ORDER_NUMBER_INVALID',
     };
   }
 
@@ -445,6 +450,7 @@ export async function insertOrder(order: Order): Promise<InsertOrderResult> {
         orderId: null,
         publicId: null,
         error: `El número de orden ${numericOrderNumber} ya existe.`,
+        errorParams: { orderNumber: String(numericOrderNumber) },
         code: 'ORDER_NUMBER_EXISTS',
       };
     }

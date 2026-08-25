@@ -2,7 +2,7 @@ import { Button } from './button'
 import { useI18n } from '@/i18n'
 
 export function LanguageToggle({ inline }: { inline?: boolean }) {
-  const { locale, setLocale } = useI18n()
+  const { locale, setLocale, t } = useI18n()
 
   function toggle() {
     setLocale(locale === 'es' ? 'en' : 'es')
@@ -13,7 +13,7 @@ export function LanguageToggle({ inline }: { inline?: boolean }) {
       variant="ghost"
       size="sm"
       onClick={toggle}
-      aria-label="Cambiar idioma"
+      aria-label={t('common.changeLanguage')}
       className={inline ? 'text-[#FAFAFC]/90 hover:text-white' : undefined}
     >
       {locale === 'es' ? 'ES' : 'EN'}
