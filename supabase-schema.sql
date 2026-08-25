@@ -533,6 +533,10 @@ CREATE POLICY "client_search_by_phone" ON "public"."client" FOR SELECT USING (tr
 
 
 
+CREATE POLICY "client_update_authenticated_only" ON "public"."client" FOR UPDATE USING (("auth"."role"() = 'authenticated'::"text")) WITH CHECK (("auth"."role"() = 'authenticated'::"text"));
+
+
+
 ALTER TABLE "public"."receipt" ENABLE ROW LEVEL SECURITY;
 
 
