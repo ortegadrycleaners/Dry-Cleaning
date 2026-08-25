@@ -323,6 +323,8 @@ async function notifySms({
       ok: false,
       errorCode: guard.errorCode,
       errorMessage: guard.errorMessage,
+      messageKey: guard.messageKey,
+      messageParams: guard.messageParams,
       blockedLocally: true,
     };
   }

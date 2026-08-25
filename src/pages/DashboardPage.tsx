@@ -44,11 +44,13 @@ import {
   MessageSquarePlus,
   StickyNote,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import { NotificationsPanel } from '@/components/NotificationsPanel';
 import { ReminderTaskHandler } from '@/components/ReminderTaskHandler';
 import { DailyReportModal } from '@/components/DailyReportModal';
 import { DeleteOrderModal } from '@/components/DeleteOrderModal';
+import { EditCustomerNameModal } from '@/components/EditCustomerNameModal';
 import LanguageToggle from '@/components/ui/LanguageToggle';
 import {
   notifySmsTemplate,
@@ -58,9 +60,15 @@ import {
   getSmsHistory,
   isTwilioReady,
   type SmsUsageStats,
+  type SendSmsResult,
 } from '@/services/twilio';
 import { NOTIFICATION_TEMPLATE_OPTIONS, type NotificationEventType } from '@/types/notifications';
-import { useI18n } from '@/i18n';
+import { useI18n, type I18nContextType } from '@/i18n';
+
+function resolveSendErrorMessage(result: SendSmsResult, t: I18nContextType['t']): string | undefined {
+  if (result.messageKey) return t(result.messageKey, result.messageParams);
+  return result.errorMessage;
+}
 import { fetchRackConflict, type OrdersViewMode } from '@/services/supabase/ordersService';
 
 const REMINDER_DAYS = 3;
@@ -379,11 +387,12 @@ function NotifyCustomerModal({
       return;
     }
 
-    setErrorMsg(result.errorMessage ?? t('dashboard.notify.sendError'));
+    const resolvedError = resolveSendErrorMessage(result, t);
+    setErrorMsg(resolvedError ?? t('dashboard.notify.sendError'));
     toast.error(
       isReminder ? t('dashboard.notify.failedReminder') : t('dashboard.notify.failedSms'),
       {
-        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+        description: resolvedError ?? t('dashboard.notify.failedDescription'),
       }
     );
   };
@@ -624,9 +633,10 @@ function OrderProcessedModal({ order, isOpen, onClose, onSent, operatorId }: Ord
       return;
     }
 
-    setErrorMsg(result.errorMessage ?? t('dashboard.orderProcessed.failed'));
+    const resolvedError = resolveSendErrorMessage(result, t);
+    setErrorMsg(resolvedError ?? t('dashboard.orderProcessed.failed'));
     toast.error(t('dashboard.orderProcessed.failed'), {
-      description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+      description: resolvedError ?? t('dashboard.notify.failedDescription'),
     });
   };
 
@@ -887,7 +897,7 @@ function OrderNotesIndicator({
   order: Order;
   variant: 'desktop' | 'mobile';
 }) {
-  const { t } = useI18n();
+  const { t, translateOrderNotes } = useI18n();
   const label = `#${orderTicketLabel(order)}`;
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -963,7 +973,7 @@ function OrderNotesIndicator({
             zIndex: 9999,
           }}
         >
-          {order.notes}
+          {translateOrderNotes(order.notes)}
           <button
             type="button"
             className="block mt-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
@@ -1093,6 +1103,7 @@ export function DashboardPage() {
     autoRefreshAfterStatusChange,
     setAutoRefreshAfterStatusChange,
     deleteOrder,
+    refreshOrders,
   } = useOrders();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1106,6 +1117,9 @@ export function DashboardPage() {
 
   const [deleteOrderTarget, setDeleteOrderTarget] = useState<Order | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [editCustomerTarget, setEditCustomerTarget] = useState<Order | null>(null);
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
@@ -1132,6 +1146,16 @@ export function DashboardPage() {
       toast.error(t('dashboard.deleteModal.errorToast'));
       return false;
     }
+  };
+
+  const handleEditCustomerClick = (order: Order) => {
+    setEditCustomerTarget(order);
+    setIsEditCustomerOpen(true);
+  };
+
+  const handleCustomerNameSaved = () => {
+    toast.success(t('dashboard.editCustomer.successToast'));
+    void refreshOrders();
   };
 
   // Tick que se incrementa cuando se completa un envío para refrescar el set
@@ -1245,7 +1269,7 @@ export function DashboardPage() {
       handleNotified();
     } else {
       toast.error(t('dashboard.notify.failedSms'), {
-        description: result.errorMessage ?? t('dashboard.notify.failedDescription'),
+        description: resolveSendErrorMessage(result, t) ?? t('dashboard.notify.failedDescription'),
       });
     }
   };
@@ -1526,8 +1550,8 @@ export function DashboardPage() {
         </div>
 
         <div className="mb-4 flex items-center justify-between text-sm text-gray-500">
-          <span>{isLoading ? 'Cargando órdenes...' : `Página ${page} de ${totalPages}`}</span>
-          <span>{orders.length} órdenes activas</span>
+          <span>{isLoading ? t('dashboard.pagination.loading') : t('dashboard.pagination.pageOf', { page, totalPages })}</span>
+          <span>{t('dashboard.pagination.activeCount', { count: orders.length })}</span>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -1573,7 +1597,20 @@ export function DashboardPage() {
                         <TableCell className="font-medium text-[#1B2A4A]">
                           <OrderNotesIndicator order={order} variant="desktop" />
                         </TableCell>
-                        <TableCell>{order.customerName}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5">
+                            {order.customerName}
+                            <button
+                              type="button"
+                              onClick={() => handleEditCustomerClick(order)}
+                              className="text-gray-400 hover:text-[#3B4BFF] transition-colors"
+                              aria-label={t('dashboard.editCustomer.editLabel')}
+                              title={t('dashboard.editCustomer.editLabel')}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        </TableCell>
                         <TableCell className="text-gray-600">{order.phone}</TableCell>
                         <TableCell className="text-gray-600">{order.estimatedDate}</TableCell>
                         <TableCell><StatusBadge order={order} /></TableCell>
@@ -1721,7 +1758,18 @@ export function DashboardPage() {
                         <p className="text-sm font-semibold text-slate-900">
                           <OrderNotesIndicator order={order} variant="mobile" />
                         </p>
-                        <p className="text-sm text-gray-600 truncate">{order.customerName} · {order.phone}</p>
+                        <p className="text-sm text-gray-600 truncate inline-flex items-center gap-1.5">
+                          {order.customerName} · {order.phone}
+                          <button
+                            type="button"
+                            onClick={() => handleEditCustomerClick(order)}
+                            className="text-gray-400 hover:text-[#3B4BFF] transition-colors shrink-0"
+                            aria-label={t('dashboard.editCustomer.editLabel')}
+                            title={t('dashboard.editCustomer.editLabel')}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </p>
                         <p className="text-xs text-gray-500 mt-1">{order.estimatedDate}</p>
                       </div>
                       <StatusBadge order={order} />
@@ -1791,17 +1839,17 @@ export function DashboardPage() {
                 onClick={() => goToPage(Math.max(1, page - 1))}
                 disabled={page <= 1 || isLoading}
               >
-                Anterior
+                {t('dashboard.pagination.previous')}
               </Button>
               <span className="text-gray-600">
-                Página {page} de {totalPages}
+                {t('dashboard.pagination.pageOf', { page, totalPages })}
               </span>
               <Button
                 variant="outline"
                 onClick={() => goToPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages || isLoading}
               >
-                Siguiente
+                {t('dashboard.pagination.next')}
               </Button>
             </div>
             </>
@@ -1876,6 +1924,16 @@ export function DashboardPage() {
           setDeleteOrderTarget(null);
         }}
         onConfirmDelete={handleConfirmDeleteOrder}
+      />
+
+      <EditCustomerNameModal
+        order={editCustomerTarget}
+        isOpen={isEditCustomerOpen}
+        onClose={() => {
+          setIsEditCustomerOpen(false);
+          setEditCustomerTarget(null);
+        }}
+        onSaved={handleCustomerNameSaved}
       />
     </div>
   );

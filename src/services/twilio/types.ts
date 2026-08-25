@@ -76,6 +76,9 @@ export interface SendSmsResult {
   messageSid?: string;
   errorCode?: TwilioErrorCode;
   errorMessage?: string;
+  /** i18n key for errorMessage, set when the failure comes from a local guard. */
+  messageKey?: string;
+  messageParams?: Record<string, string>;
   /** Si true, no se llamó al backend (un guard local lo bloqueó). */
   blockedLocally?: boolean;
   /** Mensaje renderizado mostrado al operador (preview/auditoría). */

@@ -59,10 +59,16 @@ export async function findCustomerByPhone(phone: string): Promise<{ phone: strin
  * @param query - Texto que escribe el usuario (puede incluir paréntesis, guiones, etc.)
  * @returns Lista de Customer para el autocompletado.
  */
-export async function createCustomer(customer: { name: string; phone: string }): Promise<{ success: boolean; error?: string }> {
+export interface CreateCustomerResult {
+  success: boolean;
+  errorCode?: 'phoneInvalid' | 'customerCheckError' | 'phoneRegisteredOtherName' | 'customerCreateError';
+  errorParams?: Record<string, string>;
+}
+
+export async function createCustomer(customer: { name: string; phone: string }): Promise<CreateCustomerResult> {
   const digits = normalizePhoneDigits(customer.phone);
   if (!digits) {
-    return { success: false, error: 'El teléfono no es válido.' };
+    return { success: false, errorCode: 'phoneInvalid' };
   }
 
   const rawPhone = parseInt(digits, 10);
@@ -75,14 +81,15 @@ export async function createCustomer(customer: { name: string; phone: string }):
 
   if (existingError) {
     console.error('[customersService] createCustomer (check existing) error:', existingError.message);
-    return { success: false, error: 'Error al verificar el cliente existente.' };
+    return { success: false, errorCode: 'customerCheckError' };
   }
 
   if (existingCustomer) {
     if (normalizeName(existingCustomer.name ?? '') !== normalizeName(customer.name)) {
       return {
         success: false,
-        error: `El número ${formatPhone(rawPhone)} ya está registrado con otro nombre.`,
+        errorCode: 'phoneRegisteredOtherName',
+        errorParams: { phone: formatPhone(rawPhone) },
       };
     }
     return { success: true };
@@ -96,7 +103,44 @@ export async function createCustomer(customer: { name: string; phone: string }):
 
   if (error) {
     console.error('[customersService] createCustomer error:', error.message);
-    return { success: false, error: 'No se pudo registrar el cliente.' };
+    return { success: false, errorCode: 'customerCreateError' };
+  }
+
+  return { success: true };
+}
+
+export interface UpdateCustomerNameResult {
+  success: boolean;
+  errorCode?: 'nameInvalid' | 'customerNotFound' | 'updateFailed';
+}
+
+/** Actualiza el nombre del cliente (clave natural: phone_number) para todas sus órdenes. */
+export async function updateCustomerName(phone: string, newName: string): Promise<UpdateCustomerNameResult> {
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    return { success: false, errorCode: 'nameInvalid' };
+  }
+
+  const digits = normalizePhoneDigits(phone);
+  if (!digits) {
+    return { success: false, errorCode: 'customerNotFound' };
+  }
+  const rawPhone = parseInt(digits, 10);
+
+  const { data, error } = await supabase
+    .from('client')
+    .update({ name: trimmedName })
+    .eq('phone_number', rawPhone)
+    .select('id_client')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[customersService] updateCustomerName error:', error.message);
+    return { success: false, errorCode: 'updateFailed' };
+  }
+
+  if (!data) {
+    return { success: false, errorCode: 'customerNotFound' };
   }
 
   return { success: true };
