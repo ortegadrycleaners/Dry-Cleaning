@@ -582,3 +582,95 @@ export async function fetchOrderByPublicId(publicId: string): Promise<Order | nu
 
   return rowToOrder(data as OrderQueryRow);
 }
+
+export interface DailyReportOrder {
+  orderNumber: string;
+  phone: string;
+  orderDate: string;
+  formattedTime: string;
+}
+
+export interface FetchDailyReportResult {
+  orders: DailyReportOrder[];
+  error: string | null;
+}
+
+function formatTimeOnly(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+/**
+ * Consulta optimizada para obtener las órdenes creadas en la fecha actual (día local)
+ * trayendo únicamente el payload mínimo (order_number, order_date, cliente phone).
+ */
+export async function fetchTodayDailyReport(): Promise<FetchDailyReportResult> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data, error } = await supabase
+    .from('receipt')
+    .select(`
+      order_number,
+      order_date,
+      client:fk_cliente (
+        phone_number
+      )
+    `)
+    .gte('order_date', startOfDay.toISOString())
+    .lte('order_date', endOfDay.toISOString())
+    .order('order_date', { ascending: true });
+
+  if (error) {
+    console.error('[ordersService] fetchTodayDailyReport error:', error.message);
+    return { orders: [], error: 'No se pudieron consultar las órdenes del día.' };
+  }
+
+  const orders: DailyReportOrder[] = (data || []).map((row: any) => {
+    const clientData = extractClientData(row.client);
+    const rawPhone = clientData?.phone_number ?? '';
+    return {
+      orderNumber: String(row.order_number ?? ''),
+      phone: rawPhone ? formatPhone(rawPhone) : 'N/A',
+      orderDate: row.order_date ?? '',
+      formattedTime: row.order_date ? formatTimeOnly(row.order_date) : '',
+    };
+  });
+
+  return { orders, error: null };
+}
+
+/**
+ * Elimina físicamente una orden de Supabase por su id_order (UUID).
+ * Las notificaciones y tareas asociadas se eliminan en cascada automáticamente (ON DELETE CASCADE).
+ * La información del cliente asociado permanece intacta.
+ */
+export async function deleteOrderFromDb(orderId: string): Promise<{ success: boolean; error?: string }> {
+  console.log(`[ordersService] Audit Log: Intentando eliminar físicamente la orden con ID: ${orderId}`);
+  
+  const { data, error } = await supabase
+    .from('receipt')
+    .delete()
+    .eq('id_order', orderId)
+    .select('id_order');
+
+  if (error) {
+    console.error('[ordersService] Error al eliminar orden de Supabase:', error.message);
+    return { success: false, error: error.message };
+  }
+
+  if (!data || data.length === 0) {
+    const errorMsg = 'No se pudo eliminar la orden en Supabase. Posible falta de permisos RLS o la orden no existe.';
+    console.error(`[ordersService] ${errorMsg} (ID: ${orderId})`);
+    return { success: false, error: errorMsg };
+  }
+
+  console.log(`[ordersService] Audit Log: Orden ${orderId} eliminada exitosamente de Supabase (${data.length} fila/s eliminada/s).`);
+  return { success: true };
+}
+
+
