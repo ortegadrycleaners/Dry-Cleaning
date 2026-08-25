@@ -134,6 +134,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
             border: 1px solid #000000 !important;
             padding: 8px 12px !important;
             color: #000000 !important;
+            height: 34px !important;
           }
         }
       `}</style>
