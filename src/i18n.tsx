@@ -220,7 +220,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.actions.deleteOrder': 'Eliminar orden',
     'dashboard.deleteModal.title': 'Eliminar Orden Permanentemente',
     'dashboard.deleteModal.warningTitle': '¡Advertencia Irreversible!',
-    'dashboard.deleteModal.warningDescription': 'Esta acción borrará de manera física y definitiva la Orden #{ticketLabel} del cliente {customerName} en Supabase, incluyendo sus logs de recordatorios. La información del cliente permanecerá guardada.',
+    'dashboard.deleteModal.warningDescription': 'Esta orden se eliminará permanentemente, incluyendo su historial de notificaciones. Los datos del cliente se conservan',
     'dashboard.deleteModal.inputLabel': 'Para confirmar la eliminación, escribe el siguiente texto a continuación:',
     'dashboard.deleteModal.deleting': 'Eliminando...',
     'dashboard.deleteModal.confirmBtn': 'Eliminar Orden',
