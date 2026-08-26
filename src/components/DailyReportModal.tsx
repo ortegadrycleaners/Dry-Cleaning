@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -31,15 +31,26 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<DailyReportOrder[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setSelectedDate(getTodayString());
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      return;
     }
-  }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
+    const justOpened = !wasOpenRef.current;
+    wasOpenRef.current = true;
+
+    if (justOpened) {
+      const todayStr = getTodayString();
+      if (selectedDate !== todayStr) {
+        // Reset to today on (re)open; the effect re-runs once selectedDate
+        // updates, so we skip fetching for the stale date here.
+        setSelectedDate(todayStr);
+        return;
+      }
+    }
 
     let isMounted = true;
     setLoading(true);
