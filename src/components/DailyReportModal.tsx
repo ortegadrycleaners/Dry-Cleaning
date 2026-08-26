@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Loader2, AlertTriangle, FileText } from 'lucide-react';
+import { Printer, Loader2, AlertTriangle, FileText, Calendar } from 'lucide-react';
 import { fetchTodayDailyReport, type DailyReportOrder } from '@/services/supabase/ordersService';
 import { useI18n } from '@/i18n';
 
@@ -17,11 +17,26 @@ interface DailyReportModalProps {
   onClose: () => void;
 }
 
+function getTodayString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
   const { t, locale } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<DailyReportOrder[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayString());
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedDate(getTodayString());
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -30,7 +45,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
     setLoading(true);
     setError(null);
 
-    fetchTodayDailyReport()
+    fetchTodayDailyReport(selectedDate)
       .then((res) => {
         if (!isMounted) return;
         if (res.error) {
@@ -52,18 +67,24 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
     return () => {
       isMounted = false;
     };
-  }, [isOpen, t]);
+  }, [isOpen, selectedDate, t]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const todayFormatted = new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'es-ES', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formattedDisplayDate = useMemo(() => {
+    if (!selectedDate) return '';
+    const parts = selectedDate.split('-');
+    if (parts.length !== 3) return selectedDate;
+    const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return dateObj.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }, [selectedDate, locale]);
 
   return (
     <>
@@ -158,6 +179,33 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
             </div>
           </DialogHeader>
 
+          {/* Barra interactiva de Selección de Fecha */}
+          <div className="flex items-center justify-between gap-3 bg-slate-50 border-b border-gray-100 px-6 py-2.5 no-print">
+            <div className="flex items-center gap-2">
+              <label htmlFor="daily-report-date-picker" className="text-xs font-semibold text-slate-600">
+                {t('dashboard.dailyReport.selectDate')}
+              </label>
+              <input
+                id="daily-report-date-picker"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="text-xs font-medium bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3B4BFF]/20 focus:border-[#3B4BFF] cursor-pointer"
+              />
+            </div>
+            {selectedDate !== getTodayString() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDate(getTodayString())}
+                className="text-xs h-7 px-2.5 text-slate-700 hover:text-slate-900 border-gray-300 gap-1.5"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                {t('dashboard.dailyReport.todayButton')}
+              </Button>
+            )}
+          </div>
+
           {/* Cuerpo interactivo / Contenido del Reporte */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {loading ? (
@@ -190,7 +238,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                       <p className="text-xs uppercase font-semibold text-slate-400">
                         {t('dashboard.dailyReport.reportDate')}
                       </p>
-                      <p className="text-sm font-bold text-slate-800 capitalize">{todayFormatted}</p>
+                      <p className="text-sm font-bold text-slate-800 capitalize">{formattedDisplayDate}</p>
                     </div>
                   </div>
                 </div>
@@ -202,7 +250,7 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
                       {t('dashboard.dailyReport.emptyTitle')}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {t('dashboard.dailyReport.emptySubtitle', { date: todayFormatted })}
+                      {t('dashboard.dailyReport.emptySubtitle', { date: formattedDisplayDate })}
                     </p>
                   </div>
                 ) : (
@@ -270,3 +318,4 @@ export function DailyReportModal({ isOpen, onClose }: DailyReportModalProps) {
     </>
   );
 }
+
